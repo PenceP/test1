@@ -162,7 +162,6 @@
                     android:paddingTop="3dp"
                     android:paddingEnd="6dp"
                     android:paddingBottom="3dp"
-                    android:textColor="#00FF00"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     tools:text="67%" />
