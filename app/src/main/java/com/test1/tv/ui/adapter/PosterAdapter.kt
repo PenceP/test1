@@ -1,5 +1,6 @@
 package com.test1.tv.ui.adapter
 
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,7 +14,8 @@ import com.test1.tv.data.model.ContentItem
 class PosterAdapter(
     private val items: List<ContentItem>,
     private val onItemClick: (ContentItem) -> Unit,
-    private val onItemFocused: (ContentItem, Int) -> Unit
+    private val onItemFocused: (ContentItem, Int) -> Unit,
+    private val onNavigateToNavBar: () -> Unit
 ) : RecyclerView.Adapter<PosterAdapter.PosterViewHolder>() {
 
     inner class PosterViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -48,6 +50,19 @@ class PosterAdapter(
                         .scaleY(1.0f)
                         .setDuration(90)
                         .start()
+                }
+            }
+
+            itemView.setOnKeyListener { _, keyCode, event ->
+                if (
+                    keyCode == KeyEvent.KEYCODE_DPAD_LEFT &&
+                    event.action == KeyEvent.ACTION_DOWN &&
+                    bindingAdapterPosition == 0
+                ) {
+                    onNavigateToNavBar()
+                    true
+                } else {
+                    false
                 }
             }
 

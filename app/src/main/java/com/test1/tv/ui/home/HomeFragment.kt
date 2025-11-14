@@ -37,6 +37,9 @@ class HomeFragment : Fragment() {
     private lateinit var heroRuntime: TextView
     private lateinit var heroGenre: TextView
     private lateinit var heroOverview: TextView
+    private lateinit var homeContentContainer: View
+    private lateinit var comingSoonContainer: View
+    private lateinit var comingSoonText: TextView
 
     // Navigation
     private lateinit var navSearch: MaterialButton
@@ -44,6 +47,7 @@ class HomeFragment : Fragment() {
     private lateinit var navMovies: MaterialButton
     private lateinit var navTvShows: MaterialButton
     private lateinit var navSettings: MaterialButton
+    private var lastFocusedNavButton: View? = null
 
     companion object {
         private const val TAG = "HomeFragment"
@@ -80,6 +84,9 @@ class HomeFragment : Fragment() {
         heroRuntime = view.findViewById(R.id.hero_runtime)
         heroGenre = view.findViewById(R.id.hero_genre)
         heroOverview = view.findViewById(R.id.hero_overview)
+        homeContentContainer = view.findViewById(R.id.home_content_container)
+        comingSoonContainer = view.findViewById(R.id.coming_soon_container)
+        comingSoonText = view.findViewById(R.id.coming_soon_text)
 
         // Navigation
         navSearch = view.findViewById(R.id.nav_search)
@@ -105,26 +112,37 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupNavigation() {
+        val navButtons = listOf(navSearch, navHome, navMovies, navTvShows, navSettings)
+
+        navButtons.forEach { button ->
+            button.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    lastFocusedNavButton = view
+                }
+            }
+        }
+
+        lastFocusedNavButton = navHome
         navHome.requestFocus()
 
         navSearch.setOnClickListener {
-            Toast.makeText(requireContext(), "Search coming soon", Toast.LENGTH_SHORT).show()
+            showComingSoonPage("Search")
         }
 
         navHome.setOnClickListener {
-            // Already on home
+            showHomeContent()
         }
 
         navMovies.setOnClickListener {
-            Toast.makeText(requireContext(), "Movies page coming soon", Toast.LENGTH_SHORT).show()
+            showComingSoonPage("Movies")
         }
 
         navTvShows.setOnClickListener {
-            Toast.makeText(requireContext(), "TV Shows page coming soon", Toast.LENGTH_SHORT).show()
+            showComingSoonPage("TV Shows")
         }
 
         navSettings.setOnClickListener {
-            Toast.makeText(requireContext(), "Settings coming soon", Toast.LENGTH_SHORT).show()
+            showComingSoonPage("Settings")
         }
     }
 
@@ -159,6 +177,9 @@ class HomeFragment : Fragment() {
                 },
                 onItemFocused = { item, rowIndex, itemIndex ->
                     handleItemFocused(item, rowIndex, itemIndex)
+                },
+                onNavigateToNavBar = {
+                    focusNavigationBar()
                 }
             )
 
@@ -221,6 +242,21 @@ class HomeFragment : Fragment() {
         } ?: run {
             heroRuntime.visibility = View.GONE
         }
+    }
+
+    private fun showComingSoonPage(pageName: String) {
+        comingSoonText.text = "$pageName coming soon"
+        comingSoonContainer.visibility = View.VISIBLE
+        homeContentContainer.visibility = View.GONE
+    }
+
+    private fun showHomeContent() {
+        comingSoonContainer.visibility = View.GONE
+        homeContentContainer.visibility = View.VISIBLE
+    }
+
+    private fun focusNavigationBar() {
+        (lastFocusedNavButton ?: navHome).requestFocus()
     }
 
     private fun handleItemClick(item: ContentItem) {

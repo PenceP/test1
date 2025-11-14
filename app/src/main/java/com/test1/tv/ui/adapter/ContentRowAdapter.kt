@@ -17,7 +17,8 @@ data class ContentRow(
 class ContentRowAdapter(
     private val rows: List<ContentRow>,
     private val onItemClick: (ContentItem) -> Unit,
-    private val onItemFocused: (ContentItem, Int, Int) -> Unit // item, rowIndex, itemIndex
+    private val onItemFocused: (ContentItem, Int, Int) -> Unit, // item, rowIndex, itemIndex
+    private val onNavigateToNavBar: () -> Unit
 ) : RecyclerView.Adapter<ContentRowAdapter.RowViewHolder>() {
 
     inner class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -33,7 +34,8 @@ class ContentRowAdapter(
                 onItemClick = onItemClick,
                 onItemFocused = { item, itemIndex ->
                     onItemFocused(item, rowIndex, itemIndex)
-                }
+                },
+                onNavigateToNavBar = onNavigateToNavBar
             )
 
             rowContent.adapter = adapter
