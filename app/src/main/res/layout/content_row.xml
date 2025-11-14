@@ -13,9 +13,10 @@
         android:id="@+id/row_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="0dp"
+        android:layout_marginStart="16dp"
         android:textColor="@android:color/white"
-        android:textSize="22sp"
+        android:textSize="18sp"
         android:textStyle="bold" />
 
     <!-- Horizontal GridView for content items -->
@@ -26,6 +27,7 @@
         android:clipToPadding="false"
         android:clipChildren="false"
         android:focusable="true"
+        android:paddingStart="12dp"
         android:paddingEnd="48dp"
         android:paddingTop="22dp"
         android:paddingBottom="22dp" />

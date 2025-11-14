@@ -35,9 +35,7 @@
         android:layout_marginStart="48dp"
         android:layout_marginBottom="24dp"
         android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="4dp"
         app:layout_constraintWidth_max="700dp">
 
         <!-- Title -->
@@ -52,7 +50,7 @@
             android:shadowDx="2"
             android:shadowDy="2"
             android:shadowRadius="4"
-            android:maxLines="2"
+            android:maxLines="4"
             android:ellipsize="end"
             tools:text="Alien: Romulus" />
 
@@ -132,7 +130,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="4"
             android:textColor="@android:color/white"
             android:textSize="14sp"
             android:lineSpacingMultiplier="1.1"
