@@ -35,9 +35,9 @@ class PosterAdapter(
                 if (hasFocus) {
                     // Animate scale up
                     itemView.animate()
-                        .scaleX(1.1f)
-                        .scaleY(1.1f)
-                        .setDuration(200)
+                        .scaleX(1.12f)
+                        .scaleY(1.12f)
+                        .setDuration(90)
                         .start()
 
                     onItemFocused(item, position)
@@ -46,7 +46,7 @@ class PosterAdapter(
                     itemView.animate()
                         .scaleX(1.0f)
                         .scaleY(1.0f)
-                        .setDuration(200)
+                        .setDuration(90)
                         .start()
                 }
             }
