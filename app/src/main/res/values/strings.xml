@@ -13,6 +13,21 @@
     <string name="buy_2">AT $9.99</string>
     <string name="movie">Movie</string>
     <string name="hero_logo_content_description">Series or movie logo</string>
+    <string name="details_play">Play</string>
+    <string name="details_play_trailer">Play Trailer</string>
+    <string name="details_trakt">Trakt</string>
+    <string name="details_section_cast">Cast</string>
+    <string name="details_section_similar">Similar Titles</string>
+    <string name="details_section_collection">Collection</string>
+    <string name="details_section_cast_empty">No cast loaded yet.</string>
+    <string name="details_section_similar_empty">No similar titles available.</string>
+    <string name="details_section_collection_empty">No collection information.</string>
+    <string name="details_cast_template">Starring: %1$s</string>
+    <string name="details_tooltip_play">Play</string>
+    <string name="details_tooltip_trailer">Trailer</string>
+    <string name="details_tooltip_watched">Mark watched</string>
+    <string name="details_tooltip_watchlist">Watchlist</string>
+    <string name="details_tooltip_collection">Collection</string>
 
     <!-- Error messages -->
     <string name="error_fragment_message">An error occurred</string>

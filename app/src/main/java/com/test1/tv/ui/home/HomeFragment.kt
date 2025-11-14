@@ -1,6 +1,7 @@
 package com.test1.tv.ui.home
 
 import android.graphics.drawable.Drawable
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -8,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.RatingBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -18,6 +20,7 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.android.material.button.MaterialButton
+import com.test1.tv.DetailsActivity
 import com.test1.tv.R
 import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.model.ContentItem
@@ -36,7 +39,7 @@ class HomeFragment : Fragment() {
     private lateinit var heroBackdrop: ImageView
     private lateinit var heroLogo: ImageView
     private lateinit var heroTitle: TextView
-    private lateinit var heroRating: TextView
+    private lateinit var heroRatingBar: RatingBar
     private lateinit var heroYear: TextView
     private lateinit var heroRuntime: TextView
     private lateinit var heroContentRating: TextView
@@ -86,7 +89,7 @@ class HomeFragment : Fragment() {
         heroBackdrop = view.findViewById(R.id.hero_backdrop)
         heroLogo = view.findViewById(R.id.hero_logo)
         heroTitle = view.findViewById(R.id.hero_title)
-        heroRating = view.findViewById(R.id.hero_rating)
+        heroRatingBar = view.findViewById(R.id.hero_rating_bar)
         heroYear = view.findViewById(R.id.hero_year)
         heroRuntime = view.findViewById(R.id.hero_runtime)
         heroContentRating = view.findViewById(R.id.hero_content_rating)
@@ -251,13 +254,7 @@ class HomeFragment : Fragment() {
             heroCast.visibility = View.GONE
         }
 
-        // Update rating
-        item.ratingPercentage?.let { percentage ->
-            heroRating.text = "$percentage%"
-            heroRating.visibility = View.VISIBLE
-        } ?: run {
-            heroRating.visibility = View.GONE
-        }
+        updateHeroRating(item.ratingPercentage)
 
         // Update certification
         item.certification?.let {
@@ -268,7 +265,7 @@ class HomeFragment : Fragment() {
         }
 
         // Update runtime
-        item.runtime?.let {
+        formatRuntimeText(item.runtime)?.let {
             heroRuntime.text = it
             heroRuntime.visibility = View.VISIBLE
         } ?: run {
@@ -338,6 +335,36 @@ class HomeFragment : Fragment() {
             })
     }
 
+    private fun updateHeroRating(percentage: Int?) {
+        if (percentage == null) {
+            heroRatingBar.visibility = View.GONE
+            heroRatingBar.rating = 0f
+            return
+        }
+
+        heroRatingBar.visibility = View.VISIBLE
+        val clamped = percentage.coerceIn(0, 100)
+        heroRatingBar.rating = clamped / 20f
+    }
+
+    private fun formatRuntimeText(runtime: String?): String? {
+        if (runtime.isNullOrBlank()) return null
+        if (runtime.contains("h")) return runtime
+
+        val minutes = runtime.filter { it.isDigit() }.toIntOrNull() ?: return runtime
+        return if (minutes >= 60) {
+            val hours = minutes / 60
+            val remaining = minutes % 60
+            if (remaining == 0) {
+                "${hours}h"
+            } else {
+                "${hours}h ${remaining}m"
+            }
+        } else {
+            "${minutes}m"
+        }
+    }
+
     private fun showComingSoonPage(pageName: String) {
         comingSoonText.text = "$pageName coming soon"
         comingSoonContainer.visibility = View.VISIBLE
@@ -355,12 +382,10 @@ class HomeFragment : Fragment() {
 
     private fun handleItemClick(item: ContentItem) {
         Log.d(TAG, "Item clicked: ${item.title}")
-        Toast.makeText(
-            requireContext(),
-            "Details for: ${item.title}",
-            Toast.LENGTH_SHORT
-        ).show()
-        // TODO: Navigate to details screen
+        val intent = Intent(requireContext(), DetailsActivity::class.java).apply {
+            putExtra(DetailsActivity.CONTENT_ITEM, item)
+        }
+        startActivity(intent)
     }
 
     private fun handleItemFocused(item: ContentItem, rowIndex: Int, itemIndex: Int) {

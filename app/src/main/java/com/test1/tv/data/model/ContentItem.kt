@@ -1,8 +1,12 @@
 package com.test1.tv.data.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
 /**
  * Unified model that combines Trakt and TMDB data for displaying content
  */
+@Parcelize
 data class ContentItem(
     val id: Int,
     val tmdbId: Int,
@@ -19,7 +23,7 @@ data class ContentItem(
     val runtime: String?,
     val cast: String?,
     val certification: String?
-) {
+) : Parcelable {
     enum class ContentType {
         MOVIE, TV_SHOW
     }

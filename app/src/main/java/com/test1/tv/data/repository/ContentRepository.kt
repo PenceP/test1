@@ -151,7 +151,7 @@ class ContentRepository(
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.MOVIE,
-                        runtime = tmdbDetails.runtime?.let { "${it}m" },
+                        runtime = formatRuntime(tmdbDetails.runtime),
                         cast = tmdbDetails.getCastNames(),
                         certification = tmdbDetails.getCertification()
                     )
@@ -195,7 +195,7 @@ class ContentRepository(
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.MOVIE,
-                        runtime = tmdbDetails.runtime?.let { "${it}m" },
+                        runtime = formatRuntime(tmdbDetails.runtime),
                         cast = tmdbDetails.getCastNames(),
                         certification = tmdbDetails.getCertification()
                     )
@@ -238,7 +238,7 @@ class ContentRepository(
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.TV_SHOW,
-                        runtime = tmdbDetails.episodeRunTime?.firstOrNull()?.let { "${it}m" },
+                        runtime = formatRuntime(tmdbDetails.episodeRunTime?.firstOrNull()),
                         cast = tmdbDetails.getCastNames(),
                         certification = tmdbDetails.getCertification()
                     )
@@ -282,7 +282,7 @@ class ContentRepository(
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.TV_SHOW,
-                        runtime = tmdbDetails.episodeRunTime?.firstOrNull()?.let { "${it}m" },
+                        runtime = formatRuntime(tmdbDetails.episodeRunTime?.firstOrNull()),
                         cast = tmdbDetails.getCastNames(),
                         certification = tmdbDetails.getCertification()
                     )
@@ -299,5 +299,17 @@ class ContentRepository(
      */
     suspend fun cleanupCache() {
         cacheRepository.cleanupOldCache()
+    }
+
+    private fun formatRuntime(minutes: Int?): String? {
+        if (minutes == null || minutes <= 0) return null
+
+        return if (minutes >= 60) {
+            val hours = minutes / 60
+            val remainingMinutes = minutes % 60
+            "${hours}h ${remainingMinutes}m"
+        } else {
+            "${minutes}m"
+        }
     }
 }
