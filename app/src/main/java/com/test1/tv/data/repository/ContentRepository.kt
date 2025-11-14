@@ -145,12 +145,15 @@ class ContentRepository(
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
                         backdropUrl = tmdbDetails.getBackdropUrl(),
+                        logoUrl = tmdbDetails.getLogoUrl(),
                         year = tmdbDetails.getYear(),
                         rating = tmdbDetails.voteAverage,
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.MOVIE,
-                        runtime = tmdbDetails.runtime?.let { "${it}m" }
+                        runtime = tmdbDetails.runtime?.let { "${it}m" },
+                        cast = tmdbDetails.getCastNames(),
+                        certification = tmdbDetails.getCertification()
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for movie $tmdbId", e)
@@ -186,12 +189,15 @@ class ContentRepository(
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
                         backdropUrl = tmdbDetails.getBackdropUrl(),
+                        logoUrl = tmdbDetails.getLogoUrl(),
                         year = tmdbDetails.getYear(),
                         rating = tmdbDetails.voteAverage,
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.MOVIE,
-                        runtime = tmdbDetails.runtime?.let { "${it}m" }
+                        runtime = tmdbDetails.runtime?.let { "${it}m" },
+                        cast = tmdbDetails.getCastNames(),
+                        certification = tmdbDetails.getCertification()
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for movie $tmdbId", e)
@@ -226,12 +232,15 @@ class ContentRepository(
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
                         backdropUrl = tmdbDetails.getBackdropUrl(),
+                        logoUrl = tmdbDetails.getLogoUrl(),
                         year = tmdbDetails.getYear(),
                         rating = tmdbDetails.voteAverage,
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.TV_SHOW,
-                        runtime = tmdbDetails.episodeRunTime?.firstOrNull()?.let { "${it}m" }
+                        runtime = tmdbDetails.episodeRunTime?.firstOrNull()?.let { "${it}m" },
+                        cast = tmdbDetails.getCastNames(),
+                        certification = tmdbDetails.getCertification()
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for show $tmdbId", e)
@@ -267,12 +276,15 @@ class ContentRepository(
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
                         backdropUrl = tmdbDetails.getBackdropUrl(),
+                        logoUrl = tmdbDetails.getLogoUrl(),
                         year = tmdbDetails.getYear(),
                         rating = tmdbDetails.voteAverage,
                         ratingPercentage = tmdbDetails.getRatingPercentage(),
                         genres = tmdbDetails.genres?.joinToString(", ") { it.name },
                         type = ContentItem.ContentType.TV_SHOW,
-                        runtime = tmdbDetails.episodeRunTime?.firstOrNull()?.let { "${it}m" }
+                        runtime = tmdbDetails.episodeRunTime?.firstOrNull()?.let { "${it}m" },
+                        cast = tmdbDetails.getCastNames(),
+                        certification = tmdbDetails.getCertification()
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for show $tmdbId", e)

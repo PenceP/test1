@@ -57,7 +57,13 @@ data class TMDBShowDetails(
     @SerializedName("number_of_episodes")
     val numberOfEpisodes: Int?,
     @SerializedName("status")
-    val status: String?
+    val status: String?,
+    @SerializedName("images")
+    val images: TMDBImages?,
+    @SerializedName("credits")
+    val credits: TMDBCredits?,
+    @SerializedName("content_ratings")
+    val contentRatings: TMDBContentRatingsResponse?
 ) {
     fun getPosterUrl(): String? {
         return posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
@@ -74,4 +80,34 @@ data class TMDBShowDetails(
     fun getRatingPercentage(): Int? {
         return voteAverage?.times(10)?.toInt()
     }
+
+    fun getLogoUrl(): String? {
+        return images.getPreferredLogoUrl()
+    }
+
+    fun getCastNames(limit: Int = 10): String? {
+        val castList = credits?.cast
+            ?.sortedBy { it.order ?: Int.MAX_VALUE }
+            ?.take(limit)
+            ?.mapNotNull { it.name }
+
+        return if (castList.isNullOrEmpty()) null else castList.joinToString(", ")
+    }
+
+    fun getCertification(): String? {
+        // Look for US content rating
+        return contentRatings?.results?.find { it.iso31661 == "US" }?.rating
+    }
 }
+
+data class TMDBContentRatingsResponse(
+    @SerializedName("results")
+    val results: List<TMDBContentRating>?
+)
+
+data class TMDBContentRating(
+    @SerializedName("iso_3166_1")
+    val iso31661: String,
+    @SerializedName("rating")
+    val rating: String?
+)

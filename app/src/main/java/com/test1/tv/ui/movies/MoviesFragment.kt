@@ -1,6 +1,5 @@
-package com.test1.tv.ui.home
+package com.test1.tv.ui.movies
 
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -25,10 +24,11 @@ import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.ui.adapter.ContentRowAdapter
+import android.graphics.drawable.Drawable
 
-class HomeFragment : Fragment() {
+class MoviesFragment : Fragment() {
 
-    private lateinit var viewModel: HomeViewModel
+    private lateinit var viewModel: MoviesViewModel
     private lateinit var contentRowsView: VerticalGridView
     private lateinit var loadingIndicator: ProgressBar
 
@@ -43,9 +43,6 @@ class HomeFragment : Fragment() {
     private lateinit var heroGenreContainer: android.widget.LinearLayout
     private lateinit var heroOverview: TextView
     private lateinit var heroCast: TextView
-    private lateinit var homeContentContainer: View
-    private lateinit var comingSoonContainer: View
-    private lateinit var comingSoonText: TextView
 
     // Navigation
     private lateinit var navSearch: MaterialButton
@@ -56,7 +53,7 @@ class HomeFragment : Fragment() {
     private var lastFocusedNavButton: View? = null
 
     companion object {
-        private const val TAG = "HomeFragment"
+        private const val TAG = "MoviesFragment"
     }
 
     override fun onCreateView(
@@ -64,7 +61,7 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_home, container, false)
+        return inflater.inflate(R.layout.fragment_movies, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -82,7 +79,7 @@ class HomeFragment : Fragment() {
         contentRowsView = view.findViewById(R.id.content_rows)
         loadingIndicator = view.findViewById(R.id.loading_indicator)
 
-        // Hero section (now directly in main layout)
+        // Hero section
         heroBackdrop = view.findViewById(R.id.hero_backdrop)
         heroLogo = view.findViewById(R.id.hero_logo)
         heroTitle = view.findViewById(R.id.hero_title)
@@ -93,9 +90,6 @@ class HomeFragment : Fragment() {
         heroGenreContainer = view.findViewById(R.id.hero_genre_container)
         heroOverview = view.findViewById(R.id.hero_overview)
         heroCast = view.findViewById(R.id.hero_cast)
-        homeContentContainer = view.findViewById(R.id.home_content_container)
-        comingSoonContainer = view.findViewById(R.id.coming_soon_container)
-        comingSoonText = view.findViewById(R.id.coming_soon_text)
 
         // Navigation
         navSearch = view.findViewById(R.id.nav_search)
@@ -116,8 +110,8 @@ class HomeFragment : Fragment() {
         )
 
         // Create ViewModel
-        val factory = HomeViewModelFactory(contentRepository)
-        viewModel = ViewModelProvider(this, factory)[HomeViewModel::class.java]
+        val factory = MoviesViewModelFactory(contentRepository)
+        viewModel = ViewModelProvider(this, factory)[MoviesViewModel::class.java]
     }
 
     private fun setupNavigation() {
@@ -131,22 +125,19 @@ class HomeFragment : Fragment() {
             }
         }
 
-        lastFocusedNavButton = navHome
-        navHome.requestFocus()
+        lastFocusedNavButton = navMovies
+        navMovies.requestFocus()
 
         navSearch.setOnClickListener {
-            showComingSoonPage("Search")
+            Toast.makeText(requireContext(), "Search coming soon", Toast.LENGTH_SHORT).show()
         }
 
         navHome.setOnClickListener {
-            showHomeContent()
+            requireActivity().supportFragmentManager.popBackStack()
         }
 
         navMovies.setOnClickListener {
-            requireActivity().supportFragmentManager.beginTransaction()
-                .replace(R.id.main_browse_fragment, com.test1.tv.ui.movies.MoviesFragment())
-                .addToBackStack(null)
-                .commit()
+            // Already on Movies page
         }
 
         navTvShows.setOnClickListener {
@@ -157,7 +148,7 @@ class HomeFragment : Fragment() {
         }
 
         navSettings.setOnClickListener {
-            showComingSoonPage("Settings")
+            Toast.makeText(requireContext(), "Settings coming soon", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -338,19 +329,8 @@ class HomeFragment : Fragment() {
             })
     }
 
-    private fun showComingSoonPage(pageName: String) {
-        comingSoonText.text = "$pageName coming soon"
-        comingSoonContainer.visibility = View.VISIBLE
-        homeContentContainer.visibility = View.GONE
-    }
-
-    private fun showHomeContent() {
-        comingSoonContainer.visibility = View.GONE
-        homeContentContainer.visibility = View.VISIBLE
-    }
-
     private fun focusNavigationBar() {
-        (lastFocusedNavButton ?: navHome).requestFocus()
+        (lastFocusedNavButton ?: navMovies).requestFocus()
     }
 
     private fun handleItemClick(item: ContentItem) {

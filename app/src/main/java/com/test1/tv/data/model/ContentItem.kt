@@ -10,12 +10,15 @@ data class ContentItem(
     val overview: String?,
     val posterUrl: String?,
     val backdropUrl: String?,
+    val logoUrl: String?,
     val year: String?,
     val rating: Double?,
     val ratingPercentage: Int?,
     val genres: String?,
     val type: ContentType,
-    val runtime: String?
+    val runtime: String?,
+    val cast: String?,
+    val certification: String?
 ) {
     enum class ContentType {
         MOVIE, TV_SHOW

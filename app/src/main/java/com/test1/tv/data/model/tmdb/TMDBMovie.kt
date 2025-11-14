@@ -55,7 +55,13 @@ data class TMDBMovieDetails(
     @SerializedName("tagline")
     val tagline: String?,
     @SerializedName("status")
-    val status: String?
+    val status: String?,
+    @SerializedName("images")
+    val images: TMDBImages?,
+    @SerializedName("credits")
+    val credits: TMDBCredits?,
+    @SerializedName("release_dates")
+    val releaseDates: TMDBReleaseDatesResponse?
 ) {
     fun getPosterUrl(): String? {
         return posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
@@ -72,6 +78,26 @@ data class TMDBMovieDetails(
     fun getRatingPercentage(): Int? {
         return voteAverage?.times(10)?.toInt()
     }
+
+    fun getLogoUrl(): String? {
+        return images.getPreferredLogoUrl()
+    }
+
+    fun getCastNames(limit: Int = 10): String? {
+        val castList = credits?.cast
+            ?.sortedBy { it.order ?: Int.MAX_VALUE }
+            ?.take(limit)
+            ?.mapNotNull { it.name }
+
+        return if (castList.isNullOrEmpty()) null else castList.joinToString(", ")
+    }
+
+    fun getCertification(): String? {
+        // Look for US certification
+        val usRelease = releaseDates?.results?.find { it.iso31661 == "US" }
+        // Get the first certification from release dates (usually theatrical release)
+        return usRelease?.releaseDates?.firstOrNull { !it.certification.isNullOrBlank() }?.certification
+    }
 }
 
 data class TMDBGenre(
@@ -79,4 +105,41 @@ data class TMDBGenre(
     val id: Int,
     @SerializedName("name")
     val name: String
+)
+
+data class TMDBCast(
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("character")
+    val character: String?,
+    @SerializedName("order")
+    val order: Int?
+)
+
+data class TMDBCredits(
+    @SerializedName("cast")
+    val cast: List<TMDBCast>?
+)
+
+data class TMDBReleaseDatesResponse(
+    @SerializedName("results")
+    val results: List<TMDBReleaseDate>?
+)
+
+data class TMDBReleaseDate(
+    @SerializedName("iso_3166_1")
+    val iso31661: String,
+    @SerializedName("release_dates")
+    val releaseDates: List<TMDBReleaseDateInfo>?
+)
+
+data class TMDBReleaseDateInfo(
+    @SerializedName("certification")
+    val certification: String?,
+    @SerializedName("release_date")
+    val releaseDate: String?,
+    @SerializedName("type")
+    val type: Int?
 )

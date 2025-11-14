@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Genre Pills -->
+    <dimen name="genre_pill_padding_horizontal">12dp</dimen>
+    <dimen name="genre_pill_padding_vertical">6dp</dimen>
+    <dimen name="genre_pill_margin">8dp</dimen>
+</resources>

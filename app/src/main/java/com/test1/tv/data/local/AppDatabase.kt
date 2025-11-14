@@ -9,7 +9,7 @@ import com.test1.tv.data.local.entity.CachedContent
 
 @Database(
     entities = [CachedContent::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

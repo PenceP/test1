@@ -13,6 +13,7 @@ data class CachedContent(
     val overview: String?,
     val posterUrl: String?,
     val backdropUrl: String?,
+    val logoUrl: String?,
     val year: String?,
     val rating: Double?,
     val ratingPercentage: Int?,
@@ -20,6 +21,8 @@ data class CachedContent(
     val contentType: String, // "MOVIE" or "TV_SHOW"
     val category: String, // "TRENDING_MOVIES", "POPULAR_MOVIES", etc.
     val runtime: String?,
+    val cast: String?,
+    val certification: String?,
     val position: Int, // Position in the list for ordering
     val cachedAt: Long // Timestamp when cached
 ) {
@@ -31,12 +34,15 @@ data class CachedContent(
             overview = overview,
             posterUrl = posterUrl,
             backdropUrl = backdropUrl,
+            logoUrl = logoUrl,
             year = year,
             rating = rating,
             ratingPercentage = ratingPercentage,
             genres = genres,
             type = if (contentType == "MOVIE") ContentItem.ContentType.MOVIE else ContentItem.ContentType.TV_SHOW,
-            runtime = runtime
+            runtime = runtime,
+            cast = cast,
+            certification = certification
         )
     }
 
@@ -53,6 +59,7 @@ data class CachedContent(
                 overview = item.overview,
                 posterUrl = item.posterUrl,
                 backdropUrl = item.backdropUrl,
+                logoUrl = item.logoUrl,
                 year = item.year,
                 rating = item.rating,
                 ratingPercentage = item.ratingPercentage,
@@ -60,6 +67,8 @@ data class CachedContent(
                 contentType = item.type.name,
                 category = category,
                 runtime = item.runtime,
+                cast = item.cast,
+                certification = item.certification,
                 position = position,
                 cachedAt = System.currentTimeMillis()
             )
