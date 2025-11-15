@@ -24,7 +24,7 @@
         android:id="@+id/navigation_sidebar"
         android:layout_width="50dp"
         android:layout_height="match_parent"
-        android:background="#AA000000"
+        android:background="#77000000"
         android:orientation="vertical"
         android:paddingTop="40dp">
 
