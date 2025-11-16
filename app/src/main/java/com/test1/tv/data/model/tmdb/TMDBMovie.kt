@@ -61,7 +61,9 @@ data class TMDBMovieDetails(
     @SerializedName("credits")
     val credits: TMDBCredits?,
     @SerializedName("release_dates")
-    val releaseDates: TMDBReleaseDatesResponse?
+    val releaseDates: TMDBReleaseDatesResponse?,
+    @SerializedName("belongs_to_collection")
+    val belongsToCollection: TMDBCollection?
 ) {
     fun getPosterUrl(): String? {
         return posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
@@ -114,9 +116,15 @@ data class TMDBCast(
     val name: String,
     @SerializedName("character")
     val character: String?,
+    @SerializedName("profile_path")
+    val profilePath: String?,
     @SerializedName("order")
     val order: Int?
-)
+) {
+    fun getProfileUrl(): String? {
+        return profilePath?.let { "https://image.tmdb.org/t/p/w185$it" }
+    }
+}
 
 data class TMDBCredits(
     @SerializedName("cast")
@@ -142,4 +150,41 @@ data class TMDBReleaseDateInfo(
     val releaseDate: String?,
     @SerializedName("type")
     val type: Int?
+)
+
+data class TMDBCollection(
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("poster_path")
+    val posterPath: String?,
+    @SerializedName("backdrop_path")
+    val backdropPath: String?
+)
+
+data class TMDBCollectionDetails(
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("overview")
+    val overview: String?,
+    @SerializedName("poster_path")
+    val posterPath: String?,
+    @SerializedName("backdrop_path")
+    val backdropPath: String?,
+    @SerializedName("parts")
+    val parts: List<TMDBMovie>?
+)
+
+data class TMDBMovieListResponse(
+    @SerializedName("page")
+    val page: Int,
+    @SerializedName("results")
+    val results: List<TMDBMovie>?,
+    @SerializedName("total_pages")
+    val totalPages: Int?,
+    @SerializedName("total_results")
+    val totalResults: Int?
 )

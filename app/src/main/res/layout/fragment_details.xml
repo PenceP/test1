@@ -413,13 +413,14 @@
                     app:iconTint="@color/action_button_icon" />
             </LinearLayout>
 
-            <!-- Sections (Similar, Collection, etc.) -->
+            <!-- Sections (People, Collection, Similar) -->
             <LinearLayout
                 android:id="@+id/rows_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- People Section -->
                 <LinearLayout
                     android:id="@+id/cast_section"
                     android:layout_width="match_parent"
@@ -432,7 +433,7 @@
                         android:id="@+id/cast_section_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/details_section_cast"
+                        android:text="People"
                         android:textColor="@android:color/white"
                         android:textSize="22sp"
                         android:textStyle="bold" />
@@ -456,6 +457,44 @@
                         tools:visibility="visible" />
                 </LinearLayout>
 
+                <!-- Collection Section -->
+                <LinearLayout
+                    android:id="@+id/collection_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="32dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/collection_section_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        tools:text="The Avengers Collection" />
+
+                    <TextView
+                        android:id="@+id/collection_empty_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/details_section_collection_empty"
+                        android:textColor="#999999"
+                        android:visibility="gone" />
+
+                    <androidx.leanback.widget.HorizontalGridView
+                        android:id="@+id/collection_row"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:layout_marginTop="12dp"
+                        android:clipToPadding="false"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <!-- Similar Section -->
                 <LinearLayout
                     android:id="@+id/similar_section"
                     android:layout_width="match_parent"
@@ -484,42 +523,6 @@
 
                     <androidx.leanback.widget.HorizontalGridView
                         android:id="@+id/similar_row"
-                        android:layout_width="match_parent"
-                        android:layout_height="200dp"
-                        android:layout_marginTop="12dp"
-                        android:clipToPadding="false"
-                        android:visibility="gone"
-                        tools:visibility="visible" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/collection_section"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="32dp"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:id="@+id/collection_section_title"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/details_section_collection"
-                        android:textColor="@android:color/white"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/collection_empty_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="@string/details_section_collection_empty"
-                        android:textColor="#999999"
-                        android:visibility="gone" />
-
-                    <androidx.leanback.widget.HorizontalGridView
-                        android:id="@+id/collection_row"
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
                         android:layout_marginTop="12dp"

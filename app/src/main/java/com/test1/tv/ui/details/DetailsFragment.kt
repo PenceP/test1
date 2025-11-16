@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.RatingBar
 import android.widget.TextView
 import android.widget.Toast
@@ -23,10 +24,23 @@ import android.widget.ImageButton
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.test1.tv.BuildConfig
 import com.test1.tv.DetailsActivity
 import com.test1.tv.Movie
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
+import com.test1.tv.data.model.tmdb.TMDBCast
+import com.test1.tv.data.model.tmdb.TMDBCollection
+import com.test1.tv.data.model.tmdb.TMDBMovie
+import com.test1.tv.data.model.tmdb.TMDBShow
+import com.test1.tv.data.remote.ApiClient
+import com.test1.tv.ui.adapter.PersonAdapter
+import com.test1.tv.ui.adapter.PosterAdapter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.util.Log
 
 class DetailsFragment : Fragment() {
 
@@ -51,6 +65,12 @@ class DetailsFragment : Fragment() {
     private lateinit var buttonWatched: MaterialButton
     private lateinit var buttonCollection: MaterialButton
 
+    private lateinit var castSection: LinearLayout
+    private lateinit var similarSection: LinearLayout
+    private lateinit var collectionSection: LinearLayout
+    private lateinit var castSectionTitle: TextView
+    private lateinit var similarSectionTitle: TextView
+    private lateinit var collectionSectionTitle: TextView
     private lateinit var castRow: HorizontalGridView
     private lateinit var similarRow: HorizontalGridView
     private lateinit var collectionRow: HorizontalGridView
@@ -109,6 +129,12 @@ class DetailsFragment : Fragment() {
         buttonWatched = view.findViewById(R.id.button_watched)
         buttonCollection = view.findViewById(R.id.button_collection)
 
+        castSection = view.findViewById(R.id.cast_section)
+        similarSection = view.findViewById(R.id.similar_section)
+        collectionSection = view.findViewById(R.id.collection_section)
+        castSectionTitle = view.findViewById(R.id.cast_section_title)
+        similarSectionTitle = view.findViewById(R.id.similar_section_title)
+        collectionSectionTitle = view.findViewById(R.id.collection_section_title)
         castRow = view.findViewById(R.id.cast_row)
         similarRow = view.findViewById(R.id.similar_row)
         collectionRow = view.findViewById(R.id.collection_row)
@@ -205,6 +231,266 @@ class DetailsFragment : Fragment() {
 
         ratingBadge.text = item.certification ?: ""
         ratingBadge.visibility = if (item.certification.isNullOrBlank()) View.GONE else View.VISIBLE
+
+        // Show row sections
+        showRowSections()
+    }
+
+    private fun showRowSections() {
+        // Show People section (cast/crew)
+        castSection.visibility = View.VISIBLE
+
+        // Show Similar section
+        similarSection.visibility = View.VISIBLE
+
+        // Hide Collection section for now (will show when collection data is available)
+        collectionSection.visibility = View.GONE
+
+        // Fetch and populate row data
+        contentItem?.let { fetchDetailsData(it) }
+    }
+
+    private fun fetchDetailsData(item: ContentItem) {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                when (item.type) {
+                    ContentItem.ContentType.MOVIE -> fetchMovieDetails(item.tmdbId)
+                    ContentItem.ContentType.TV_SHOW -> fetchShowDetails(item.tmdbId)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching details data", e)
+                showEmptyStates()
+            }
+        }
+    }
+
+    private suspend fun fetchMovieDetails(tmdbId: Int) = withContext(Dispatchers.IO) {
+        try {
+            // Fetch movie details with credits
+            val movieDetails = ApiClient.tmdbApiService.getMovieDetails(
+                movieId = tmdbId,
+                apiKey = BuildConfig.TMDB_API_KEY
+            )
+
+            // Fetch similar movies
+            val similarMovies = ApiClient.tmdbApiService.getSimilarMovies(
+                movieId = tmdbId,
+                apiKey = BuildConfig.TMDB_API_KEY
+            )
+
+            // Fetch collection if exists
+            val collectionMovies = movieDetails.belongsToCollection?.let { collection ->
+                ApiClient.tmdbApiService.getCollectionDetails(
+                    collectionId = collection.id,
+                    apiKey = BuildConfig.TMDB_API_KEY
+                )
+            }
+
+            withContext(Dispatchers.Main) {
+                // Populate People row
+                populateCastRow(movieDetails.credits?.cast)
+
+                // Populate Similar row
+                populateSimilarRow(similarMovies.results)
+
+                // Populate Collection row if exists
+                if (collectionMovies != null && movieDetails.belongsToCollection != null) {
+                    populateCollectionRow(
+                        movieDetails.belongsToCollection.name,
+                        collectionMovies.parts
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching movie details", e)
+            withContext(Dispatchers.Main) {
+                showEmptyStates()
+            }
+        }
+    }
+
+    private suspend fun fetchShowDetails(tmdbId: Int) = withContext(Dispatchers.IO) {
+        try {
+            // Fetch show details with credits
+            val showDetails = ApiClient.tmdbApiService.getShowDetails(
+                showId = tmdbId,
+                apiKey = BuildConfig.TMDB_API_KEY
+            )
+
+            // Fetch similar shows
+            val similarShows = ApiClient.tmdbApiService.getSimilarShows(
+                showId = tmdbId,
+                apiKey = BuildConfig.TMDB_API_KEY
+            )
+
+            withContext(Dispatchers.Main) {
+                // Populate People row
+                populateCastRow(showDetails.credits?.cast)
+
+                // Populate Similar row (convert TMDBShow to ContentItem)
+                val similarItems = similarShows.results?.map { show ->
+                    ContentItem(
+                        id = show.id,
+                        tmdbId = show.id,
+                        title = show.name,
+                        overview = show.overview,
+                        posterUrl = show.getPosterUrl(),
+                        backdropUrl = show.getBackdropUrl(),
+                        logoUrl = null,
+                        year = show.firstAirDate?.take(4),
+                        rating = show.voteAverage,
+                        ratingPercentage = show.voteAverage?.times(10)?.toInt(),
+                        genres = null,
+                        type = ContentItem.ContentType.TV_SHOW,
+                        runtime = null,
+                        cast = null,
+                        certification = null
+                    )
+                }
+                populateSimilarRowWithItems(similarItems)
+
+                // TV shows don't have collections
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching show details", e)
+            withContext(Dispatchers.Main) {
+                showEmptyStates()
+            }
+        }
+    }
+
+    private fun populateCastRow(cast: List<TMDBCast>?) {
+        if (cast.isNullOrEmpty()) {
+            castEmpty.visibility = View.VISIBLE
+            castRow.visibility = View.GONE
+            return
+        }
+
+        val sortedCast = cast.sortedBy { it.order ?: Int.MAX_VALUE }.take(20)
+        val adapter = PersonAdapter(sortedCast)
+
+        castRow.adapter = adapter
+        castRow.setNumRows(1)
+        castRow.setItemSpacing(0)
+        castRow.setHasFixedSize(true)
+        castRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+
+        castEmpty.visibility = View.GONE
+        castRow.visibility = View.VISIBLE
+    }
+
+    private fun populateSimilarRow(similar: List<TMDBMovie>?) {
+        if (similar.isNullOrEmpty()) {
+            similarEmpty.visibility = View.VISIBLE
+            similarRow.visibility = View.GONE
+            return
+        }
+
+        val similarItems = similar.take(20).map { movie ->
+            ContentItem(
+                id = movie.id,
+                tmdbId = movie.id,
+                title = movie.title,
+                overview = movie.overview,
+                posterUrl = movie.getPosterUrl(),
+                backdropUrl = movie.getBackdropUrl(),
+                logoUrl = null,
+                year = movie.releaseDate?.take(4),
+                rating = movie.voteAverage,
+                ratingPercentage = movie.voteAverage?.times(10)?.toInt(),
+                genres = null,
+                type = ContentItem.ContentType.MOVIE,
+                runtime = null,
+                cast = null,
+                certification = null
+            )
+        }
+
+        populateSimilarRowWithItems(similarItems)
+    }
+
+    private fun populateSimilarRowWithItems(similarItems: List<ContentItem>?) {
+        if (similarItems.isNullOrEmpty()) {
+            similarEmpty.visibility = View.VISIBLE
+            similarRow.visibility = View.GONE
+            return
+        }
+
+        val adapter = PosterAdapter(
+            items = similarItems.take(20),
+            onItemClick = { item ->
+                // TODO: Navigate to details of clicked item
+                Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
+            },
+            onItemFocused = { _, _ -> },
+            onNavigateToNavBar = { }
+        )
+
+        similarRow.adapter = adapter
+        similarRow.setNumRows(1)
+        similarRow.setItemSpacing(0)
+        similarRow.setHasFixedSize(true)
+        similarRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+
+        similarEmpty.visibility = View.GONE
+        similarRow.visibility = View.VISIBLE
+    }
+
+    private fun populateCollectionRow(collectionName: String, movies: List<TMDBMovie>?) {
+        if (movies.isNullOrEmpty()) {
+            collectionSection.visibility = View.GONE
+            return
+        }
+
+        collectionSectionTitle.text = collectionName
+
+        val collectionItems = movies.take(20).map { movie ->
+            ContentItem(
+                id = movie.id,
+                tmdbId = movie.id,
+                title = movie.title,
+                overview = movie.overview,
+                posterUrl = movie.getPosterUrl(),
+                backdropUrl = movie.getBackdropUrl(),
+                logoUrl = null,
+                year = movie.releaseDate?.take(4),
+                rating = movie.voteAverage,
+                ratingPercentage = movie.voteAverage?.times(10)?.toInt(),
+                genres = null,
+                type = ContentItem.ContentType.MOVIE,
+                runtime = null,
+                cast = null,
+                certification = null
+            )
+        }
+
+        val adapter = PosterAdapter(
+            items = collectionItems,
+            onItemClick = { item ->
+                // TODO: Navigate to details of clicked item
+                Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
+            },
+            onItemFocused = { _, _ -> },
+            onNavigateToNavBar = { }
+        )
+
+        collectionRow.adapter = adapter
+        collectionRow.setNumRows(1)
+        collectionRow.setItemSpacing(0)
+        collectionRow.setHasFixedSize(true)
+        collectionRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+
+        collectionEmpty.visibility = View.GONE
+        collectionRow.visibility = View.VISIBLE
+        collectionSection.visibility = View.VISIBLE
+    }
+
+    private fun showEmptyStates() {
+        castEmpty.visibility = View.VISIBLE
+        castRow.visibility = View.GONE
+        similarEmpty.visibility = View.VISIBLE
+        similarRow.visibility = View.GONE
+        collectionSection.visibility = View.GONE
     }
 
     private fun showMissingContent() {
@@ -366,6 +652,7 @@ class DetailsFragment : Fragment() {
     }
 
     companion object {
+        private const val TAG = "DetailsFragment"
         private const val ARG_CONTENT_ITEM = "arg_content_item"
         private const val ARG_MOVIE = "arg_movie"
 

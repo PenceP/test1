@@ -111,3 +111,14 @@ data class TMDBContentRating(
     @SerializedName("rating")
     val rating: String?
 )
+
+data class TMDBShowListResponse(
+    @SerializedName("page")
+    val page: Int,
+    @SerializedName("results")
+    val results: List<TMDBShow>?,
+    @SerializedName("total_pages")
+    val totalPages: Int?,
+    @SerializedName("total_results")
+    val totalResults: Int?
+)
