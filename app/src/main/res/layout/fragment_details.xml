@@ -435,7 +435,7 @@
                         android:layout_height="wrap_content"
                         android:text="People"
                         android:textColor="@android:color/white"
-                        android:textSize="22sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -471,7 +471,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@android:color/white"
-                        android:textSize="22sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         tools:text="The Avengers Collection" />
 
@@ -509,7 +509,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/details_section_similar"
                         android:textColor="@android:color/white"
-                        android:textSize="22sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
