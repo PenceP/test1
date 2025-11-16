@@ -275,10 +275,17 @@ class DetailsFragment : Fragment() {
         }
 
         parts.forEach { label ->
-            val chip = Chip(requireContext(), null, com.google.android.material.R.attr.chipStyle).apply {
+            val chip = Chip(requireContext()).apply {
                 text = label
                 isClickable = false
                 isFocusable = false
+                setChipBackgroundColorResource(android.R.color.transparent)
+                chipStrokeWidth = 1f
+                setChipStrokeColorResource(android.R.color.white)
+                chipStrokeColor = android.content.res.ColorStateList.valueOf(0x11FFFFFF)
+                setChipBackgroundColor(android.content.res.ColorStateList.valueOf(0x11FFFFFF))
+                setTextColor(resources.getColor(android.R.color.white, null))
+                textSize = 12f
             }
             genreGroup.addView(chip)
         }
