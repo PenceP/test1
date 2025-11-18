@@ -9,12 +9,38 @@ import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.ui.adapter.ContentRow
 import kotlinx.coroutines.launch
 
+private data class ContentRowState(
+    val category: String,
+    val title: String,
+    val pageSize: Int = 20,
+    val items: MutableList<ContentItem> = mutableListOf(),
+    var currentPage: Int = 0,
+    var hasMore: Boolean = true,
+    var isLoading: Boolean = false,
+    var prefetchingPage: Int? = null
+)
+
+data class RowAppendEvent(
+    val rowIndex: Int,
+    val newItems: List<ContentItem>
+)
+
 class HomeViewModel(
     private val contentRepository: ContentRepository
 ) : ViewModel() {
 
+    private val rowStates = mutableListOf(
+        ContentRowState(ContentRepository.CATEGORY_TRENDING_MOVIES, "Trending Movies"),
+        ContentRowState(ContentRepository.CATEGORY_POPULAR_MOVIES, "Popular Movies"),
+        ContentRowState(ContentRepository.CATEGORY_TRENDING_SHOWS, "Trending Shows"),
+        ContentRowState(ContentRepository.CATEGORY_POPULAR_SHOWS, "Popular Shows")
+    )
+
     private val _contentRows = MutableLiveData<List<ContentRow>>()
     val contentRows: LiveData<List<ContentRow>> = _contentRows
+
+    private val _rowAppendEvents = MutableLiveData<RowAppendEvent>()
+    val rowAppendEvents: LiveData<RowAppendEvent> = _rowAppendEvents
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
@@ -26,62 +52,118 @@ class HomeViewModel(
     val heroContent: LiveData<ContentItem?> = _heroContent
 
     init {
-        loadAllContent()
+        loadInitialRows()
     }
 
-    fun loadAllContent(forceRefresh: Boolean = false) {
+    private fun loadInitialRows(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _isLoading.value = true
-            _error.value = null
+            rowStates.forEachIndexed { index, _ ->
+                loadRowPage(index, page = 1, forceRefresh = forceRefresh)
+            }
+            _isLoading.value = false
+            prefetchNextPages()
+        }
+    }
 
+    fun requestNextPage(rowIndex: Int) {
+        val state = rowStates.getOrNull(rowIndex) ?: return
+        if (state.isLoading || !state.hasMore) return
+
+        viewModelScope.launch {
+            loadRowPage(rowIndex, page = state.currentPage + 1, forceRefresh = false)
+        }
+    }
+
+    private suspend fun loadRowPage(
+        rowIndex: Int,
+        page: Int,
+        forceRefresh: Boolean
+    ) {
+        val state = rowStates.getOrNull(rowIndex) ?: return
+        if (state.isLoading) return
+        if (!forceRefresh && page > 1 && !state.hasMore) return
+
+        state.isLoading = true
+        val result = when (state.category) {
+            ContentRepository.CATEGORY_TRENDING_MOVIES ->
+                contentRepository.getTrendingMoviesPage(page, state.pageSize, forceRefresh)
+            ContentRepository.CATEGORY_POPULAR_MOVIES ->
+                contentRepository.getPopularMoviesPage(page, state.pageSize, forceRefresh)
+            ContentRepository.CATEGORY_TRENDING_SHOWS ->
+                contentRepository.getTrendingShowsPage(page, state.pageSize, forceRefresh)
+            ContentRepository.CATEGORY_POPULAR_SHOWS ->
+                contentRepository.getPopularShowsPage(page, state.pageSize, forceRefresh)
+            else -> Result.success(emptyList())
+        }
+
+        result.onSuccess { items ->
+            applyRowItems(rowIndex, state, page, items)
+        }.onFailure { throwable ->
+            _error.value = "Failed to load ${state.title}: ${throwable.message}"
+        }
+
+        state.isLoading = false
+    }
+
+    private fun applyRowItems(
+        rowIndex: Int,
+        state: ContentRowState,
+        page: Int,
+        items: List<ContentItem>
+    ) {
+        if (page == 1) {
+            state.items.clear()
+        } else {
+            val expectedOffset = (page - 1) * state.pageSize
+            if (state.items.size > expectedOffset) {
+                state.items.subList(expectedOffset, state.items.size).clear()
+            }
+        }
+
+        state.items.addAll(items)
+        state.currentPage = page
+        state.hasMore = items.size >= state.pageSize
+
+        if (page == 1) {
+            publishRows()
+            if (_heroContent.value == null && state.items.isNotEmpty()) {
+                _heroContent.value = state.items.first()
+            }
+        } else if (items.isNotEmpty()) {
+            _rowAppendEvents.value = RowAppendEvent(rowIndex, items.toList())
+        }
+
+        prefetchNextForState(state)
+    }
+
+    private fun publishRows() {
+        _contentRows.value = rowStates.map { ContentRow(it.title, it.items) }
+    }
+
+    private fun prefetchNextPages() {
+        rowStates.forEach { state ->
+            prefetchNextForState(state)
+        }
+    }
+
+    private fun prefetchNextForState(state: ContentRowState) {
+        if (!state.hasMore || state.currentPage == 0) return
+        val nextPage = state.currentPage + 1
+        if (state.prefetchingPage == nextPage) return
+
+        state.prefetchingPage = nextPage
+        viewModelScope.launch {
             try {
-                val rows = mutableListOf<ContentRow>()
-
-                // Fetch trending movies
-                contentRepository.getTrendingMovies(forceRefresh).onSuccess { movies ->
-                    if (movies.isNotEmpty()) {
-                        rows.add(ContentRow("Trending Movies", movies))
-                        // Set first item as hero if not already set
-                        if (_heroContent.value == null) {
-                            _heroContent.value = movies.first()
-                        }
-                    }
-                }.onFailure { e ->
-                    _error.value = "Failed to load trending movies: ${e.message}"
-                }
-
-                // Fetch popular movies
-                contentRepository.getPopularMovies(forceRefresh).onSuccess { movies ->
-                    if (movies.isNotEmpty()) {
-                        rows.add(ContentRow("Popular Movies", movies))
-                    }
-                }.onFailure { e ->
-                    _error.value = "Failed to load popular movies: ${e.message}"
-                }
-
-                // Fetch trending shows
-                contentRepository.getTrendingShows(forceRefresh).onSuccess { shows ->
-                    if (shows.isNotEmpty()) {
-                        rows.add(ContentRow("Trending Shows", shows))
-                    }
-                }.onFailure { e ->
-                    _error.value = "Failed to load trending shows: ${e.message}"
-                }
-
-                // Fetch popular shows
-                contentRepository.getPopularShows(forceRefresh).onSuccess { shows ->
-                    if (shows.isNotEmpty()) {
-                        rows.add(ContentRow("Popular Shows", shows))
-                    }
-                }.onFailure { e ->
-                    _error.value = "Failed to load popular shows: ${e.message}"
-                }
-
-                _contentRows.value = rows
-            } catch (e: Exception) {
-                _error.value = "Failed to load content: ${e.message}"
+                contentRepository.prefetchCategoryPage(
+                    category = state.category,
+                    page = nextPage,
+                    pageSize = state.pageSize
+                )
             } finally {
-                _isLoading.value = false
+                if (state.prefetchingPage == nextPage) {
+                    state.prefetchingPage = null
+                }
             }
         }
     }
@@ -94,8 +176,8 @@ class HomeViewModel(
         viewModelScope.launch {
             try {
                 contentRepository.cleanupCache()
-            } catch (e: Exception) {
-                // Silently fail cache cleanup
+            } catch (_: Exception) {
+                // ignore cleanup errors
             }
         }
     }

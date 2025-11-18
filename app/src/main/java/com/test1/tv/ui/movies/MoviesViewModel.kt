@@ -40,7 +40,7 @@ class MoviesViewModel(
                 // Fetch trending movies
                 contentRepository.getTrendingMovies(forceRefresh).onSuccess { movies ->
                     if (movies.isNotEmpty()) {
-                        rows.add(ContentRow("Trending Movies", movies))
+                        rows.add(ContentRow("Trending Movies", movies.toMutableList()))
                         // Set first item as hero if not already set
                         if (_heroContent.value == null) {
                             _heroContent.value = movies.first()
@@ -53,7 +53,7 @@ class MoviesViewModel(
                 // Fetch popular movies
                 contentRepository.getPopularMovies(forceRefresh).onSuccess { movies ->
                     if (movies.isNotEmpty()) {
-                        rows.add(ContentRow("Popular Movies", movies))
+                        rows.add(ContentRow("Popular Movies", movies.toMutableList()))
                     }
                 }.onFailure { e ->
                     _error.value = "Failed to load popular movies: ${e.message}"

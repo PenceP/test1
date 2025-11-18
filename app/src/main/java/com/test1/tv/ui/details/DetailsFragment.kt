@@ -417,13 +417,14 @@ class DetailsFragment : Fragment() {
         }
 
         val adapter = PosterAdapter(
-            items = similarItems.take(20),
+            initialItems = similarItems.take(20),
             onItemClick = { item ->
                 // TODO: Navigate to details of clicked item
                 Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
             },
             onItemFocused = { _, _ -> },
-            onNavigateToNavBar = { }
+            onNavigateToNavBar = { },
+            onNearEnd = {}
         )
 
         similarRow.adapter = adapter
@@ -465,13 +466,14 @@ class DetailsFragment : Fragment() {
         }
 
         val adapter = PosterAdapter(
-            items = collectionItems,
+            initialItems = collectionItems,
             onItemClick = { item ->
                 // TODO: Navigate to details of clicked item
                 Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
             },
             onItemFocused = { _, _ -> },
-            onNavigateToNavBar = { }
+            onNavigateToNavBar = { },
+            onNearEnd = {}
         )
 
         collectionRow.adapter = adapter
@@ -499,13 +501,13 @@ class DetailsFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        val hasLogo = !logoUrl.isNullOrEmpty()
-        title.visibility = if (hasLogo) View.GONE else View.VISIBLE
-
         logo.visibility = View.GONE
         logo.setImageDrawable(null)
         if (logoUrl.isNullOrEmpty()) {
+            title.visibility = View.VISIBLE
             return
+        } else {
+            title.visibility = View.GONE
         }
 
         Glide.with(this)

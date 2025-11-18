@@ -40,7 +40,7 @@ class TvShowsViewModel(
                 // Fetch trending shows
                 contentRepository.getTrendingShows(forceRefresh).onSuccess { shows ->
                     if (shows.isNotEmpty()) {
-                        rows.add(ContentRow("Trending Shows", shows))
+                        rows.add(ContentRow("Trending Shows", shows.toMutableList()))
                         // Set first item as hero if not already set
                         if (_heroContent.value == null) {
                             _heroContent.value = shows.first()
@@ -53,7 +53,7 @@ class TvShowsViewModel(
                 // Fetch popular shows
                 contentRepository.getPopularShows(forceRefresh).onSuccess { shows ->
                     if (shows.isNotEmpty()) {
-                        rows.add(ContentRow("Popular Shows", shows))
+                        rows.add(ContentRow("Popular Shows", shows.toMutableList()))
                     }
                 }.onFailure { e ->
                     _error.value = "Failed to load popular shows: ${e.message}"

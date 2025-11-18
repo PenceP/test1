@@ -1,5 +1,6 @@
 package com.test1.tv.ui.adapter
 
+import android.util.SparseArray
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,15 +12,19 @@ import com.test1.tv.data.model.ContentItem
 
 data class ContentRow(
     val title: String,
-    val items: List<ContentItem>
+    val items: MutableList<ContentItem>
 )
 
 class ContentRowAdapter(
-    private val rows: List<ContentRow>,
+    initialRows: List<ContentRow>,
     private val onItemClick: (ContentItem) -> Unit,
     private val onItemFocused: (ContentItem, Int, Int) -> Unit, // item, rowIndex, itemIndex
-    private val onNavigateToNavBar: () -> Unit
+    private val onNavigateToNavBar: () -> Unit,
+    private val onRequestMore: (Int) -> Unit
 ) : RecyclerView.Adapter<ContentRowAdapter.RowViewHolder>() {
+
+    private val rows = initialRows.toMutableList()
+    private val rowAdapters = SparseArray<PosterAdapter>()
 
     inner class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val rowTitle: TextView = itemView.findViewById(R.id.row_title)
@@ -28,32 +33,36 @@ class ContentRowAdapter(
         fun bind(row: ContentRow, rowIndex: Int) {
             rowTitle.text = row.title
 
-            // Set up horizontal grid view
-            val adapter = PosterAdapter(
-                items = row.items,
-                onItemClick = onItemClick,
-                onItemFocused = { item, itemIndex ->
-                    onItemFocused(item, rowIndex, itemIndex)
-                },
-                onNavigateToNavBar = onNavigateToNavBar
-            )
+            var adapter = rowAdapters.get(rowIndex)
+            if (adapter == null) {
+                adapter = PosterAdapter(
+                    initialItems = row.items,
+                    onItemClick = onItemClick,
+                    onItemFocused = { item, itemIndex ->
+                        onItemFocused(item, rowIndex, itemIndex)
+                    },
+                    onNavigateToNavBar = onNavigateToNavBar,
+                    onNearEnd = {
+                        onRequestMore(rowIndex)
+                    }
+                )
+                rowAdapters.put(rowIndex, adapter)
+            }
 
-            rowContent.adapter = adapter
-            rowContent.setNumRows(1)
-            rowContent.setItemSpacing(0)
+            if (rowContent.adapter !== adapter) {
+                rowContent.adapter = adapter
+                rowContent.setNumRows(1)
+                rowContent.setItemSpacing(0)
+                rowContent.setHasFixedSize(true)
+                rowContent.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+                rowContent.setWindowAlignment(HorizontalGridView.WINDOW_ALIGN_LOW_EDGE)
+                rowContent.setWindowAlignmentOffset(144)
+                rowContent.setWindowAlignmentOffsetPercent(HorizontalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
+                rowContent.setItemAlignmentOffset(60)
+                rowContent.setItemAlignmentOffsetPercent(HorizontalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
+            }
 
-            // Enable smooth scrolling with fixed focus behavior
-            rowContent.setHasFixedSize(true)
-            rowContent.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
-
-            // Set window alignment to keep focus at a fixed position (left side)
-            rowContent.setWindowAlignment(HorizontalGridView.WINDOW_ALIGN_LOW_EDGE)
-            rowContent.setWindowAlignmentOffset(144) // Position where focus stays (poster width 120 + spacing 12 * 2)
-            rowContent.setWindowAlignmentOffsetPercent(HorizontalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
-
-            // Align items by their center for smooth focus
-            rowContent.setItemAlignmentOffset(60) // Half of poster width (120dp / 2)
-            rowContent.setItemAlignmentOffsetPercent(HorizontalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
+            adapter.replaceAll(row.items)
         }
     }
 
@@ -68,4 +77,16 @@ class ContentRowAdapter(
     }
 
     override fun getItemCount(): Int = rows.size
+
+    fun updateRows(newRows: List<ContentRow>) {
+        rows.clear()
+        rows.addAll(newRows)
+        rowAdapters.clear()
+        notifyDataSetChanged()
+    }
+
+    fun appendItems(rowIndex: Int, newItems: List<ContentItem>) {
+        val stateRow = rows.getOrNull(rowIndex) ?: return
+        rowAdapters.get(rowIndex)?.appendItems(newItems)
+    }
 }

@@ -70,6 +70,9 @@ class HomeFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_home, container, false)
     }
 
+    private var rowsAdapter: ContentRowAdapter? = null
+    private var hasRequestedInitialFocus = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -188,24 +191,40 @@ class HomeFragment : Fragment() {
         viewModel.contentRows.observe(viewLifecycleOwner) { rows ->
             Log.d(TAG, "Content rows updated: ${rows.size} rows")
 
-            val adapter = ContentRowAdapter(
-                rows = rows,
-                onItemClick = { item ->
-                    handleItemClick(item)
-                },
-                onItemFocused = { item, rowIndex, itemIndex ->
-                    handleItemFocused(item, rowIndex, itemIndex)
-                },
-                onNavigateToNavBar = {
-                    focusNavigationBar()
+            if (rowsAdapter == null) {
+                val adapter = ContentRowAdapter(
+                    initialRows = rows,
+                    onItemClick = { item ->
+                        handleItemClick(item)
+                    },
+                    onItemFocused = { item, rowIndex, itemIndex ->
+                        handleItemFocused(item, rowIndex, itemIndex)
+                    },
+                    onNavigateToNavBar = {
+                        focusNavigationBar()
+                    },
+                    onRequestMore = { rowIndex ->
+                        viewModel.requestNextPage(rowIndex)
+                    }
+                )
+
+                rowsAdapter = adapter
+                contentRowsView.adapter = adapter
+
+                contentRowsView.post {
+                    if (!hasRequestedInitialFocus) {
+                        hasRequestedInitialFocus = true
+                        contentRowsView.requestFocus()
+                    }
                 }
-            )
+            } else {
+                rowsAdapter?.updateRows(rows)
+            }
+        }
 
-            contentRowsView.adapter = adapter
-
-            // Request focus on first item after content loads
-            contentRowsView.post {
-                contentRowsView.requestFocus()
+        viewModel.rowAppendEvents.observe(viewLifecycleOwner) { event ->
+            if (event.newItems.isNotEmpty()) {
+                rowsAdapter?.appendItems(event.rowIndex, event.newItems)
             }
         }
 

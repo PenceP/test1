@@ -177,7 +177,7 @@ class TvShowsFragment : Fragment() {
             Log.d(TAG, "Content rows updated: ${rows.size} rows")
 
             val adapter = ContentRowAdapter(
-                rows = rows,
+                initialRows = rows,
                 onItemClick = { item ->
                     handleItemClick(item)
                 },
@@ -186,7 +186,8 @@ class TvShowsFragment : Fragment() {
                 },
                 onNavigateToNavBar = {
                     focusNavigationBar()
-                }
+                },
+                onRequestMore = {}
             )
 
             contentRowsView.adapter = adapter

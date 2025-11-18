@@ -16,14 +16,34 @@ interface CachedContentDao {
     @Query("SELECT * FROM cached_content WHERE id = :id LIMIT 1")
     suspend fun getContentById(id: String): CachedContent?
 
-    @Query("SELECT cachedAt FROM cached_content WHERE category = :category LIMIT 1")
+    @Query("SELECT MIN(cachedAt) FROM cached_content WHERE category = :category")
     suspend fun getCategoryTimestamp(category: String): Long?
+
+    @Query(
+        "SELECT * FROM cached_content WHERE category = :category " +
+            "ORDER BY position ASC LIMIT :limit OFFSET :offset"
+    )
+    suspend fun getContentPage(
+        category: String,
+        limit: Int,
+        offset: Int
+    ): List<CachedContent>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContent(content: List<CachedContent>)
 
     @Query("DELETE FROM cached_content WHERE category = :category")
     suspend fun deleteCategoryContent(category: String)
+
+    @Query(
+        "DELETE FROM cached_content WHERE category = :category " +
+            "AND position BETWEEN :start AND :end"
+    )
+    suspend fun deleteRange(
+        category: String,
+        start: Int,
+        end: Int
+    )
 
     @Query("DELETE FROM cached_content WHERE cachedAt < :timestamp")
     suspend fun deleteOldContent(timestamp: Long)

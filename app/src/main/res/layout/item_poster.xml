@@ -17,6 +17,23 @@
         android:scaleType="centerCrop"
         tools:src="@tools:sample/backgrounds/scenic" />
 
+    <TextView
+        android:id="@+id/poster_title_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/poster_title_bg"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:paddingStart="8dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="6dp"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:visibility="visible"
+        tools:text="Movie Title" />
+
     <!-- Focus Overlay -->
     <View
         android:id="@+id/focus_overlay"

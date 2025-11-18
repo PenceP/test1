@@ -22,112 +22,147 @@ class ContentRepository(
         const val CATEGORY_POPULAR_MOVIES = "POPULAR_MOVIES"
         const val CATEGORY_TRENDING_SHOWS = "TRENDING_SHOWS"
         const val CATEGORY_POPULAR_SHOWS = "POPULAR_SHOWS"
+        private const val DEFAULT_PAGE_SIZE = 20
     }
 
-    /**
-     * Get trending movies with caching
-     */
     suspend fun getTrendingMovies(forceRefresh: Boolean = false): Result<List<ContentItem>> {
-        return getContentWithCache(
-            category = CATEGORY_TRENDING_MOVIES,
-            forceRefresh = forceRefresh
-        ) {
-            fetchTrendingMoviesFromApis()
-        }
+        return getTrendingMoviesPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
     }
 
-    /**
-     * Get popular movies with caching
-     */
     suspend fun getPopularMovies(forceRefresh: Boolean = false): Result<List<ContentItem>> {
-        return getContentWithCache(
-            category = CATEGORY_POPULAR_MOVIES,
-            forceRefresh = forceRefresh
-        ) {
-            fetchPopularMoviesFromApis()
-        }
+        return getPopularMoviesPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
     }
 
-    /**
-     * Get trending shows with caching
-     */
     suspend fun getTrendingShows(forceRefresh: Boolean = false): Result<List<ContentItem>> {
-        return getContentWithCache(
-            category = CATEGORY_TRENDING_SHOWS,
-            forceRefresh = forceRefresh
-        ) {
-            fetchTrendingShowsFromApis()
-        }
+        return getTrendingShowsPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
     }
 
-    /**
-     * Get popular shows with caching
-     */
     suspend fun getPopularShows(forceRefresh: Boolean = false): Result<List<ContentItem>> {
-        return getContentWithCache(
-            category = CATEGORY_POPULAR_SHOWS,
+        return getPopularShowsPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
+    }
+
+    suspend fun getTrendingMoviesPage(
+        page: Int,
+        pageSize: Int,
+        forceRefresh: Boolean = false
+    ): Result<List<ContentItem>> {
+        return getPagedContent(
+            category = CATEGORY_TRENDING_MOVIES,
+            page = page,
+            pageSize = pageSize,
             forceRefresh = forceRefresh
         ) {
-            fetchPopularShowsFromApis()
+            fetchTrendingMoviesFromApis(page, pageSize)
         }
     }
 
-    /**
-     * Generic method to get content with caching logic
-     */
-    private suspend fun getContentWithCache(
+    suspend fun getPopularMoviesPage(
+        page: Int,
+        pageSize: Int,
+        forceRefresh: Boolean = false
+    ): Result<List<ContentItem>> {
+        return getPagedContent(
+            category = CATEGORY_POPULAR_MOVIES,
+            page = page,
+            pageSize = pageSize,
+            forceRefresh = forceRefresh
+        ) {
+            fetchPopularMoviesFromApis(page, pageSize)
+        }
+    }
+
+    suspend fun getTrendingShowsPage(
+        page: Int,
+        pageSize: Int,
+        forceRefresh: Boolean = false
+    ): Result<List<ContentItem>> {
+        return getPagedContent(
+            category = CATEGORY_TRENDING_SHOWS,
+            page = page,
+            pageSize = pageSize,
+            forceRefresh = forceRefresh
+        ) {
+            fetchTrendingShowsFromApis(page, pageSize)
+        }
+    }
+
+    suspend fun getPopularShowsPage(
+        page: Int,
+        pageSize: Int,
+        forceRefresh: Boolean = false
+    ): Result<List<ContentItem>> {
+        return getPagedContent(
+            category = CATEGORY_POPULAR_SHOWS,
+            page = page,
+            pageSize = pageSize,
+            forceRefresh = forceRefresh
+        ) {
+            fetchPopularShowsFromApis(page, pageSize)
+        }
+    }
+
+    suspend fun prefetchCategoryPage(category: String, page: Int, pageSize: Int) {
+        when (category) {
+            CATEGORY_TRENDING_MOVIES -> getTrendingMoviesPage(page, pageSize, forceRefresh = false)
+            CATEGORY_POPULAR_MOVIES -> getPopularMoviesPage(page, pageSize, forceRefresh = false)
+            CATEGORY_TRENDING_SHOWS -> getTrendingShowsPage(page, pageSize, forceRefresh = false)
+            CATEGORY_POPULAR_SHOWS -> getPopularShowsPage(page, pageSize, forceRefresh = false)
+        }
+    }
+
+    private suspend fun getPagedContent(
         category: String,
+        page: Int,
+        pageSize: Int,
         forceRefresh: Boolean,
         fetcher: suspend () -> List<ContentItem>
     ): Result<List<ContentItem>> = withContext(Dispatchers.IO) {
         try {
-            // Check if cache is fresh and return cached data if available
-            if (!forceRefresh && cacheRepository.isCacheFresh(category)) {
-                val cachedData = cacheRepository.getCachedContent(category)
-                if (cachedData != null && cachedData.isNotEmpty()) {
-                    Log.d(TAG, "Returning cached data for $category (${cachedData.size} items)")
-                    return@withContext Result.success(cachedData)
-                }
+            val cachedPage = cacheRepository.getCachedPage(category, page, pageSize)
+            val cacheFresh = cacheRepository.isCacheFresh(category)
+            val shouldFetch = forceRefresh || !cacheFresh || cachedPage.size < pageSize
+
+            if (!shouldFetch) {
+                Log.d(TAG, "Returning cached page $page for $category (${cachedPage.size} items)")
+                return@withContext Result.success(cachedPage)
             }
 
-            // Fetch fresh data from APIs
-            Log.d(TAG, "Fetching fresh data for $category")
+            Log.d(TAG, "Fetching page $page for $category")
             val freshData = fetcher()
-
-            // Cache the fresh data
             if (freshData.isNotEmpty()) {
-                cacheRepository.cacheContent(category, freshData)
-                Log.d(TAG, "Cached ${freshData.size} items for $category")
+                cacheRepository.cacheContentPage(category, freshData, page, pageSize)
+                Log.d(TAG, "Cached page $page for $category (${freshData.size} items)")
+                Result.success(freshData)
+            } else if (cachedPage.isNotEmpty()) {
+                Log.d(
+                    TAG,
+                    "Using cached page $page for $category because API returned empty list"
+                )
+                Result.success(cachedPage)
+            } else {
+                Result.success(emptyList())
             }
-
-            Result.success(freshData)
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching $category", e)
-
-            // Try to return stale cache if network fails
-            try {
-                val staleCache = cacheRepository.getCachedContent(category)
-                if (staleCache != null && staleCache.isNotEmpty()) {
-                    Log.d(TAG, "Returning stale cache for $category due to error")
-                    return@withContext Result.success(staleCache)
-                }
-            } catch (cacheError: Exception) {
-                Log.e(TAG, "Error reading cache for $category", cacheError)
+            Log.e(TAG, "Error fetching $category page $page", e)
+            val fallback = cacheRepository.getCachedPage(category, page, pageSize)
+            if (fallback.isNotEmpty()) {
+                Result.success(fallback)
+            } else {
+                Result.failure(e)
             }
-
-            Result.failure(e)
         }
     }
 
-    /**
-     * Fetch trending movies from Trakt and enrich with TMDB data
-     */
-    private suspend fun fetchTrendingMoviesFromApis(): List<ContentItem> = withContext(Dispatchers.IO) {
+    private suspend fun fetchTrendingMoviesFromApis(
+        page: Int,
+        pageSize: Int
+    ): List<ContentItem> = withContext(Dispatchers.IO) {
         val traktMovies = traktApiService.getTrendingMovies(
-            clientId = BuildConfig.TRAKT_CLIENT_ID
+            clientId = BuildConfig.TRAKT_CLIENT_ID,
+            limit = pageSize,
+            page = page
         )
 
-        // Fetch TMDB details for each movie in parallel
         traktMovies.mapNotNull { traktMovie ->
             val tmdbId = traktMovie.movie.ids.tmdb ?: return@mapNotNull null
 
@@ -163,15 +198,16 @@ class ContentRepository(
         }.awaitAll().filterNotNull()
     }
 
-    /**
-     * Fetch popular movies from Trakt and enrich with TMDB data
-     */
-    private suspend fun fetchPopularMoviesFromApis(): List<ContentItem> = withContext(Dispatchers.IO) {
+    private suspend fun fetchPopularMoviesFromApis(
+        page: Int,
+        pageSize: Int
+    ): List<ContentItem> = withContext(Dispatchers.IO) {
         val traktMovies = traktApiService.getPopularMovies(
-            clientId = BuildConfig.TRAKT_CLIENT_ID
+            clientId = BuildConfig.TRAKT_CLIENT_ID,
+            limit = pageSize,
+            page = page
         )
 
-        // Popular endpoint returns TraktMovie directly (no wrapper)
         traktMovies.mapNotNull { traktMovie ->
             val tmdbId = traktMovie.ids.tmdb ?: return@mapNotNull null
 
@@ -207,12 +243,14 @@ class ContentRepository(
         }.awaitAll().filterNotNull()
     }
 
-    /**
-     * Fetch trending shows from Trakt and enrich with TMDB data
-     */
-    private suspend fun fetchTrendingShowsFromApis(): List<ContentItem> = withContext(Dispatchers.IO) {
+    private suspend fun fetchTrendingShowsFromApis(
+        page: Int,
+        pageSize: Int
+    ): List<ContentItem> = withContext(Dispatchers.IO) {
         val traktShows = traktApiService.getTrendingShows(
-            clientId = BuildConfig.TRAKT_CLIENT_ID
+            clientId = BuildConfig.TRAKT_CLIENT_ID,
+            limit = pageSize,
+            page = page
         )
 
         traktShows.mapNotNull { traktShow ->
@@ -250,15 +288,16 @@ class ContentRepository(
         }.awaitAll().filterNotNull()
     }
 
-    /**
-     * Fetch popular shows from Trakt and enrich with TMDB data
-     */
-    private suspend fun fetchPopularShowsFromApis(): List<ContentItem> = withContext(Dispatchers.IO) {
+    private suspend fun fetchPopularShowsFromApis(
+        page: Int,
+        pageSize: Int
+    ): List<ContentItem> = withContext(Dispatchers.IO) {
         val traktShows = traktApiService.getPopularShows(
-            clientId = BuildConfig.TRAKT_CLIENT_ID
+            clientId = BuildConfig.TRAKT_CLIENT_ID,
+            limit = pageSize,
+            page = page
         )
 
-        // Popular endpoint returns TraktShow directly (no wrapper)
         traktShows.mapNotNull { traktShow ->
             val tmdbId = traktShow.ids.tmdb ?: return@mapNotNull null
 
@@ -294,9 +333,6 @@ class ContentRepository(
         }.awaitAll().filterNotNull()
     }
 
-    /**
-     * Clean up old cache
-     */
     suspend fun cleanupCache() {
         cacheRepository.cleanupOldCache()
     }

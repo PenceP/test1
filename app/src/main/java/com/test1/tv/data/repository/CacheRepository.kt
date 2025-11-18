@@ -10,11 +10,9 @@ import java.util.concurrent.TimeUnit
 class CacheRepository(private val cachedContentDao: CachedContentDao) {
 
     companion object {
-        // Cache TTL for different categories (in milliseconds)
-        private val TRENDING_TTL = TimeUnit.HOURS.toMillis(6) // 6 hours for trending
-        private val POPULAR_TTL = TimeUnit.HOURS.toMillis(24) // 24 hours for popular
-        private val DETAILS_TTL = TimeUnit.DAYS.toMillis(7) // 7 days for details
-        private val MAX_CACHE_AGE = TimeUnit.DAYS.toMillis(30) // Clean up after 30 days
+        private val LIST_TTL = TimeUnit.HOURS.toMillis(24)
+        private val DETAILS_TTL = TimeUnit.DAYS.toMillis(7)
+        private val MAX_CACHE_AGE = TimeUnit.DAYS.toMillis(30)
     }
 
     /**
@@ -28,29 +26,6 @@ class CacheRepository(private val cachedContentDao: CachedContentDao) {
         val ttl = getTTLForCategory(category)
 
         age < ttl
-    }
-
-    /**
-     * Get cached content for a category
-     */
-    suspend fun getCachedContent(category: String): List<ContentItem>? = withContext(Dispatchers.IO) {
-        val cached = cachedContentDao.getContentByCategory(category)
-        if (cached.isEmpty()) return@withContext null
-
-        cached.map { it.toContentItem() }
-    }
-
-    /**
-     * Cache content for a category
-     */
-    suspend fun cacheContent(
-        category: String,
-        content: List<ContentItem>
-    ) = withContext(Dispatchers.IO) {
-        val cachedEntities = content.mapIndexed { index, item ->
-            CachedContent.fromContentItem(item, category, index)
-        }
-        cachedContentDao.replaceCategoryContent(category, cachedEntities)
     }
 
     /**
@@ -73,8 +48,8 @@ class CacheRepository(private val cachedContentDao: CachedContentDao) {
      */
     private fun getTTLForCategory(category: String): Long {
         return when {
-            category.startsWith("TRENDING") -> TRENDING_TTL
-            category.startsWith("POPULAR") -> POPULAR_TTL
+            category.startsWith("TRENDING") -> LIST_TTL
+            category.startsWith("POPULAR") -> LIST_TTL
             else -> DETAILS_TTL
         }
     }
@@ -85,5 +60,53 @@ class CacheRepository(private val cachedContentDao: CachedContentDao) {
     suspend fun getCacheAge(category: String): Long? = withContext(Dispatchers.IO) {
         val timestamp = cachedContentDao.getCategoryTimestamp(category)
         timestamp?.let { System.currentTimeMillis() - it }
+    }
+
+    suspend fun getCachedContent(category: String): List<ContentItem>? = withContext(Dispatchers.IO) {
+        val cached = cachedContentDao.getContentByCategory(category)
+        if (cached.isEmpty()) return@withContext null
+
+        cached.map { it.toContentItem() }
+    }
+
+    suspend fun getCachedPage(
+        category: String,
+        page: Int,
+        pageSize: Int
+    ): List<ContentItem> = withContext(Dispatchers.IO) {
+        val offset = (page - 1) * pageSize
+        cachedContentDao.getContentPage(category, pageSize, offset).map { it.toContentItem() }
+    }
+
+    suspend fun cacheContentPage(
+        category: String,
+        content: List<ContentItem>,
+        page: Int,
+        pageSize: Int
+    ) = withContext(Dispatchers.IO) {
+        if (content.isEmpty()) return@withContext
+
+        val start = (page - 1) * pageSize
+        val end = start + content.size - 1
+        cachedContentDao.deleteRange(category, start, end)
+
+        val cachedEntities = content.mapIndexed { index, item ->
+            CachedContent.fromContentItem(
+                item = item,
+                category = category,
+                position = start + index
+            )
+        }
+        cachedContentDao.insertContent(cachedEntities)
+    }
+
+    suspend fun cacheContent(
+        category: String,
+        content: List<ContentItem>
+    ) = withContext(Dispatchers.IO) {
+        val cachedEntities = content.mapIndexed { index, item ->
+            CachedContent.fromContentItem(item, category, index)
+        }
+        cachedContentDao.replaceCategoryContent(category, cachedEntities)
     }
 }
