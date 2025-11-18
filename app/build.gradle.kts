@@ -85,6 +85,9 @@ dependencies {
     implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.runtime)
 
+    // WorkManager
+    implementation(libs.work.runtime)
+
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
