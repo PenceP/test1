@@ -1,15 +1,15 @@
 package com.test1.tv.ui.home
 
-import android.graphics.drawable.Drawable
 import android.content.Intent
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.RatingBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -28,6 +28,7 @@ import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.ui.adapter.ContentRowAdapter
+import java.util.Locale
 
 class HomeFragment : Fragment() {
 
@@ -39,13 +40,21 @@ class HomeFragment : Fragment() {
     private lateinit var heroBackdrop: ImageView
     private lateinit var heroLogo: ImageView
     private lateinit var heroTitle: TextView
-    private lateinit var heroRatingBar: RatingBar
     private lateinit var heroYear: TextView
     private lateinit var heroRuntime: TextView
     private lateinit var heroContentRating: TextView
-    private lateinit var heroGenreContainer: android.widget.LinearLayout
+    private lateinit var heroGenreContainer: LinearLayout
     private lateinit var heroOverview: TextView
     private lateinit var heroCast: TextView
+    private lateinit var heroRatingContainer: LinearLayout
+    private lateinit var heroRatingImdb: View
+    private lateinit var heroRatingImdbValue: TextView
+    private lateinit var heroRatingRotten: View
+    private lateinit var heroRatingRottenValue: TextView
+    private lateinit var heroRatingTmdb: View
+    private lateinit var heroRatingTmdbValue: TextView
+    private lateinit var heroRatingTrakt: View
+    private lateinit var heroRatingTraktValue: TextView
     private lateinit var homeContentContainer: View
     private lateinit var comingSoonContainer: View
     private lateinit var comingSoonText: TextView
@@ -92,13 +101,21 @@ class HomeFragment : Fragment() {
         heroBackdrop = view.findViewById(R.id.hero_backdrop)
         heroLogo = view.findViewById(R.id.hero_logo)
         heroTitle = view.findViewById(R.id.hero_title)
-        heroRatingBar = view.findViewById(R.id.hero_rating_bar)
         heroYear = view.findViewById(R.id.hero_year)
         heroRuntime = view.findViewById(R.id.hero_runtime)
         heroContentRating = view.findViewById(R.id.hero_content_rating)
         heroGenreContainer = view.findViewById(R.id.hero_genre_container)
         heroOverview = view.findViewById(R.id.hero_overview)
         heroCast = view.findViewById(R.id.hero_cast)
+        heroRatingContainer = view.findViewById(R.id.hero_rating_container)
+        heroRatingImdb = view.findViewById(R.id.hero_rating_imdb)
+        heroRatingImdbValue = view.findViewById(R.id.hero_rating_imdb_value)
+        heroRatingRotten = view.findViewById(R.id.hero_rating_rotten)
+        heroRatingRottenValue = view.findViewById(R.id.hero_rating_rotten_value)
+        heroRatingTmdb = view.findViewById(R.id.hero_rating_tmdb)
+        heroRatingTmdbValue = view.findViewById(R.id.hero_rating_tmdb_value)
+        heroRatingTrakt = view.findViewById(R.id.hero_rating_trakt)
+        heroRatingTraktValue = view.findViewById(R.id.hero_rating_trakt_value)
         homeContentContainer = view.findViewById(R.id.home_content_container)
         comingSoonContainer = view.findViewById(R.id.coming_soon_container)
         comingSoonText = view.findViewById(R.id.coming_soon_text)
@@ -118,6 +135,7 @@ class HomeFragment : Fragment() {
         val contentRepository = ContentRepository(
             traktApiService = ApiClient.traktApiService,
             tmdbApiService = ApiClient.tmdbApiService,
+            omdbApiService = ApiClient.omdbApiService,
             cacheRepository = cacheRepository
         )
 
@@ -273,7 +291,7 @@ class HomeFragment : Fragment() {
             heroCast.visibility = View.GONE
         }
 
-        updateHeroRating(item.ratingPercentage)
+        updateHeroRatings(item)
 
         // Update certification
         item.certification?.let {
@@ -354,16 +372,53 @@ class HomeFragment : Fragment() {
             })
     }
 
-    private fun updateHeroRating(percentage: Int?) {
-        if (percentage == null) {
-            heroRatingBar.visibility = View.GONE
-            heroRatingBar.rating = 0f
-            return
-        }
+    private fun updateHeroRatings(item: ContentItem) {
+        val hasImdb = bindRatingBadge(
+            heroRatingImdb,
+            heroRatingImdbValue,
+            formatImdbRating(item.imdbRating)
+        )
+        val hasRotten = bindRatingBadge(
+            heroRatingRotten,
+            heroRatingRottenValue,
+            item.rottenTomatoesRating?.takeIf { it.isNotBlank() && it != "N/A" }
+        )
+        val hasTmdb = bindRatingBadge(
+            heroRatingTmdb,
+            heroRatingTmdbValue,
+            formatScore(item.rating)
+        )
+        val hasTrakt = bindRatingBadge(
+            heroRatingTrakt,
+            heroRatingTraktValue,
+            formatScore(item.traktRating)
+        )
 
-        heroRatingBar.visibility = View.VISIBLE
-        val clamped = percentage.coerceIn(0, 100)
-        heroRatingBar.rating = clamped / 20f
+        heroRatingContainer.visibility =
+            if (hasImdb || hasRotten || hasTmdb || hasTrakt) View.VISIBLE else View.GONE
+    }
+
+    private fun bindRatingBadge(container: View, valueView: TextView, value: String?): Boolean {
+        return if (!value.isNullOrBlank()) {
+            valueView.text = value
+            container.visibility = View.VISIBLE
+            true
+        } else {
+            container.visibility = View.GONE
+            false
+        }
+    }
+
+    private fun formatScore(value: Double?): String? {
+        value ?: return null
+        if (value <= 0.0) return null
+        return String.format(Locale.US, "%.1f", value)
+    }
+
+    private fun formatImdbRating(raw: String?): String? {
+        if (raw.isNullOrBlank() || raw == "N/A") return null
+        val parts = raw.split("/")
+        return parts.firstOrNull()?.trim().takeUnless { it.isNullOrBlank() } ?: raw
     }
 
     private fun formatRuntimeText(runtime: String?): String? {

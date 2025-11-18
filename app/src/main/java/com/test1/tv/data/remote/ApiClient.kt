@@ -1,6 +1,7 @@
 package com.test1.tv.data.remote
 
 import com.test1.tv.BuildConfig
+import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
 import okhttp3.OkHttpClient
@@ -13,6 +14,7 @@ object ApiClient {
 
     private const val TRAKT_BASE_URL = "https://api.trakt.tv/"
     private const val TMDB_BASE_URL = "https://api.themoviedb.org/3/"
+    private const val OMDB_BASE_URL = "https://www.omdbapi.com/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = if (BuildConfig.DEBUG) {
@@ -41,11 +43,21 @@ object ApiClient {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
+    private val omdbRetrofit = Retrofit.Builder()
+        .baseUrl(OMDB_BASE_URL)
+        .client(okHttpClient)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
     val traktApiService: TraktApiService by lazy {
         traktRetrofit.create(TraktApiService::class.java)
     }
 
     val tmdbApiService: TMDBApiService by lazy {
         tmdbRetrofit.create(TMDBApiService::class.java)
+    }
+
+    val omdbApiService: OMDbApiService by lazy {
+        omdbRetrofit.create(OMDbApiService::class.java)
     }
 }

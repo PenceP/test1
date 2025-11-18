@@ -3,6 +3,7 @@ package com.test1.tv.data.repository
 import android.util.Log
 import com.test1.tv.BuildConfig
 import com.test1.tv.data.model.ContentItem
+import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,7 @@ import kotlinx.coroutines.withContext
 class ContentRepository(
     private val traktApiService: TraktApiService,
     private val tmdbApiService: TMDBApiService,
+    private val omdbApiService: com.test1.tv.data.remote.api.OMDbApiService,
     private val cacheRepository: CacheRepository
 ) {
 
@@ -172,6 +174,7 @@ class ContentRepository(
                         movieId = tmdbId,
                         apiKey = BuildConfig.TMDB_API_KEY
                     )
+                    val omdbRatings = fetchOmdbRatings(traktMovie.movie.ids.imdb)
 
                     ContentItem(
                         id = tmdbId,
@@ -188,7 +191,10 @@ class ContentRepository(
                         type = ContentItem.ContentType.MOVIE,
                         runtime = formatRuntime(tmdbDetails.runtime),
                         cast = tmdbDetails.getCastNames(),
-                        certification = tmdbDetails.getCertification()
+                        certification = tmdbDetails.getCertification(),
+                        imdbRating = omdbRatings?.imdb,
+                        rottenTomatoesRating = omdbRatings?.rottenTomatoes,
+                        traktRating = traktMovie.movie.rating
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for movie $tmdbId", e)
@@ -217,6 +223,7 @@ class ContentRepository(
                         movieId = tmdbId,
                         apiKey = BuildConfig.TMDB_API_KEY
                     )
+                    val omdbRatings = fetchOmdbRatings(traktMovie.ids.imdb)
 
                     ContentItem(
                         id = tmdbId,
@@ -233,7 +240,10 @@ class ContentRepository(
                         type = ContentItem.ContentType.MOVIE,
                         runtime = formatRuntime(tmdbDetails.runtime),
                         cast = tmdbDetails.getCastNames(),
-                        certification = tmdbDetails.getCertification()
+                        certification = tmdbDetails.getCertification(),
+                        imdbRating = omdbRatings?.imdb,
+                        rottenTomatoesRating = omdbRatings?.rottenTomatoes,
+                        traktRating = traktMovie.rating
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for movie $tmdbId", e)
@@ -262,6 +272,7 @@ class ContentRepository(
                         showId = tmdbId,
                         apiKey = BuildConfig.TMDB_API_KEY
                     )
+                    val omdbRatings = fetchOmdbRatings(traktShow.show.ids.imdb)
 
                     ContentItem(
                         id = tmdbId,
@@ -278,7 +289,10 @@ class ContentRepository(
                         type = ContentItem.ContentType.TV_SHOW,
                         runtime = formatRuntime(tmdbDetails.episodeRunTime?.firstOrNull()),
                         cast = tmdbDetails.getCastNames(),
-                        certification = tmdbDetails.getCertification()
+                        certification = tmdbDetails.getCertification(),
+                        imdbRating = omdbRatings?.imdb,
+                        rottenTomatoesRating = omdbRatings?.rottenTomatoes,
+                        traktRating = traktShow.show.rating
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for show $tmdbId", e)
@@ -307,6 +321,7 @@ class ContentRepository(
                         showId = tmdbId,
                         apiKey = BuildConfig.TMDB_API_KEY
                     )
+                    val omdbRatings = fetchOmdbRatings(traktShow.ids.imdb)
 
                     ContentItem(
                         id = tmdbId,
@@ -323,7 +338,10 @@ class ContentRepository(
                         type = ContentItem.ContentType.TV_SHOW,
                         runtime = formatRuntime(tmdbDetails.episodeRunTime?.firstOrNull()),
                         cast = tmdbDetails.getCastNames(),
-                        certification = tmdbDetails.getCertification()
+                        certification = tmdbDetails.getCertification(),
+                        imdbRating = omdbRatings?.imdb,
+                        rottenTomatoesRating = omdbRatings?.rottenTomatoes,
+                        traktRating = traktShow.rating
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for show $tmdbId", e)
@@ -348,4 +366,32 @@ class ContentRepository(
             "${minutes}m"
         }
     }
+
+    private suspend fun fetchOmdbRatings(imdbId: String?): OmdbRatings? {
+        if (imdbId.isNullOrBlank()) return null
+        return try {
+            val response = omdbApiService.getTitleDetails(
+                imdbId = imdbId,
+                apiKey = BuildConfig.OMDB_API_KEY
+            )
+            if (response.response.equals("False", true)) {
+                null
+            } else {
+                val imdb = response.imdbRating?.takeIf { it != "N/A" }
+                val rotten = response.ratings
+                    ?.firstOrNull { it.source.equals("Rotten Tomatoes", ignoreCase = true) }
+                    ?.value
+                    ?.takeIf { it != "N/A" }
+                OmdbRatings(imdb = imdb, rottenTomatoes = rotten)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching OMDb ratings for $imdbId", e)
+            null
+        }
+    }
 }
+
+data class OmdbRatings(
+    val imdb: String?,
+    val rottenTomatoes: String?
+)

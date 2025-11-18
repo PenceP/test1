@@ -106,6 +106,7 @@ class TvShowsFragment : Fragment() {
         val contentRepository = ContentRepository(
             traktApiService = ApiClient.traktApiService,
             tmdbApiService = ApiClient.tmdbApiService,
+            omdbApiService = ApiClient.omdbApiService,
             cacheRepository = cacheRepository
         )
 

@@ -24,3 +24,18 @@
 
 ## Database & Persistence
 - Ensure pagination results, row configs, and metadata are cached efficiently. Hitting the network should only happen when the DB lacks the requested slice or when the 24h TTL has expired.
+
+
+## Modern polish ideas
+
+1. Glassmorphism hero card – wrap the title/metadata stack in a rounded rectangle with blurred backdrop + 60% opacity. It keeps text readable over
+    busy art while feeling very “future Netflix.”
+2. Dynamic accent color – sample the hero backdrop’s dominant color and apply it to the rating-value text, focus ring, and CTA buttons for cohesive
+    branding that changes with each show.
+3. Hero controls bar – add slim Play / Watchlist buttons under the rating logos with icon+label chips (think Netflix’s “Play / More Info”), giving the
+    user quick actions before they leave the hero.
+4. Poster rail depth – apply a subtle Z-translation + drop shadow to the focused poster and tint unfocused ones; combined with a parallax scroll on
+    the backdrop it sells the premium feel.
+5. Sidebar glow states – show which section is active by animating a thin neon strip or soft glow behind the focused navigation icon, rather than just
+    tint changes; it keeps the navigation minimal but modern.
+

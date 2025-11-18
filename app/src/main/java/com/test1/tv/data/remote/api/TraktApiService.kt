@@ -16,7 +16,8 @@ interface TraktApiService {
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String,
         @Query("limit") limit: Int = 40,
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("extended") extended: String = "full"
     ): List<TraktTrendingMovie>
 
     @GET("movies/popular")
@@ -25,7 +26,8 @@ interface TraktApiService {
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String,
         @Query("limit") limit: Int = 40,
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("extended") extended: String = "full"
     ): List<TraktMovie>
 
     @GET("shows/trending")
@@ -34,7 +36,8 @@ interface TraktApiService {
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String,
         @Query("limit") limit: Int = 40,
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("extended") extended: String = "full"
     ): List<TraktTrendingShow>
 
     @GET("shows/popular")
@@ -43,6 +46,7 @@ interface TraktApiService {
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String,
         @Query("limit") limit: Int = 40,
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1,
+        @Query("extended") extended: String = "full"
     ): List<TraktShow>
 }

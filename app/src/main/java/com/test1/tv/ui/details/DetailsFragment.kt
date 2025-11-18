@@ -9,7 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RatingBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.TooltipCompat
@@ -41,6 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Log
+import java.util.Locale
 
 class DetailsFragment : Fragment() {
 
@@ -49,12 +49,20 @@ class DetailsFragment : Fragment() {
     private lateinit var backdrop: ImageView
     private lateinit var logo: ImageView
     private lateinit var title: TextView
-    private lateinit var ratingBar: RatingBar
     private lateinit var year: TextView
     private lateinit var ratingBadge: TextView
     private lateinit var runtime: TextView
     private lateinit var overview: TextView
     private lateinit var castSummary: TextView
+    private lateinit var ratingContainer: LinearLayout
+    private lateinit var ratingImdb: View
+    private lateinit var ratingImdbValue: TextView
+    private lateinit var ratingRotten: View
+    private lateinit var ratingRottenValue: TextView
+    private lateinit var ratingTmdb: View
+    private lateinit var ratingTmdbValue: TextView
+    private lateinit var ratingTrakt: View
+    private lateinit var ratingTraktValue: TextView
     private lateinit var genreGroup: ChipGroup
 
     private lateinit var buttonThumbsUp: ImageButton
@@ -113,12 +121,20 @@ class DetailsFragment : Fragment() {
         backdrop = view.findViewById(R.id.details_backdrop)
         logo = view.findViewById(R.id.details_logo)
         title = view.findViewById(R.id.details_title)
-        ratingBar = view.findViewById(R.id.details_rating_bar)
         year = view.findViewById(R.id.details_year)
         ratingBadge = view.findViewById(R.id.details_rating_label)
         runtime = view.findViewById(R.id.details_runtime)
         overview = view.findViewById(R.id.details_overview)
         castSummary = view.findViewById(R.id.details_cast_summary)
+        ratingContainer = view.findViewById(R.id.details_rating_container)
+        ratingImdb = view.findViewById(R.id.details_rating_imdb)
+        ratingImdbValue = view.findViewById(R.id.details_rating_imdb_value)
+        ratingRotten = view.findViewById(R.id.details_rating_rotten)
+        ratingRottenValue = view.findViewById(R.id.details_rating_rotten_value)
+        ratingTmdb = view.findViewById(R.id.details_rating_tmdb)
+        ratingTmdbValue = view.findViewById(R.id.details_rating_tmdb_value)
+        ratingTrakt = view.findViewById(R.id.details_rating_trakt)
+        ratingTraktValue = view.findViewById(R.id.details_rating_trakt_value)
         genreGroup = view.findViewById(R.id.details_genre_group)
 
         buttonThumbsUp = view.findViewById(R.id.button_thumbs_up)
@@ -225,7 +241,7 @@ class DetailsFragment : Fragment() {
         runtime.visibility = if (runtimeText.isNullOrBlank()) View.GONE else View.VISIBLE
 
         updateHeroLogo(item.logoUrl)
-        updateHeroRating(item.ratingPercentage)
+        updateRatingBadges(item)
         updateGenres(item.genres)
         updateCastSummary(item.cast)
 
@@ -344,7 +360,10 @@ class DetailsFragment : Fragment() {
                         type = ContentItem.ContentType.TV_SHOW,
                         runtime = null,
                         cast = null,
-                        certification = null
+                        certification = null,
+                        imdbRating = null,
+                        rottenTomatoesRating = null,
+                        traktRating = null
                     )
                 }
                 populateSimilarRowWithItems(similarItems)
@@ -402,7 +421,10 @@ class DetailsFragment : Fragment() {
                 type = ContentItem.ContentType.MOVIE,
                 runtime = null,
                 cast = null,
-                certification = null
+                certification = null,
+                imdbRating = null,
+                rottenTomatoesRating = null,
+                traktRating = null
             )
         }
 
@@ -461,7 +483,10 @@ class DetailsFragment : Fragment() {
                 type = ContentItem.ContentType.MOVIE,
                 runtime = null,
                 cast = null,
-                certification = null
+                certification = null,
+                imdbRating = null,
+                rottenTomatoesRating = null,
+                traktRating = null
             )
         }
 
@@ -538,15 +563,53 @@ class DetailsFragment : Fragment() {
             })
     }
 
-    private fun updateHeroRating(percentage: Int?) {
-        if (percentage == null) {
-            ratingBar.visibility = View.GONE
-            ratingBar.rating = 0f
-            return
-        }
+    private fun updateRatingBadges(item: ContentItem) {
+        val hasImdb = bindRatingBadge(
+            ratingImdb,
+            ratingImdbValue,
+            formatImdbRating(item.imdbRating)
+        )
+        val hasRotten = bindRatingBadge(
+            ratingRotten,
+            ratingRottenValue,
+            item.rottenTomatoesRating?.takeIf { !it.equals("N/A", ignoreCase = true) && it.isNotBlank() }
+        )
+        val hasTmdb = bindRatingBadge(
+            ratingTmdb,
+            ratingTmdbValue,
+            formatScore(item.rating)
+        )
+        val hasTrakt = bindRatingBadge(
+            ratingTrakt,
+            ratingTraktValue,
+            formatScore(item.traktRating)
+        )
 
-        ratingBar.visibility = View.VISIBLE
-        ratingBar.rating = percentage.coerceIn(0, 100) / 20f
+        ratingContainer.visibility =
+            if (hasImdb || hasRotten || hasTmdb || hasTrakt) View.VISIBLE else View.GONE
+    }
+
+    private fun bindRatingBadge(container: View, valueView: TextView, value: String?): Boolean {
+        return if (!value.isNullOrBlank()) {
+            valueView.text = value
+            container.visibility = View.VISIBLE
+            true
+        } else {
+            container.visibility = View.GONE
+            false
+        }
+    }
+
+    private fun formatScore(value: Double?): String? {
+        value ?: return null
+        if (value <= 0.0) return null
+        return String.format(Locale.US, "%.1f", value)
+    }
+
+    private fun formatImdbRating(raw: String?): String? {
+        if (raw.isNullOrBlank() || raw.equals("N/A", ignoreCase = true)) return null
+        val slashIndex = raw.indexOf("/")
+        return if (slashIndex > 0) raw.substring(0, slashIndex).trim() else raw
     }
 
     private fun updateGenres(genres: String?) {
@@ -622,7 +685,10 @@ class DetailsFragment : Fragment() {
             type = ContentItem.ContentType.MOVIE,
             runtime = null,
             cast = null,
-            certification = null
+            certification = null,
+            imdbRating = null,
+            rottenTomatoesRating = null,
+            traktRating = null
         )
     }
 

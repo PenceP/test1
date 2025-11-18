@@ -32,6 +32,7 @@ android {
         buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${secrets.getProperty("TRAKT_CLIENT_SECRET", "")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${secrets.getProperty("TMDB_API_KEY", "")}\"")
         buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"${secrets.getProperty("TMDB_ACCESS_TOKEN", "")}\"")
+        buildConfigField("String", "OMDB_API_KEY", "\"${secrets.getProperty("OMDB_API_KEY", "a8787305")}\"")
     }
 
     buildTypes {

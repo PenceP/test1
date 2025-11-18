@@ -23,6 +23,9 @@ data class CachedContent(
     val runtime: String?,
     val cast: String?,
     val certification: String?,
+    val imdbRating: String?,
+    val rottenTomatoesRating: String?,
+    val traktRating: Double?,
     val position: Int, // Position in the list for ordering
     val cachedAt: Long // Timestamp when cached
 ) {
@@ -42,7 +45,10 @@ data class CachedContent(
             type = if (contentType == "MOVIE") ContentItem.ContentType.MOVIE else ContentItem.ContentType.TV_SHOW,
             runtime = runtime,
             cast = cast,
-            certification = certification
+            certification = certification,
+            imdbRating = imdbRating,
+            rottenTomatoesRating = rottenTomatoesRating,
+            traktRating = traktRating
         )
     }
 
@@ -69,6 +75,9 @@ data class CachedContent(
                 runtime = item.runtime,
                 cast = item.cast,
                 certification = item.certification,
+                imdbRating = item.imdbRating,
+                rottenTomatoesRating = item.rottenTomatoesRating,
+                traktRating = item.traktRating,
                 position = position,
                 cachedAt = System.currentTimeMillis()
             )

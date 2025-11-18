@@ -14,6 +14,8 @@ data class TraktShow(
     val title: String,
     @SerializedName("year")
     val year: Int?,
+    @SerializedName("rating")
+    val rating: Double? = null,
     @SerializedName("ids")
     val ids: TraktIds
 )
