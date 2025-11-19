@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -153,6 +154,14 @@ class HomeFragment : Fragment() {
                     lastFocusedNavButton = view
                 }
             }
+            button.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
+                    focusPrimaryContent()
+                    true
+                } else {
+                    false
+                }
+            }
         }
 
         lastFocusedNavButton = navHome
@@ -210,7 +219,7 @@ class HomeFragment : Fragment() {
             Log.d(TAG, "Content rows updated: ${rows.size} rows")
 
             if (rowsAdapter == null) {
-                val adapter = ContentRowAdapter(
+                rowsAdapter = ContentRowAdapter(
                     initialRows = rows,
                     onItemClick = { item ->
                         handleItemClick(item)
@@ -225,18 +234,19 @@ class HomeFragment : Fragment() {
                         viewModel.requestNextPage(rowIndex)
                     }
                 )
+            }
 
-                rowsAdapter = adapter
-                contentRowsView.adapter = adapter
+            if (contentRowsView.adapter !== rowsAdapter) {
+                contentRowsView.adapter = rowsAdapter
+            }
 
-                contentRowsView.post {
-                    if (!hasRequestedInitialFocus) {
-                        hasRequestedInitialFocus = true
-                        contentRowsView.requestFocus()
-                    }
+            rowsAdapter?.updateRows(rows)
+
+            contentRowsView.post {
+                if (!hasRequestedInitialFocus) {
+                    hasRequestedInitialFocus = true
+                    contentRowsView.requestFocus()
                 }
-            } else {
-                rowsAdapter?.updateRows(rows)
             }
         }
 
@@ -450,6 +460,14 @@ class HomeFragment : Fragment() {
         homeContentContainer.visibility = View.VISIBLE
     }
 
+    private fun focusPrimaryContent() {
+        if (comingSoonContainer.visibility == View.VISIBLE) {
+            comingSoonContainer.requestFocus()
+        } else {
+            contentRowsView.requestFocus()
+        }
+    }
+
     private fun focusNavigationBar() {
         (lastFocusedNavButton ?: navHome).requestFocus()
     }
@@ -471,6 +489,7 @@ class HomeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        hasRequestedInitialFocus = false
         viewModel.cleanupCache()
     }
 }

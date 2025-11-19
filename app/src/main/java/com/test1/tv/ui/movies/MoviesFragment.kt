@@ -2,6 +2,7 @@ package com.test1.tv.ui.movies
 
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -122,6 +123,14 @@ class MoviesFragment : Fragment() {
             button.setOnFocusChangeListener { view, hasFocus ->
                 if (hasFocus) {
                     lastFocusedNavButton = view
+                }
+            }
+            button.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
+                    focusContentRows()
+                    true
+                } else {
+                    false
                 }
             }
         }
@@ -333,6 +342,10 @@ class MoviesFragment : Fragment() {
 
     private fun focusNavigationBar() {
         (lastFocusedNavButton ?: navMovies).requestFocus()
+    }
+
+    private fun focusContentRows() {
+        contentRowsView.requestFocus()
     }
 
     private fun handleItemClick(item: ContentItem) {

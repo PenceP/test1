@@ -4,6 +4,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Log
 import java.util.Locale
+import androidx.core.widget.NestedScrollView
 
 class DetailsFragment : Fragment() {
 
@@ -85,6 +87,7 @@ class DetailsFragment : Fragment() {
     private lateinit var castEmpty: TextView
     private lateinit var similarEmpty: TextView
     private lateinit var collectionEmpty: TextView
+    private lateinit var detailsScroll: NestedScrollView
 
     private var isWatched = false
     private var isInCollection = false
@@ -118,6 +121,7 @@ class DetailsFragment : Fragment() {
     }
 
     private fun initViews(view: View) {
+        detailsScroll = view.findViewById(R.id.details_scroll)
         backdrop = view.findViewById(R.id.details_backdrop)
         logo = view.findViewById(R.id.details_logo)
         title = view.findViewById(R.id.details_title)
@@ -217,8 +221,17 @@ class DetailsFragment : Fragment() {
         )
 
         navButtons.forEach { id ->
-            root.findViewById<MaterialButton>(id)?.setOnClickListener {
+            val button = root.findViewById<MaterialButton>(id)
+            button?.setOnClickListener {
                 Toast.makeText(requireContext(), "Navigation coming soon", Toast.LENGTH_SHORT).show()
+            }
+            button?.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
+                    focusDetailsContent()
+                    true
+                } else {
+                    false
+                }
             }
         }
     }
@@ -735,5 +748,9 @@ class DetailsFragment : Fragment() {
                 arguments = bundleOf(ARG_MOVIE to movie)
             }
         }
+    }
+
+    private fun focusDetailsContent() {
+        detailsScroll.requestFocus()
     }
 }
