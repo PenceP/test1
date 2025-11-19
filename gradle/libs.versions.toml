@@ -15,12 +15,14 @@ material = "1.11.0"
 constraintlayout = "2.1.4"
 cardview = "1.0.0"
 work = "2.9.0"
+palette = "1.0.0" # Added for extracting colors from images
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-leanback = { group = "androidx.leanback", name = "leanback", version.ref = "leanback" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 androidx-cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
+androidx-palette = { group = "androidx.palette", name = "palette", version.ref = "palette" } # Added Palette library
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 
 # Networking
