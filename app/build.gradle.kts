@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.leanback)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.cardview)
+    implementation(libs.androidx.palette)
     implementation(libs.glide)
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 

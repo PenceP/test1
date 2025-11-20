@@ -7,11 +7,13 @@ import androidx.lifecycle.viewModelScope
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.ui.adapter.ContentRow
+import com.test1.tv.ui.adapter.RowPresentation
 import kotlinx.coroutines.launch
 
 private data class ContentRowState(
     val category: String,
     val title: String,
+    val presentation: RowPresentation = RowPresentation.PORTRAIT,
     val pageSize: Int = 20,
     val items: MutableList<ContentItem> = mutableListOf(),
     var currentPage: Int = 0,
@@ -30,6 +32,12 @@ class HomeViewModel(
 ) : ViewModel() {
 
     private val rowStates = mutableListOf(
+        ContentRowState(
+            category = ContentRepository.CATEGORY_CONTINUE_WATCHING,
+            title = "Continue Watching",
+            presentation = RowPresentation.LANDSCAPE_16_9,
+            pageSize = 12
+        ),
         ContentRowState(ContentRepository.CATEGORY_TRENDING_MOVIES, "Trending Movies"),
         ContentRowState(ContentRepository.CATEGORY_POPULAR_MOVIES, "Popular Movies"),
         ContentRowState(ContentRepository.CATEGORY_TRENDING_SHOWS, "Trending Shows"),
@@ -94,6 +102,8 @@ class HomeViewModel(
                 contentRepository.getTrendingShowsPage(page, state.pageSize, forceRefresh)
             ContentRepository.CATEGORY_POPULAR_SHOWS ->
                 contentRepository.getPopularShowsPage(page, state.pageSize, forceRefresh)
+            ContentRepository.CATEGORY_CONTINUE_WATCHING ->
+                contentRepository.getTrendingShowsPage(page, state.pageSize, forceRefresh)
             else -> Result.success(emptyList())
         }
 
@@ -138,7 +148,13 @@ class HomeViewModel(
     }
 
     private fun publishRows() {
-        _contentRows.value = rowStates.map { ContentRow(it.title, it.items) }
+        _contentRows.value = rowStates.map {
+            ContentRow(
+                title = it.title,
+                items = it.items,
+                presentation = it.presentation
+            )
+        }
     }
 
     private fun prefetchNextPages() {

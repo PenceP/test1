@@ -10,6 +10,7 @@
         android:id="@+id/details_backdrop"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:transitionName="@string/shared_element_hero"
         android:scaleType="centerCrop"
         tools:src="@tools:sample/backgrounds/scenic" />
 

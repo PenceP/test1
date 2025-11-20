@@ -24,6 +24,7 @@ class ContentRepository(
         const val CATEGORY_POPULAR_MOVIES = "POPULAR_MOVIES"
         const val CATEGORY_TRENDING_SHOWS = "TRENDING_SHOWS"
         const val CATEGORY_POPULAR_SHOWS = "POPULAR_SHOWS"
+        const val CATEGORY_CONTINUE_WATCHING = "CONTINUE_WATCHING"
         private const val DEFAULT_PAGE_SIZE = 20
     }
 
@@ -109,6 +110,7 @@ class ContentRepository(
             CATEGORY_POPULAR_MOVIES -> getPopularMoviesPage(page, pageSize, forceRefresh = false)
             CATEGORY_TRENDING_SHOWS -> getTrendingShowsPage(page, pageSize, forceRefresh = false)
             CATEGORY_POPULAR_SHOWS -> getPopularShowsPage(page, pageSize, forceRefresh = false)
+            CATEGORY_CONTINUE_WATCHING -> getTrendingShowsPage(page, pageSize, forceRefresh = false)
         }
     }
 

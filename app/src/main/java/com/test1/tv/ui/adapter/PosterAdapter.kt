@@ -1,12 +1,22 @@
 package com.test1.tv.ui.adapter
 
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.SoundEffectConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.cardview.widget.CardView
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -14,28 +24,40 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
+import androidx.palette.graphics.Palette
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 class PosterAdapter(
     initialItems: List<ContentItem>,
-    private val onItemClick: (ContentItem) -> Unit,
+    private val onItemClick: (ContentItem, ImageView) -> Unit,
     private val onItemFocused: (ContentItem, Int) -> Unit,
     private val onNavigateToNavBar: () -> Unit,
-    private val onNearEnd: () -> Unit
+    private val onNearEnd: () -> Unit,
+    private val onItemLongPressed: ((ContentItem) -> Unit)? = null,
+    private val presentation: RowPresentation = RowPresentation.PORTRAIT
 ) : RecyclerView.Adapter<PosterAdapter.PosterViewHolder>() {
 
     companion object {
         private const val NEAR_END_THRESHOLD = 10
+        private const val BORDER_WIDTH_DP = 4f
+        private const val PORTRAIT_RADIUS_DP = 18f
+        private const val LANDSCAPE_RADIUS_DP = 16f
+        private const val DEFAULT_BORDER_COLOR = Color.WHITE
     }
+
+    private val posterAccentColors = mutableMapOf<Int, Int>()
 
     inner class PosterViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val posterImage: ImageView = itemView.findViewById(R.id.poster_image)
         val focusOverlay: View = itemView.findViewById(R.id.focus_overlay)
         val titleOverlay: TextView = itemView.findViewById(R.id.poster_title_overlay)
+        val cardContainer: CardView? = itemView.findViewById(R.id.poster_card)
 
         fun bind(item: ContentItem, position: Int) {
             titleOverlay.text = item.title
             titleOverlay.visibility = View.VISIBLE
+            cardContainer?.let { ViewCompat.setElevation(it, 6f) }
 
             Glide.with(itemView.context)
                 .load(item.posterUrl)
@@ -60,18 +82,27 @@ class PosterAdapter(
                     ) {
                         posterImage.setImageDrawable(resource)
                         titleOverlay.visibility = View.GONE
+                        val accentColor = extractAccentColor(resource)
+                        posterAccentColors[getColorKey(item)] = accentColor
+                        if (itemView.isFocused) {
+                            applyFocusOverlay(true, accentColor)
+                        }
                     }
                 })
 
             itemView.setOnFocusChangeListener { _, hasFocus ->
-                focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
+                val accentColor = posterAccentColors[getColorKey(item)] ?: DEFAULT_BORDER_COLOR
+                applyFocusOverlay(hasFocus, accentColor)
+                val targetScale = if (hasFocus) 1.1f else 1.0f
                 if (hasFocus) {
                     itemView.animate()
-                        .scaleX(1.12f)
-                        .scaleY(1.12f)
-                        .setDuration(90)
+                        .scaleX(targetScale)
+                        .scaleY(targetScale)
+                        .setDuration(110)
                         .start()
 
+                    cardContainer?.let { ViewCompat.setElevation(it, 18f) }
+                    itemView.playSoundEffect(SoundEffectConstants.CLICK)
                     onItemFocused(item, position)
                     val nearEndIndex = max(itemCount - NEAR_END_THRESHOLD, 0)
                     if (bindingAdapterPosition >= nearEndIndex) {
@@ -83,6 +114,7 @@ class PosterAdapter(
                         .scaleY(1.0f)
                         .setDuration(90)
                         .start()
+                    cardContainer?.let { ViewCompat.setElevation(it, 6f) }
                 }
             }
 
@@ -100,14 +132,94 @@ class PosterAdapter(
             }
 
             itemView.setOnClickListener {
-                onItemClick(item)
+                onItemClick(item, posterImage)
+            }
+
+            if (onItemLongPressed != null) {
+                itemView.isLongClickable = true
+                itemView.setOnLongClickListener {
+                    onItemLongPressed.invoke(item)
+                    true
+                }
+            } else {
+                itemView.isLongClickable = false
+                itemView.setOnLongClickListener(null)
             }
         }
+
+        private fun applyFocusOverlay(hasFocus: Boolean, accentColor: Int) {
+            if (hasFocus) {
+                val radius = if (presentation == RowPresentation.LANDSCAPE_16_9) {
+                    LANDSCAPE_RADIUS_DP
+                } else {
+                    PORTRAIT_RADIUS_DP
+                }
+                focusOverlay.background = createFocusDrawable(
+                    itemView.context,
+                    accentColor,
+                    radius
+                )
+                focusOverlay.visibility = View.VISIBLE
+            } else {
+                focusOverlay.background = null
+                focusOverlay.visibility = View.INVISIBLE
+            }
+        }
+
+        private fun createFocusDrawable(
+            context: Context,
+            color: Int,
+            radiusDp: Float
+        ): Drawable {
+            val strokeColor = ColorUtils.blendARGB(color, Color.WHITE, 0.65f)
+            val borderWidth = dpToPx(context, BORDER_WIDTH_DP).roundToInt()
+            val cornerRadius = dpToPx(context, radiusDp)
+
+            val borderLayer = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                this.cornerRadius = cornerRadius
+                setStroke(borderWidth, strokeColor)
+                setColor(Color.TRANSPARENT)
+            }
+
+            val glowLayer = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                this.cornerRadius = cornerRadius + dpToPx(context, 4f)
+                setColor(ColorUtils.setAlphaComponent(color, 60))
+                setStroke(borderWidth * 2, ColorUtils.setAlphaComponent(color, 40))
+            }
+
+            return LayerDrawable(arrayOf(glowLayer, borderLayer))
+        }
+
+        private fun dpToPx(context: Context, dp: Float): Float =
+            dp * context.resources.displayMetrics.density
+
+        private fun extractAccentColor(drawable: Drawable?): Int {
+            drawable ?: return DEFAULT_BORDER_COLOR
+            val bitmap = when (drawable) {
+                is BitmapDrawable -> drawable.bitmap
+                else -> drawable.toBitmap()
+            }
+            val palette = Palette.from(bitmap).generate()
+            return palette.vibrantSwatch?.rgb
+                ?: palette.darkVibrantSwatch?.rgb
+                ?: palette.dominantSwatch?.rgb
+                ?: DEFAULT_BORDER_COLOR
+        }
+
+        private fun getColorKey(item: ContentItem): Int =
+            item.tmdbId.takeIf { it != 0 } ?: item.id
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PosterViewHolder {
+        val layoutRes = if (presentation == RowPresentation.LANDSCAPE_16_9) {
+            R.layout.item_poster_landscape
+        } else {
+            R.layout.item_poster
+        }
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_poster, parent, false)
+            .inflate(layoutRes, parent, false)
         return PosterViewHolder(view)
     }
 

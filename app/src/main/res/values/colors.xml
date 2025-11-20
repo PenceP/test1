@@ -5,4 +5,6 @@
     <color name="search_opaque">#ffaa3f</color>
     <color name="selected_background">#ffaa3f</color>
     <color name="default_background">#3d3d3d</color>
+    <color name="nav_button_ripple">#33FFFFFF</color>
+    <color name="match_score_highlight">#7CFFB2</color>
 </resources>

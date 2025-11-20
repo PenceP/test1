@@ -453,7 +453,7 @@ class DetailsFragment : Fragment() {
 
         val adapter = PosterAdapter(
             initialItems = similarItems.take(20),
-            onItemClick = { item ->
+            onItemClick = { item, _ ->
                 // TODO: Navigate to details of clicked item
                 Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
             },
@@ -505,7 +505,7 @@ class DetailsFragment : Fragment() {
 
         val adapter = PosterAdapter(
             initialItems = collectionItems,
-            onItemClick = { item ->
+            onItemClick = { item, _ ->
                 // TODO: Navigate to details of clicked item
                 Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
             },

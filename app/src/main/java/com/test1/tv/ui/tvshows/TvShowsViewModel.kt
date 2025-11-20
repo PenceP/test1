@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.ui.adapter.ContentRow
+import com.test1.tv.ui.adapter.RowPresentation
 import kotlinx.coroutines.launch
 
 class TvShowsViewModel(
@@ -40,7 +41,13 @@ class TvShowsViewModel(
                 // Fetch trending shows
                 contentRepository.getTrendingShows(forceRefresh).onSuccess { shows ->
                     if (shows.isNotEmpty()) {
-                        rows.add(ContentRow("Trending Shows", shows.toMutableList()))
+                        rows.add(
+                            ContentRow(
+                                title = "Trending Shows",
+                                items = shows.toMutableList(),
+                                presentation = RowPresentation.PORTRAIT
+                            )
+                        )
                         // Set first item as hero if not already set
                         if (_heroContent.value == null) {
                             _heroContent.value = shows.first()
@@ -53,7 +60,13 @@ class TvShowsViewModel(
                 // Fetch popular shows
                 contentRepository.getPopularShows(forceRefresh).onSuccess { shows ->
                     if (shows.isNotEmpty()) {
-                        rows.add(ContentRow("Popular Shows", shows.toMutableList()))
+                        rows.add(
+                            ContentRow(
+                                title = "Popular Shows",
+                                items = shows.toMutableList(),
+                                presentation = RowPresentation.PORTRAIT
+                            )
+                        )
                     }
                 }.onFailure { e ->
                     _error.value = "Failed to load popular shows: ${e.message}"

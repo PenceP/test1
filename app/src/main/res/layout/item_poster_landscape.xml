@@ -2,9 +2,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="@dimen/poster_width_portrait"
-    android:layout_height="@dimen/poster_height_portrait"
-    android:layout_marginEnd="20dp"
+    android:layout_width="@dimen/poster_width_landscape"
+    android:layout_height="@dimen/poster_height_landscape"
+    android:layout_marginEnd="24dp"
     android:clipChildren="false"
     android:clipToPadding="false"
     android:focusable="true"
@@ -15,7 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:cardBackgroundColor="@android:color/black"
-        app:cardCornerRadius="18dp"
+        app:cardCornerRadius="16dp"
         app:cardElevation="4dp"
         app:cardUseCompatPadding="false">
 
@@ -34,7 +34,7 @@
             android:layout_gravity="bottom"
             android:background="@drawable/poster_title_bg"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="1"
             android:paddingStart="12dp"
             android:paddingTop="8dp"
             android:paddingEnd="12dp"
@@ -42,10 +42,9 @@
             android:textColor="@android:color/white"
             android:textSize="13sp"
             android:visibility="visible"
-            tools:text="Movie Title" />
+            tools:text="Continue Watching" />
     </androidx.cardview.widget.CardView>
 
-    <!-- Focus Overlay -->
     <View
         android:id="@+id/focus_overlay"
         android:layout_width="match_parent"

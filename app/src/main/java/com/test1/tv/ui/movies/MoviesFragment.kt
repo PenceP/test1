@@ -188,7 +188,7 @@ class MoviesFragment : Fragment() {
 
             val adapter = ContentRowAdapter(
                 initialRows = rows,
-                onItemClick = { item ->
+                onItemClick = { item, _ ->
                     handleItemClick(item)
                 },
                 onItemFocused = { item, rowIndex, itemIndex ->
@@ -196,6 +196,13 @@ class MoviesFragment : Fragment() {
                 },
                 onNavigateToNavBar = {
                     focusNavigationBar()
+                },
+                onItemLongPress = { item ->
+                    Toast.makeText(
+                        requireContext(),
+                        "Actions coming soon for ${item.title}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 },
                 onRequestMore = {}
             )
