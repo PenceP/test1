@@ -52,6 +52,7 @@ class MoviesFragment : Fragment() {
     private lateinit var navTvShows: MaterialButton
     private lateinit var navSettings: MaterialButton
     private var lastFocusedNavButton: View? = null
+    private var activeNavButton: MaterialButton? = null
 
     companion object {
         private const val TAG = "MoviesFragment"
@@ -137,6 +138,7 @@ class MoviesFragment : Fragment() {
 
         lastFocusedNavButton = navMovies
         navMovies.requestFocus()
+        setActiveNavButton(navMovies)
 
         navSearch.setOnClickListener {
             Toast.makeText(requireContext(), "Search coming soon", Toast.LENGTH_SHORT).show()
@@ -160,6 +162,16 @@ class MoviesFragment : Fragment() {
         navSettings.setOnClickListener {
             Toast.makeText(requireContext(), "Settings coming soon", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun setActiveNavButton(button: MaterialButton) {
+        // Clear activated state from all nav buttons
+        listOf(navSearch, navHome, navMovies, navTvShows, navSettings).forEach {
+            it.isActivated = false
+        }
+        // Set the current button as activated
+        button.isActivated = true
+        activeNavButton = button
     }
 
     private fun setupContentRows() {

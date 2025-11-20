@@ -40,7 +40,7 @@ class PosterAdapter(
 
     companion object {
         private const val NEAR_END_THRESHOLD = 10
-        private const val BORDER_WIDTH_DP = 4f
+        private const val BORDER_WIDTH_DP = 20f
         private const val PORTRAIT_RADIUS_DP = 18f
         private const val LANDSCAPE_RADIUS_DP = 16f
         private const val DEFAULT_BORDER_COLOR = Color.WHITE
@@ -61,9 +61,11 @@ class PosterAdapter(
 
             Glide.with(itemView.context)
                 .load(item.posterUrl)
+                .thumbnail(0.25f)  // Load a 25% quality version first for faster display
                 .transition(DrawableTransitionOptions.withCrossFade())
                 .placeholder(R.drawable.default_background)
                 .error(R.drawable.default_background)
+                .override(300, 450)  // Optimize image size for portrait posters
                 .into(object : CustomTarget<Drawable>() {
                     override fun onLoadCleared(placeholder: Drawable?) {
                         posterImage.setImageDrawable(placeholder)

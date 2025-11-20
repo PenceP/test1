@@ -31,6 +31,7 @@ import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
 import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.palette.graphics.Palette
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -50,6 +51,9 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
 
@@ -83,6 +87,7 @@ class HomeFragment : Fragment() {
     private lateinit var navSettings: MaterialButton
     private lateinit var navigationDockBackground: View
     private var lastFocusedNavButton: View? = null
+    private var activeNavButton: MaterialButton? = null
 
     companion object {
         private const val TAG = "HomeFragment"
@@ -100,6 +105,7 @@ class HomeFragment : Fragment() {
 
     private var rowsAdapter: ContentRowAdapter? = null
     private var hasRequestedInitialFocus = false
+    private var heroUpdateJob: Job? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -180,16 +186,20 @@ class HomeFragment : Fragment() {
 
         lastFocusedNavButton = navHome
         navHome.requestFocus()
+        setActiveNavButton(navHome)
 
         navSearch.setOnClickListener {
+            setActiveNavButton(navSearch)
             showComingSoonPage("Search")
         }
 
         navHome.setOnClickListener {
+            setActiveNavButton(navHome)
             showHomeContent()
         }
 
         navMovies.setOnClickListener {
+            setActiveNavButton(navMovies)
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(R.id.main_browse_fragment, com.test1.tv.ui.movies.MoviesFragment())
                 .addToBackStack(null)
@@ -197,6 +207,7 @@ class HomeFragment : Fragment() {
         }
 
         navTvShows.setOnClickListener {
+            setActiveNavButton(navTvShows)
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(R.id.main_browse_fragment, com.test1.tv.ui.tvshows.TvShowsFragment())
                 .addToBackStack(null)
@@ -204,12 +215,23 @@ class HomeFragment : Fragment() {
         }
 
         navSettings.setOnClickListener {
+            setActiveNavButton(navSettings)
             showComingSoonPage("Settings")
         }
     }
 
     private fun applyNavigationDockEffects() {
         navigationDockBackground.alpha = 0.92f
+    }
+
+    private fun setActiveNavButton(button: MaterialButton) {
+        // Clear activated state from all nav buttons
+        listOf(navSearch, navHome, navMovies, navTvShows, navSettings).forEach {
+            it.isActivated = false
+        }
+        // Set the current button as activated
+        button.isActivated = true
+        activeNavButton = button
     }
 
     private fun View.animateNavFocusState(hasFocus: Boolean) {
@@ -320,14 +342,18 @@ class HomeFragment : Fragment() {
         } else {
             Glide.with(this)
                 .load(heroImageUrl)
-                .transition(DrawableTransitionOptions.withCrossFade())
+                .thumbnail(0.2f)  // Load a 20% quality version first for instant display
+                .transition(DrawableTransitionOptions.withCrossFade(200))  // Faster crossfade
                 .placeholder(R.drawable.default_background)
                 .error(R.drawable.default_background)
+                .override(1920, 1080)  // Optimize for typical TV resolution
                 .into(heroBackdrop)
 
+            // Load a smaller version for palette extraction to improve performance
             Glide.with(this)
                 .asBitmap()
                 .load(heroImageUrl)
+                .override(150, 150)  // Small size is sufficient for color extraction
                 .into(object : CustomTarget<Bitmap>() {
                     override fun onResourceReady(
                         resource: Bitmap,
@@ -394,7 +420,9 @@ class HomeFragment : Fragment() {
 
         Glide.with(this)
             .load(logoUrl)
-            .transition(DrawableTransitionOptions.withCrossFade())
+            .thumbnail(0.2f)  // Load thumbnail first
+            .transition(DrawableTransitionOptions.withCrossFade(150))  // Faster transition
+            .override(600, 200)  // Reasonable size for logos
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
                     heroLogo.setImageDrawable(resource)
@@ -641,8 +669,15 @@ class HomeFragment : Fragment() {
     private fun handleItemFocused(item: ContentItem, rowIndex: Int, itemIndex: Int) {
         Log.d(TAG, "Item focused: ${item.title} at row $rowIndex, position $itemIndex")
 
-        // Update hero section for ANY focused item
-        viewModel.updateHeroContent(item)
+        // Cancel any pending hero update
+        heroUpdateJob?.cancel()
+
+        // Debounce hero section updates - only update if user stays on item for 250ms
+        // This prevents the hero section from queuing updates during fast scrolling
+        heroUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(250)
+            viewModel.updateHeroContent(item)
+        }
     }
 
     private fun showItemContextMenu(item: ContentItem) {
@@ -681,6 +716,8 @@ class HomeFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         hasRequestedInitialFocus = false
+        heroUpdateJob?.cancel()
+        heroUpdateJob = null
         ambientColorAnimator?.cancel()
         ambientColorAnimator = null
         currentAmbientColor = DEFAULT_AMBIENT_COLOR

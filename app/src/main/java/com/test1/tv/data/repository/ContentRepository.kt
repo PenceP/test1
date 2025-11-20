@@ -370,6 +370,10 @@ class ContentRepository(
     }
 
     private suspend fun fetchOmdbRatings(imdbId: String?): OmdbRatings? {
+        // OMDb ratings disabled for performance - not needed on home page
+        return null
+
+        /* Original implementation - commented out for performance
         if (imdbId.isNullOrBlank()) return null
         return try {
             val response = omdbApiService.getTitleDetails(
@@ -390,6 +394,7 @@ class ContentRepository(
             Log.e(TAG, "Error fetching OMDb ratings for $imdbId", e)
             null
         }
+        */
     }
 }
 

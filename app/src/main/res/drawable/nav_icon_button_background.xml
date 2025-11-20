@@ -6,5 +6,8 @@
     <item
         android:drawable="@drawable/nav_icon_button_focused"
         android:state_pressed="true" />
+    <item
+        android:drawable="@drawable/nav_icon_button_selected"
+        android:state_activated="true" />
     <item android:drawable="@drawable/nav_icon_button_default" />
 </selector>
