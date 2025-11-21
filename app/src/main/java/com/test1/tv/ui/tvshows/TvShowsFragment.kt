@@ -37,11 +37,8 @@ class TvShowsFragment : Fragment() {
     private lateinit var heroBackdrop: ImageView
     private lateinit var heroLogo: ImageView
     private lateinit var heroTitle: TextView
-    private lateinit var heroRating: TextView
-    private lateinit var heroYear: TextView
-    private lateinit var heroRuntime: TextView
-    private lateinit var heroContentRating: TextView
-    private lateinit var heroGenreContainer: android.widget.LinearLayout
+    private lateinit var heroMetadata: TextView
+    private lateinit var heroGenreText: TextView
     private lateinit var heroOverview: TextView
     private lateinit var heroCast: TextView
 
@@ -85,11 +82,8 @@ class TvShowsFragment : Fragment() {
         heroBackdrop = view.findViewById(R.id.hero_backdrop)
         heroLogo = view.findViewById(R.id.hero_logo)
         heroTitle = view.findViewById(R.id.hero_title)
-        heroRating = view.findViewById(R.id.hero_rating)
-        heroYear = view.findViewById(R.id.hero_year)
-        heroRuntime = view.findViewById(R.id.hero_runtime)
-        heroContentRating = view.findViewById(R.id.hero_content_rating)
-        heroGenreContainer = view.findViewById(R.id.hero_genre_container)
+        heroMetadata = view.findViewById(R.id.hero_metadata)
+        heroGenreText = view.findViewById(R.id.hero_genre_text)
         heroOverview = view.findViewById(R.id.hero_overview)
         heroCast = view.findViewById(R.id.hero_cast)
 
@@ -252,81 +246,61 @@ class TvShowsFragment : Fragment() {
         // Load backdrop image
         Glide.with(this)
             .load(item.backdropUrl)
-            .transition(DrawableTransitionOptions.withCrossFade())
+            .thumbnail(0.2f)
+            .transition(DrawableTransitionOptions.withCrossFade(200))
             .placeholder(R.drawable.default_background)
             .error(R.drawable.default_background)
+            .override(1920, 1080)
             .into(heroBackdrop)
 
         // Update text content
         heroTitle.text = item.title
-        heroYear.text = item.year ?: ""
         heroOverview.text = item.overview ?: ""
         updateHeroLogo(item.logoUrl)
-        updateGenrePills(item.genres)
+        updateGenres(item.genres)
+        updateHeroMetadata(item)
 
         // Update cast
-        item.cast?.let {
-            heroCast.text = it
+        if (!item.cast.isNullOrBlank()) {
+            val castText = "Starring: ${item.cast}"
+            heroCast.text = castText
             heroCast.visibility = View.VISIBLE
-        } ?: run {
+        } else {
             heroCast.visibility = View.GONE
-        }
-
-        // Update rating
-        item.ratingPercentage?.let { percentage ->
-            heroRating.text = "$percentage%"
-            heroRating.visibility = View.VISIBLE
-        } ?: run {
-            heroRating.visibility = View.GONE
-        }
-
-        // Update certification
-        item.certification?.let {
-            heroContentRating.text = it
-            heroContentRating.visibility = View.VISIBLE
-        } ?: run {
-            heroContentRating.visibility = View.GONE
-        }
-
-        // Update runtime
-        item.runtime?.let {
-            heroRuntime.text = it
-            heroRuntime.visibility = View.VISIBLE
-        } ?: run {
-            heroRuntime.visibility = View.GONE
         }
     }
 
-    private fun updateGenrePills(genres: String?) {
-        heroGenreContainer.removeAllViews()
-
+    private fun updateGenres(genres: String?) {
         if (genres.isNullOrBlank()) {
+            heroGenreText.visibility = View.GONE
+            heroGenreText.text = ""
             return
         }
 
-        val genreList = genres.split(",").map { it.trim() }
-        genreList.forEach { genre ->
-            val pill = TextView(requireContext()).apply {
-                text = genre
-                textSize = 12f
-                setTextColor(resources.getColor(android.R.color.white, null))
-                setBackgroundResource(R.drawable.genre_pill_bg)
-                setPadding(
-                    resources.getDimensionPixelSize(R.dimen.genre_pill_padding_horizontal),
-                    resources.getDimensionPixelSize(R.dimen.genre_pill_padding_vertical),
-                    resources.getDimensionPixelSize(R.dimen.genre_pill_padding_horizontal),
-                    resources.getDimensionPixelSize(R.dimen.genre_pill_padding_vertical)
-                )
-
-                val params = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                params.marginEnd = resources.getDimensionPixelSize(R.dimen.genre_pill_margin)
-                layoutParams = params
-            }
-            heroGenreContainer.addView(pill)
+        val formatted = genres.split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        if (formatted.isEmpty()) {
+            heroGenreText.visibility = View.GONE
+            heroGenreText.text = ""
+            return
         }
+
+        heroGenreText.text = formatted.joinToString(" • ")
+        heroGenreText.visibility = View.VISIBLE
+    }
+
+    private fun updateHeroMetadata(item: ContentItem) {
+        val parts = mutableListOf<String>()
+
+        item.ratingPercentage?.let { parts.add("$it% Match") }
+        item.year?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+        item.certification?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+        item.runtime?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+
+        val metadata = parts.joinToString(" • ")
+        heroMetadata.text = metadata
+        heroMetadata.visibility = if (metadata.isBlank()) View.GONE else View.VISIBLE
     }
 
     private fun updateHeroLogo(logoUrl: String?) {

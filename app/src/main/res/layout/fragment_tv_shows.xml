@@ -13,122 +13,185 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop" />
 
+    <!-- Ambient Mesh Gradient Overlay (updated dynamically) -->
+    <View
+        android:id="@+id/ambient_background_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <!-- Gradient Overlay -->
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@drawable/fullscreen_gradient" />
 
-    <!-- Navigation Sidebar -->
-    <LinearLayout
-        android:id="@+id/navigation_sidebar"
-        android:layout_width="50dp"
-        android:layout_height="match_parent"
-        android:background="#AA000000"
-        android:orientation="vertical"
-        android:paddingTop="40dp">
+    <!-- Navigation Dock -->
+    <FrameLayout
+        android:id="@+id/navigation_dock"
+        android:layout_width="72dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="78dp"
+        android:layout_marginBottom="78dp"
+        android:translationX="-28dp"
+        android:layout_gravity="start|center_vertical"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_search"
-            style="@style/Widget.Material3.Button.IconButton"
+        <View
+            android:id="@+id/navigation_dock_background"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/content_rows"
-            app:icon="@drawable/ic_search"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            android:layout_height="match_parent"
+            android:background="@drawable/nav_glass_background"
+            android:elevation="6dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_home"
-            style="@style/Widget.Material3.Button.IconButton"
+        <LinearLayout
+            android:id="@+id/navigation_sidebar"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/content_rows"
-            app:icon="@drawable/ic_home"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            android:layout_height="match_parent"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="34dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="32dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_movies"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/content_rows"
-            app:icon="@drawable/ic_movie"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_search"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginBottom="18dp"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/content_rows"
+                app:cornerRadius="32dp"
+                app:icon="@drawable/ic_search"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="32dp"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_tv_shows"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/content_rows"
-            app:icon="@drawable/ic_tv"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_home"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginBottom="18dp"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/content_rows"
+                app:cornerRadius="32dp"
+                app:icon="@drawable/ic_home"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="32dp"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_settings"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/content_rows"
-            app:icon="@drawable/ic_settings"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
-    </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_movies"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginBottom="18dp"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/content_rows"
+                app:cornerRadius="32dp"
+                app:icon="@drawable/ic_movie"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="32dp"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_tv_shows"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginBottom="18dp"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/content_rows"
+                app:cornerRadius="32dp"
+                app:icon="@drawable/ic_tv"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="32dp"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_settings"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/content_rows"
+                app:cornerRadius="32dp"
+                app:icon="@drawable/ic_settings"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="32dp"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
+        </LinearLayout>
+    </FrameLayout>
 
     <!-- Main Content Area -->
     <LinearLayout
+        android:id="@+id/tvshows_content_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginStart="88dp"
+        android:layout_marginStart="80dp"
         android:layout_marginTop="0dp"
-        android:orientation="vertical"
+        android:layout_marginBottom="0dp"
         android:clipChildren="false"
-        android:weightSum="2">
+        android:orientation="vertical"
+        android:weightSum="2.0">
 
         <!-- Hero Info Section -->
         <LinearLayout
             android:id="@+id/hero_info_container"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center_vertical"
+            android:layout_weight="1.1"
+            android:gravity="top"
             android:orientation="vertical"
-            android:paddingStart="44dp"
-            android:paddingEnd="48dp"
-            android:layout_marginStart="8dp"
-            android:paddingBottom="32dp">
+            android:paddingStart="30dp"
+            android:paddingEnd="22dp"
+            android:layout_marginStart="0dp"
+            android:paddingBottom="0dp">
 
             <ImageView
                 android:id="@+id/hero_logo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:layout_marginBottom="8dp"
                 android:adjustViewBounds="true"
-                android:maxHeight="320dp"
+                android:scaleType="fitCenter"
                 android:visibility="gone"
                 android:contentDescription="@string/hero_logo_content_description"
                 tools:visibility="visible"
@@ -144,85 +207,38 @@
                 android:shadowDy="2"
                 android:shadowRadius="4"
                 android:textColor="@android:color/white"
-                android:textSize="32sp"
+                android:textSize="34sp"
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end"
                 tools:text="Good Fortune" />
 
-            <!-- Meta Info -->
-            <LinearLayout
+            <TextView
+                android:id="@+id/hero_metadata"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:textColor="#F0FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="98% Match • 2025 • PG-13 • 1h 48m" />
 
-                <TextView
-                    android:id="@+id/hero_rating"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/rating_badge_bg"
-                    android:paddingStart="6dp"
-                    android:paddingTop="3dp"
-                    android:paddingEnd="6dp"
-                    android:paddingBottom="3dp"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    tools:text="67%" />
-
-                <TextView
-                    android:id="@+id/hero_year"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
-                    tools:text="2025" />
-
-                <TextView
-                    android:id="@+id/hero_content_rating"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:background="@drawable/content_rating_bg"
-                    android:paddingStart="5dp"
-                    android:paddingTop="2dp"
-                    android:paddingEnd="5dp"
-                    android:paddingBottom="2dp"
-                    android:textColor="@android:color/white"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:visibility="gone"
-                    tools:text="TV-MA" />
-
-                <TextView
-                    android:id="@+id/hero_runtime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
-                    tools:text="45m" />
-            </LinearLayout>
-
-            <!-- Genre Pills Container -->
-            <HorizontalScrollView
-                android:layout_width="600dp"
+            <!-- Genre Tags -->
+            <TextView
+                android:id="@+id/hero_genre_text"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:id="@+id/hero_genre_container"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
+                android:layout_marginTop="10dp"
+                android:textColor="@android:color/white"
+                android:textSize="13sp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="Science Fiction • Adventure • Action" />
 
             <!-- Overview -->
             <TextView
                 android:id="@+id/hero_overview"
-                android:layout_width="600dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:ellipsize="end"
@@ -230,19 +246,30 @@
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
                 android:lineSpacingMultiplier="1.1"
-                tools:text="Follow the misadventures of four irreverent grade-schoolers in the quiet, dysfunctional town of South Park, Colorado." />
+                tools:text="A well-meaning but rather inept angel named Gabriel meddles in the lives of a struggling gig worker and a wealthy capitalist." />
 
             <!-- Cast -->
-            <TextView
-                android:id="@+id/hero_cast"
-                android:layout_width="600dp"
+            <FrameLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#CCCCCC"
-                android:textSize="12sp"
-                tools:text="Trey Parker, Matt Stone, Mona Marshall, Jennifer Howell" />
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:id="@+id/hero_cast"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"
+                    tools:text="Starring: Cailee Spaeny, David Jonsson, Archie Renaux, Isabela Merced" />
+
+                <View
+                    android:layout_width="72dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end"
+                    android:background="@drawable/hero_cast_fade" />
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Content Rows -->
@@ -250,14 +277,14 @@
             android:id="@+id/content_rows"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="0.9"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:clipToPadding="false"
             android:clipChildren="false"
-            android:paddingStart="32dp"
-            android:paddingTop="0dp"
-            android:paddingBottom="60dp" />
+            android:paddingStart="0dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="12dp" />
     </LinearLayout>
 
     <!-- Loading Indicator -->
