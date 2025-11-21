@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared Hero Section Dimensions -->
+    <dimen name="hero_title_size">34sp</dimen>
+    <dimen name="hero_metadata_size">13sp</dimen>
+    <dimen name="hero_genre_size">12sp</dimen>
+    <dimen name="hero_overview_size">12sp</dimen>
+    <dimen name="hero_cast_size">11sp</dimen>
+
+    <dimen name="hero_title_margin_top">0dp</dimen>
+    <dimen name="hero_metadata_margin_top">3dp</dimen>
+    <dimen name="hero_genre_margin_top">3dp</dimen>
+    <dimen name="hero_overview_margin_top">3dp</dimen>
+    <dimen name="hero_cast_margin_top">3dp</dimen>
+
+    <dimen name="hero_logo_margin_top">5dp</dimen>
+    <dimen name="hero_logo_margin_bottom">8dp</dimen>
+
+    <!-- Nav Dock Dimensions -->
+    <dimen name="nav_dock_width">72dp</dimen>
+    <dimen name="nav_dock_margin_start">4dp</dimen>
+    <dimen name="nav_dock_margin_top">78dp</dimen>
+    <dimen name="nav_dock_margin_bottom">78dp</dimen>
+    <dimen name="nav_dock_translation_x">-28dp</dimen>
+
+    <dimen name="nav_button_size">56dp</dimen>
+    <dimen name="nav_button_margin_bottom">18dp</dimen>
+    <dimen name="nav_button_corner_radius">32dp</dimen>
+    <dimen name="nav_icon_size">32dp</dimen>
+
+    <dimen name="nav_dock_padding_start">34dp</dimen>
+    <dimen name="nav_dock_padding_end">12dp</dimen>
+    <dimen name="nav_dock_padding_vertical">32dp</dimen>
+</resources>

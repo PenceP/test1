@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/black">
 
+    <!-- Fullscreen Backdrop -->
     <ImageView
         android:id="@+id/details_backdrop"
         android:layout_width="match_parent"
@@ -14,89 +15,151 @@
         android:scaleType="centerCrop"
         tools:src="@tools:sample/backgrounds/scenic" />
 
+    <!-- Ambient Mesh Gradient Overlay (updated dynamically) -->
+    <View
+        android:id="@+id/ambient_background_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Gradient Overlay -->
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@drawable/fullscreen_gradient" />
 
-    <LinearLayout
-        android:id="@+id/navigation_sidebar"
-        android:layout_width="50dp"
-        android:layout_height="match_parent"
-        android:background="#AA000000"
-        android:orientation="vertical"
-        android:paddingTop="40dp">
+    <!-- Navigation Dock -->
+    <FrameLayout
+        android:id="@+id/navigation_dock"
+        android:layout_width="@dimen/nav_dock_width"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/nav_dock_margin_start"
+        android:layout_marginTop="@dimen/nav_dock_margin_top"
+        android:layout_marginBottom="@dimen/nav_dock_margin_bottom"
+        android:translationX="@dimen/nav_dock_translation_x"
+        android:layout_gravity="start|center_vertical"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_search"
-            style="@style/Widget.Material3.Button.IconButton"
+        <View
+            android:id="@+id/navigation_dock_background"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/details_scroll"
-            app:icon="@drawable/ic_search"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            android:layout_height="match_parent"
+            android:background="@drawable/nav_glass_background"
+            android:elevation="6dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_home"
-            style="@style/Widget.Material3.Button.IconButton"
+        <LinearLayout
+            android:id="@+id/navigation_sidebar"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/details_scroll"
-            app:icon="@drawable/ic_home"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            android:layout_height="match_parent"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/nav_dock_padding_start"
+            android:paddingEnd="@dimen/nav_dock_padding_end"
+            android:paddingTop="@dimen/nav_dock_padding_vertical"
+            android:paddingBottom="@dimen/nav_dock_padding_vertical"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_movies"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/details_scroll"
-            app:icon="@drawable/ic_movie"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_search"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="@dimen/nav_button_size"
+                android:layout_height="@dimen/nav_button_size"
+                android:layout_marginBottom="@dimen/nav_button_margin_bottom"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/details_scroll"
+                app:cornerRadius="@dimen/nav_button_corner_radius"
+                app:icon="@drawable/ic_search"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="@dimen/nav_icon_size"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_tv_shows"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/details_scroll"
-            app:icon="@drawable/ic_tv"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_home"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="@dimen/nav_button_size"
+                android:layout_height="@dimen/nav_button_size"
+                android:layout_marginBottom="@dimen/nav_button_margin_bottom"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/details_scroll"
+                app:cornerRadius="@dimen/nav_button_corner_radius"
+                app:icon="@drawable/ic_home"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="@dimen/nav_icon_size"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nav_settings"
-            style="@style/Widget.Material3.Button.IconButton"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:nextFocusRight="@id/details_scroll"
-            app:icon="@drawable/ic_settings"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            app:iconSize="28dp"
-            app:iconTint="@color/nav_icon_color" />
-    </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_movies"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="@dimen/nav_button_size"
+                android:layout_height="@dimen/nav_button_size"
+                android:layout_marginBottom="@dimen/nav_button_margin_bottom"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/details_scroll"
+                app:cornerRadius="@dimen/nav_button_corner_radius"
+                app:icon="@drawable/ic_movie"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="@dimen/nav_icon_size"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_tv_shows"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="@dimen/nav_button_size"
+                android:layout_height="@dimen/nav_button_size"
+                android:layout_marginBottom="@dimen/nav_button_margin_bottom"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/details_scroll"
+                app:cornerRadius="@dimen/nav_button_corner_radius"
+                app:icon="@drawable/ic_tv"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="@dimen/nav_icon_size"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nav_settings"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="@dimen/nav_button_size"
+                android:layout_height="@dimen/nav_button_size"
+                android:background="@drawable/nav_icon_button_background"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:insetBottom="0dp"
+                android:insetTop="0dp"
+                android:nextFocusRight="@id/details_scroll"
+                app:cornerRadius="@dimen/nav_button_corner_radius"
+                app:icon="@drawable/ic_settings"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="@dimen/nav_icon_size"
+                app:iconTint="@color/nav_icon_color"
+                app:rippleColor="@color/nav_button_ripple" />
+        </LinearLayout>
+    </FrameLayout>
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/details_scroll"
@@ -127,117 +190,79 @@
                     android:id="@+id/details_logo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/hero_logo_margin_top"
+                    android:layout_marginBottom="@dimen/hero_logo_margin_bottom"
                     android:adjustViewBounds="true"
-                    android:maxHeight="280dp"
+                    android:maxWidth="@dimen/hero_logo_max_width"
+                    android:maxHeight="@dimen/hero_logo_max_height"
+                    android:scaleType="fitCenter"
                     android:visibility="gone"
                     android:contentDescription="@string/hero_logo_content_description"
                     tools:visibility="visible"
                     tools:src="@drawable/ic_movie" />
 
+                <!-- Title -->
                 <TextView
                     android:id="@+id/details_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/hero_title_margin_top"
                     android:shadowColor="#000000"
                     android:shadowDx="2"
                     android:shadowDy="2"
                     android:shadowRadius="4"
                     android:textColor="@android:color/white"
-                    android:textSize="42sp"
+                    android:textSize="@dimen/hero_title_size"
                     android:textStyle="bold"
                     android:maxLines="2"
                     android:ellipsize="end"
                     tools:text="Guardians of the Galaxy" />
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/details_metadata"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:orientation="horizontal">
+                    android:layout_marginTop="@dimen/hero_metadata_margin_top"
+                    android:textColor="#F0FFFFFF"
+                    android:textSize="@dimen/hero_metadata_size"
+                    android:textStyle="bold"
+                    tools:text="98% Match • 2025 • PG-13 • 1h 48m" />
 
-                    <TextView
-                        android:id="@+id/details_year"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@android:color/white"
-                        android:textSize="16sp"
-                        tools:text="2014" />
-
-                    <TextView
-                        android:id="@+id/details_rating_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:background="@drawable/content_rating_bg"
-                        android:paddingStart="8dp"
-                        android:paddingTop="4dp"
-                        android:paddingEnd="8dp"
-                        android:paddingBottom="4dp"
-                        android:textColor="@android:color/white"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        tools:text="PG-13"
-                        tools:visibility="visible" />
-
-                    <TextView
-                        android:id="@+id/details_runtime"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:textColor="@android:color/white"
-                        android:textSize="16sp"
-                        tools:text="2h 1m" />
-                </LinearLayout>
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/details_genre_group"
-                    android:layout_width="wrap_content"
+                <!-- Genre Tags -->
+                <TextView
+                    android:id="@+id/details_genre_text"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    app:chipSpacing="8dp"
-                    app:singleLine="true"
-                    tools:childrenSequenceState="0,1,2">
+                    android:layout_marginTop="@dimen/hero_genre_margin_top"
+                    android:textColor="@android:color/white"
+                    android:textSize="@dimen/hero_genre_size"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    tools:text="Science Fiction • Adventure • Action" />
 
-                    <com.google.android.material.chip.Chip
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Action"
-                        tools:ignore="UselessLeaf" />
-
-                    <com.google.android.material.chip.Chip
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Science Fiction"
-                        tools:ignore="UselessLeaf" />
-
-                    <com.google.android.material.chip.Chip
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Adventure"
-                        tools:ignore="UselessLeaf" />
-                </com.google.android.material.chip.ChipGroup>
-
+                <!-- Overview -->
                 <TextView
                     android:id="@+id/details_overview"
                     android:layout_width="900dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="@dimen/hero_overview_margin_top"
+                    android:ellipsize="end"
+                    android:maxLines="4"
                     android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:lineSpacingMultiplier="1.3"
+                    android:textSize="@dimen/hero_overview_size"
+                    android:lineSpacingMultiplier="1.1"
                     tools:text="Light years from Earth, 26 years after being abducted, Peter Quill finds himself the prime target of a manhunt after discovering an orb wanted by Ronan the Accuser." />
 
+                <!-- Cast -->
                 <TextView
-                    android:id="@+id/details_cast_summary"
-                    android:layout_width="900dp"
+                    android:id="@+id/details_cast"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/hero_cast_margin_top"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:textColor="#CCCCCC"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/hero_cast_size"
                     android:visibility="gone"
                     tools:text="Starring: Chris Pratt, Zoe Saldaña, Dave Bautista, Vin Diesel, Bradley Cooper"
                     tools:visibility="visible" />

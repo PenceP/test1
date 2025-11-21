@@ -1,29 +1,35 @@
 package com.test1.tv.ui.details
 
+import android.animation.ArgbEvaluator
+import android.animation.ValueAnimator
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.os.bundleOf
+import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.leanback.widget.HorizontalGridView
+import androidx.palette.graphics.Palette
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import android.widget.ImageButton
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
+import kotlin.math.max
 import com.test1.tv.BuildConfig
 import com.test1.tv.DetailsActivity
 import com.test1.tv.Movie
@@ -34,6 +40,7 @@ import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBMovie
 import com.test1.tv.data.model.tmdb.TMDBShow
 import com.test1.tv.data.remote.ApiClient
+import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.adapter.PersonAdapter
 import com.test1.tv.ui.adapter.PosterAdapter
 import kotlinx.coroutines.CoroutineScope
@@ -49,13 +56,13 @@ class DetailsFragment : Fragment() {
     private var contentItem: ContentItem? = null
 
     private lateinit var backdrop: ImageView
+    private lateinit var ambientOverlay: View
     private lateinit var logo: ImageView
     private lateinit var title: TextView
-    private lateinit var year: TextView
-    private lateinit var ratingBadge: TextView
-    private lateinit var runtime: TextView
+    private lateinit var detailsMetadata: TextView
+    private lateinit var detailsGenreText: TextView
     private lateinit var overview: TextView
-    private lateinit var castSummary: TextView
+    private lateinit var detailsCast: TextView
     private lateinit var ratingContainer: LinearLayout
     private lateinit var ratingImdb: View
     private lateinit var ratingImdbValue: TextView
@@ -65,7 +72,6 @@ class DetailsFragment : Fragment() {
     private lateinit var ratingTmdbValue: TextView
     private lateinit var ratingTrakt: View
     private lateinit var ratingTraktValue: TextView
-    private lateinit var genreGroup: ChipGroup
 
     private lateinit var buttonThumbsUp: ImageButton
     private lateinit var buttonThumbsSide: ImageButton
@@ -92,6 +98,12 @@ class DetailsFragment : Fragment() {
     private var isWatched = false
     private var isInCollection = false
     private var currentRating: Int = 0 // 0 = none, 1 = thumbs up, 2 = thumbs side, 3 = thumbs down
+
+    // Ambient gradient animation
+    private var ambientColorAnimator: ValueAnimator? = null
+    private val argbEvaluator = ArgbEvaluator()
+    private val ambientInterpolator = DecelerateInterpolator()
+    private var currentAmbientColor: Int = DEFAULT_AMBIENT_COLOR
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -123,13 +135,13 @@ class DetailsFragment : Fragment() {
     private fun initViews(view: View) {
         detailsScroll = view.findViewById(R.id.details_scroll)
         backdrop = view.findViewById(R.id.details_backdrop)
+        ambientOverlay = view.findViewById(R.id.ambient_background_overlay)
         logo = view.findViewById(R.id.details_logo)
         title = view.findViewById(R.id.details_title)
-        year = view.findViewById(R.id.details_year)
-        ratingBadge = view.findViewById(R.id.details_rating_label)
-        runtime = view.findViewById(R.id.details_runtime)
+        detailsMetadata = view.findViewById(R.id.details_metadata)
+        detailsGenreText = view.findViewById(R.id.details_genre_text)
         overview = view.findViewById(R.id.details_overview)
-        castSummary = view.findViewById(R.id.details_cast_summary)
+        detailsCast = view.findViewById(R.id.details_cast)
         ratingContainer = view.findViewById(R.id.details_rating_container)
         ratingImdb = view.findViewById(R.id.details_rating_imdb)
         ratingImdbValue = view.findViewById(R.id.details_rating_imdb_value)
@@ -139,7 +151,6 @@ class DetailsFragment : Fragment() {
         ratingTmdbValue = view.findViewById(R.id.details_rating_tmdb_value)
         ratingTrakt = view.findViewById(R.id.details_rating_trakt)
         ratingTraktValue = view.findViewById(R.id.details_rating_trakt_value)
-        genreGroup = view.findViewById(R.id.details_genre_group)
 
         buttonThumbsUp = view.findViewById(R.id.button_thumbs_up)
         buttonThumbsSide = view.findViewById(R.id.button_thumbs_side)
@@ -237,29 +248,48 @@ class DetailsFragment : Fragment() {
     }
 
     private fun bindContent(item: ContentItem) {
-        Glide.with(this)
-            .load(item.backdropUrl)
-            .transition(DrawableTransitionOptions.withCrossFade())
-            .placeholder(R.drawable.default_background)
-            .error(R.drawable.default_background)
-            .into(backdrop)
+        // Load backdrop image
+        if (item.backdropUrl.isNullOrBlank()) {
+            backdrop.setImageResource(R.drawable.default_background)
+            animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
+        } else {
+            Glide.with(this)
+                .load(item.backdropUrl)
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .placeholder(R.drawable.default_background)
+                .error(R.drawable.default_background)
+                .into(backdrop)
+
+            // Load a smaller version for palette extraction to improve performance
+            Glide.with(this)
+                .asBitmap()
+                .load(item.backdropUrl)
+                .override(150, 150)  // Small size is sufficient for color extraction
+                .into(object : CustomTarget<Bitmap>() {
+                    override fun onResourceReady(
+                        resource: Bitmap,
+                        transition: Transition<in Bitmap>?
+                    ) {
+                        extractPaletteFromBitmap(resource)
+                    }
+
+                    override fun onLoadCleared(placeholder: Drawable?) = Unit
+
+                    override fun onLoadFailed(errorDrawable: Drawable?) {
+                        animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
+                    }
+                })
+        }
 
         title.text = item.title
         overview.text = item.overview ?: getString(R.string.details_section_similar_empty)
         overview.visibility = View.VISIBLE
 
-        year.text = item.year ?: ""
-        val runtimeText = formatRuntimeText(item.runtime)
-        runtime.text = runtimeText ?: ""
-        runtime.visibility = if (runtimeText.isNullOrBlank()) View.GONE else View.VISIBLE
-
         updateHeroLogo(item.logoUrl)
+        HeroSectionHelper.updateHeroMetadata(detailsMetadata, item)
+        HeroSectionHelper.updateGenres(detailsGenreText, item.genres)
+        HeroSectionHelper.updateCast(detailsCast, item.cast)
         updateRatingBadges(item)
-        updateGenres(item.genres)
-        updateCastSummary(item.cast)
-
-        ratingBadge.text = item.certification ?: ""
-        ratingBadge.visibility = if (item.certification.isNullOrBlank()) View.GONE else View.VISIBLE
 
         // Show row sections
         showRowSections()
@@ -625,62 +655,6 @@ class DetailsFragment : Fragment() {
         return if (slashIndex > 0) raw.substring(0, slashIndex).trim() else raw
     }
 
-    private fun updateGenres(genres: String?) {
-        genreGroup.removeAllViews()
-        if (genres.isNullOrBlank()) {
-            genreGroup.visibility = View.GONE
-            return
-        }
-
-        val parts = genres.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        if (parts.isEmpty()) {
-            genreGroup.visibility = View.GONE
-            return
-        }
-
-        parts.forEach { label ->
-            val chip = Chip(requireContext()).apply {
-                text = label
-                isClickable = false
-                isFocusable = false
-                setChipBackgroundColorResource(android.R.color.transparent)
-                chipStrokeWidth = 1f
-                setChipStrokeColorResource(android.R.color.white)
-                chipStrokeColor = android.content.res.ColorStateList.valueOf(0x11FFFFFF)
-                setChipBackgroundColor(android.content.res.ColorStateList.valueOf(0x11FFFFFF))
-                setTextColor(resources.getColor(android.R.color.white, null))
-                textSize = 12f
-            }
-            genreGroup.addView(chip)
-        }
-        genreGroup.visibility = View.VISIBLE
-    }
-
-    private fun updateCastSummary(cast: String?) {
-        if (cast.isNullOrBlank()) {
-            castSummary.visibility = View.GONE
-        } else {
-            castSummary.text = getString(R.string.details_cast_template, cast)
-            castSummary.visibility = View.VISIBLE
-        }
-
-        castEmpty.visibility = View.VISIBLE
-        castRow.visibility = View.GONE
-    }
-
-    private fun formatRuntimeText(runtime: String?): String? {
-        if (runtime.isNullOrBlank()) return null
-        if (runtime.contains("h")) return runtime
-
-        val minutes = runtime.filter { it.isDigit() }.toIntOrNull() ?: return runtime
-        return if (minutes >= 60) {
-            val hours = minutes / 60
-            val remaining = minutes % 60
-            if (remaining == 0) "${hours}h" else "${hours}h ${remaining}m"
-        } else {
-            "${minutes}m"
-        }
-    }
 
     private fun Movie.toContentItem(): ContentItem {
         return ContentItem(
@@ -736,6 +710,8 @@ class DetailsFragment : Fragment() {
         private const val TAG = "DetailsFragment"
         private const val ARG_CONTENT_ITEM = "arg_content_item"
         private const val ARG_MOVIE = "arg_movie"
+        private const val AMBIENT_ANIMATION_DURATION = 650L
+        private val DEFAULT_AMBIENT_COLOR = Color.parseColor("#0A0F1F")
 
         fun newInstance(item: ContentItem): DetailsFragment {
             return DetailsFragment().apply {
@@ -752,5 +728,80 @@ class DetailsFragment : Fragment() {
 
     private fun focusDetailsContent() {
         detailsScroll.requestFocus()
+    }
+
+    private fun extractPaletteFromBitmap(bitmap: Bitmap) {
+        Palette.from(bitmap).generate { palette ->
+            if (palette == null) {
+                animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
+            } else {
+                animateAmbientFromPalette(palette)
+            }
+        }
+    }
+
+    private fun animateAmbientFromPalette(palette: Palette) {
+        val swatchColor = palette.vibrantSwatch?.rgb
+            ?: palette.darkVibrantSwatch?.rgb
+            ?: palette.dominantSwatch?.rgb
+            ?: palette.mutedSwatch?.rgb
+            ?: DEFAULT_AMBIENT_COLOR
+        val deepColor = ColorUtils.blendARGB(swatchColor, Color.BLACK, 0.55f)
+        animateAmbientToColor(deepColor)
+    }
+
+    private fun animateAmbientToColor(targetColor: Int) {
+        if (!isAdded || !::ambientOverlay.isInitialized) return
+        ambientColorAnimator?.cancel()
+        val startColor = currentAmbientColor
+        if (startColor == targetColor) {
+            updateAmbientGradient(targetColor)
+            return
+        }
+
+        ambientColorAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = AMBIENT_ANIMATION_DURATION
+            interpolator = ambientInterpolator
+            addUpdateListener { animator ->
+                val blended = argbEvaluator.evaluate(
+                    animator.animatedFraction,
+                    startColor,
+                    targetColor
+                ) as Int
+                updateAmbientGradient(blended)
+            }
+            start()
+        }
+    }
+
+    private fun updateAmbientGradient(color: Int) {
+        currentAmbientColor = color
+        val widthCandidates = listOf(
+            backdrop.width,
+            ambientOverlay.width,
+            resources.displayMetrics.widthPixels
+        ).filter { it > 0 }
+        val heightCandidates = listOf(
+            backdrop.height,
+            ambientOverlay.height,
+            resources.displayMetrics.heightPixels
+        ).filter { it > 0 }
+
+        val width = widthCandidates.maxOrNull() ?: resources.displayMetrics.widthPixels
+        val height = heightCandidates.maxOrNull() ?: resources.displayMetrics.heightPixels
+        val radius = max(width, height).toFloat() * 0.95f
+
+        val gradient = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            gradientType = GradientDrawable.RADIAL_GRADIENT
+            gradientRadius = radius
+            setGradientCenter(0.32f, 0.28f)
+            colors = intArrayOf(
+                ColorUtils.setAlphaComponent(color, 220),
+                ColorUtils.setAlphaComponent(color, 120),
+                ColorUtils.setAlphaComponent(color, 10)
+            )
+        }
+        ambientOverlay.background = gradient
     }
 }

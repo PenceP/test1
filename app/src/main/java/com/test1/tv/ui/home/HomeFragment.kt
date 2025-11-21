@@ -46,6 +46,7 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
+import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import java.util.Locale
 import kotlin.math.max
@@ -373,38 +374,10 @@ class HomeFragment : Fragment() {
         // Update text content
         heroTitle.text = item.title
         heroOverview.text = item.overview ?: ""
-        updateHeroMetadata(item)
+        HeroSectionHelper.updateHeroMetadata(heroMetadata, item)
         updateHeroLogo(item.logoUrl)
-        updateGenres(item.genres)
-
-        // Update cast
-        val castText = item.cast?.let { formatCastList(it) }
-        if (castText != null) {
-            heroCast.text = castText
-            heroCast.visibility = View.VISIBLE
-        } else {
-            heroCast.visibility = View.GONE
-        }
-    }
-
-    private fun updateGenres(genres: String?) {
-        if (genres.isNullOrBlank()) {
-            heroGenreText.visibility = View.GONE
-            heroGenreText.text = ""
-            return
-        }
-
-        val formatted = genres.split(",")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-        if (formatted.isEmpty()) {
-            heroGenreText.visibility = View.GONE
-            heroGenreText.text = ""
-            return
-        }
-
-        heroGenreText.text = formatted.joinToString(" • ")
-        heroGenreText.visibility = View.VISIBLE
+        HeroSectionHelper.updateGenres(heroGenreText, item.genres)
+        HeroSectionHelper.updateCast(heroCast, item.cast)
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
@@ -473,11 +446,11 @@ class HomeFragment : Fragment() {
 
     private fun buildMetadataLine(item: ContentItem): CharSequence? {
         val parts = mutableListOf<String>()
-        val matchScore = formatMatchScore(item)
+        val matchScore = HeroSectionHelper.formatMatchScore(item)
         matchScore?.let { parts.add(it) }
         item.year?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
         item.certification?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
-        formatRuntimeText(item.runtime)?.let { parts.add(it) }
+        HeroSectionHelper.formatRuntimeText(item.runtime)?.let { parts.add(it) }
 
         if (parts.isEmpty()) return null
         val joined = parts.joinToString(" • ")
@@ -500,23 +473,6 @@ class HomeFragment : Fragment() {
             SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE
         )
         return styled
-    }
-
-    private fun formatMatchScore(item: ContentItem): String? {
-        val fromPercentage = item.ratingPercentage?.takeIf { it in 1..100 }
-        if (fromPercentage != null) {
-            return String.format(Locale.US, "%d%% Match", fromPercentage)
-        }
-
-        val voteAverage = item.rating?.takeIf { it > 0 }
-            ?.let { (it * 10).roundToInt().coerceAtMost(100) }
-        if (voteAverage != null) {
-            return String.format(Locale.US, "%d%% Match", voteAverage)
-        }
-
-        val trakt = item.traktRating?.takeIf { it > 0 }
-            ?.let { (it * 10).roundToInt().coerceAtMost(100) }
-        return trakt?.let { String.format(Locale.US, "%d%% Match", it) }
     }
 
     private fun extractPaletteFromDrawable(drawable: Drawable?) {
@@ -600,24 +556,6 @@ class HomeFragment : Fragment() {
             )
         }
         ambientBackgroundOverlay.background = gradient
-    }
-
-    private fun formatRuntimeText(runtime: String?): String? {
-        if (runtime.isNullOrBlank()) return null
-        if (runtime.contains("h")) return runtime
-
-        val minutes = runtime.filter { it.isDigit() }.toIntOrNull() ?: return runtime
-        return if (minutes >= 60) {
-            val hours = minutes / 60
-            val remaining = minutes % 60
-            if (remaining == 0) {
-                "${hours}h"
-            } else {
-                "${hours}h ${remaining}m"
-            }
-        } else {
-            "${minutes}m"
-        }
     }
 
     private fun formatCastList(raw: String): String? {

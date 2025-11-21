@@ -24,6 +24,7 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
+import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import android.graphics.drawable.Drawable
 
@@ -257,50 +258,9 @@ class TvShowsFragment : Fragment() {
         heroTitle.text = item.title
         heroOverview.text = item.overview ?: ""
         updateHeroLogo(item.logoUrl)
-        updateGenres(item.genres)
-        updateHeroMetadata(item)
-
-        // Update cast
-        if (!item.cast.isNullOrBlank()) {
-            val castText = "Starring: ${item.cast}"
-            heroCast.text = castText
-            heroCast.visibility = View.VISIBLE
-        } else {
-            heroCast.visibility = View.GONE
-        }
-    }
-
-    private fun updateGenres(genres: String?) {
-        if (genres.isNullOrBlank()) {
-            heroGenreText.visibility = View.GONE
-            heroGenreText.text = ""
-            return
-        }
-
-        val formatted = genres.split(",")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-        if (formatted.isEmpty()) {
-            heroGenreText.visibility = View.GONE
-            heroGenreText.text = ""
-            return
-        }
-
-        heroGenreText.text = formatted.joinToString(" • ")
-        heroGenreText.visibility = View.VISIBLE
-    }
-
-    private fun updateHeroMetadata(item: ContentItem) {
-        val parts = mutableListOf<String>()
-
-        item.ratingPercentage?.let { parts.add("$it% Match") }
-        item.year?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
-        item.certification?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
-        item.runtime?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
-
-        val metadata = parts.joinToString(" • ")
-        heroMetadata.text = metadata
-        heroMetadata.visibility = if (metadata.isBlank()) View.GONE else View.VISIBLE
+        HeroSectionHelper.updateGenres(heroGenreText, item.genres)
+        HeroSectionHelper.updateHeroMetadata(heroMetadata, item)
+        HeroSectionHelper.updateCast(heroCast, item.cast)
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
