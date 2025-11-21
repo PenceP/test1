@@ -128,7 +128,6 @@ class DetailsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViews(view)
-        bindNav(view)
         contentItem?.let { bindContent(it) } ?: showMissingContent()
     }
 
@@ -219,31 +218,6 @@ class DetailsFragment : Fragment() {
         // Request focus on Play button by default
         buttonPlay.post {
             buttonPlay.requestFocus()
-        }
-    }
-
-    private fun bindNav(root: View) {
-        val navButtons = listOf(
-            R.id.nav_search,
-            R.id.nav_home,
-            R.id.nav_movies,
-            R.id.nav_tv_shows,
-            R.id.nav_settings
-        )
-
-        navButtons.forEach { id ->
-            val button = root.findViewById<MaterialButton>(id)
-            button?.setOnClickListener {
-                Toast.makeText(requireContext(), "Navigation coming soon", Toast.LENGTH_SHORT).show()
-            }
-            button?.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
-                    focusDetailsContent()
-                    true
-                } else {
-                    false
-                }
-            }
         }
     }
 
