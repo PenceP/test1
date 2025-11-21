@@ -50,7 +50,10 @@
                 android:id="@+id/details_hero_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingStart="@dimen/hero_container_padding_start"
+                android:paddingEnd="@dimen/hero_container_padding_end"
+                android:paddingBottom="@dimen/hero_container_padding_bottom">
 
                 <ImageView
                     android:id="@+id/details_logo"
@@ -109,9 +112,10 @@
                 <!-- Overview -->
                 <TextView
                     android:id="@+id/details_overview"
-                    android:layout_width="900dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/hero_overview_margin_top"
+                    android:layout_marginEnd="@dimen/hero_overview_margin_end"
                     android:ellipsize="end"
                     android:maxLines="4"
                     android:textColor="@android:color/white"

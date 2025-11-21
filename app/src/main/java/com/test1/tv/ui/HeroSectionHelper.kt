@@ -35,7 +35,7 @@ object HeroSectionHelper {
         formatRuntimeText(item.runtime)?.let { parts.add(it) }
 
         if (parts.isEmpty()) return null
-        return parts.joinToString(" • ")
+        return parts.joinToString("  •  ")
     }
 
     /**

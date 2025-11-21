@@ -453,7 +453,7 @@ class HomeFragment : Fragment() {
         HeroSectionHelper.formatRuntimeText(item.runtime)?.let { parts.add(it) }
 
         if (parts.isEmpty()) return null
-        val joined = parts.joinToString(" • ")
+        val joined = parts.joinToString("  •  ")
         if (matchScore == null) {
             return joined
         }
