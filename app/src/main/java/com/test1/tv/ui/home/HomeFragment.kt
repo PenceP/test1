@@ -250,7 +250,7 @@ class HomeFragment : Fragment() {
     private fun setupContentRows() {
         // Configure vertical grid for rows
         contentRowsView.setNumColumns(1)
-        contentRowsView.setItemSpacing(60)
+        contentRowsView.setItemSpacing(3)
 
         // Enable smooth scrolling with fixed row heights
         contentRowsView.setHasFixedSize(true)

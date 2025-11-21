@@ -176,10 +176,10 @@
             android:id="@+id/hero_info_container"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1.1"
+            android:layout_weight="0.8"
             android:gravity="top"
             android:orientation="vertical"
-            android:paddingStart="30dp"
+            android:paddingStart="10dp"
             android:paddingEnd="22dp"
             android:layout_marginStart="0dp"
             android:paddingBottom="0dp">
@@ -188,7 +188,7 @@
                 android:id="@+id/hero_logo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="5dp"
                 android:layout_marginBottom="8dp"
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
@@ -217,9 +217,9 @@
                 android:id="@+id/hero_metadata"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="3dp"
                 android:textColor="#F0FFFFFF"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 tools:text="98% Match • 2025 • PG-13 • 1h 48m" />
 
@@ -228,9 +228,9 @@
                 android:id="@+id/hero_genre_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="3dp"
                 android:textColor="@android:color/white"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 tools:text="Science Fiction • Adventure • Action" />
@@ -240,12 +240,12 @@
                 android:id="@+id/hero_overview"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:layout_marginEnd="84dp"
+                android:layout_marginTop="3dp"
+                android:layout_marginEnd="80dp"
                 android:ellipsize="end"
-                android:maxLines="4"
+                android:maxLines="3"
                 android:textColor="@android:color/white"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:lineSpacingMultiplier="1.1"
                 tools:text="A well-meaning but rather inept angel named Gabriel meddles in the lives of a struggling gig worker and a wealthy capitalist." />
 
@@ -253,7 +253,7 @@
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp">
+                android:layout_marginTop="3dp">
 
                 <TextView
                     android:id="@+id/hero_cast"
@@ -262,7 +262,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="#CCCCCC"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     tools:text="Starring: Cailee Spaeny, David Jonsson, Archie Renaux, Isabela Merced" />
 
             </FrameLayout>
@@ -273,7 +273,7 @@
         android:id="@+id/content_rows"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.9"
+        android:layout_weight="1.2"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:clipToPadding="false"
