@@ -73,13 +73,13 @@ class DetailsFragment : Fragment() {
     private lateinit var ratingTrakt: View
     private lateinit var ratingTraktValue: TextView
 
-    private lateinit var buttonThumbsUp: ImageButton
-    private lateinit var buttonThumbsSide: ImageButton
-    private lateinit var buttonThumbsDown: ImageButton
+    private lateinit var buttonThumbsUp: MaterialButton
+    private lateinit var buttonThumbsDown: MaterialButton
     private lateinit var buttonPlay: MaterialButton
     private lateinit var buttonTrailer: MaterialButton
-    private lateinit var buttonWatched: MaterialButton
-    private lateinit var buttonCollection: MaterialButton
+    private lateinit var buttonWatchlist: MaterialButton
+    private var tooltipPopup: android.widget.PopupWindow? = null
+    private var tooltipShowJob: kotlinx.coroutines.Job? = null
 
     private lateinit var castSection: LinearLayout
     private lateinit var similarSection: LinearLayout
@@ -97,7 +97,7 @@ class DetailsFragment : Fragment() {
 
     private var isWatched = false
     private var isInCollection = false
-    private var currentRating: Int = 0 // 0 = none, 1 = thumbs up, 2 = thumbs side, 3 = thumbs down
+    private var currentRating: Int = 0 // 0 = none, 1 = thumbs up, 2 = thumbs down
 
     // Ambient gradient animation
     private var ambientColorAnimator: ValueAnimator? = null
@@ -141,23 +141,12 @@ class DetailsFragment : Fragment() {
         detailsGenreText = view.findViewById(R.id.details_genre_text)
         overview = view.findViewById(R.id.details_overview)
         detailsCast = view.findViewById(R.id.details_cast)
-        ratingContainer = view.findViewById(R.id.details_rating_container)
-        ratingImdb = view.findViewById(R.id.details_rating_imdb)
-        ratingImdbValue = view.findViewById(R.id.details_rating_imdb_value)
-        ratingRotten = view.findViewById(R.id.details_rating_rotten)
-        ratingRottenValue = view.findViewById(R.id.details_rating_rotten_value)
-        ratingTmdb = view.findViewById(R.id.details_rating_tmdb)
-        ratingTmdbValue = view.findViewById(R.id.details_rating_tmdb_value)
-        ratingTrakt = view.findViewById(R.id.details_rating_trakt)
-        ratingTraktValue = view.findViewById(R.id.details_rating_trakt_value)
 
         buttonThumbsUp = view.findViewById(R.id.button_thumbs_up)
-        buttonThumbsSide = view.findViewById(R.id.button_thumbs_side)
         buttonThumbsDown = view.findViewById(R.id.button_thumbs_down)
         buttonPlay = view.findViewById(R.id.button_play)
         buttonTrailer = view.findViewById(R.id.button_trailer)
-        buttonWatched = view.findViewById(R.id.button_watched)
-        buttonCollection = view.findViewById(R.id.button_collection)
+        buttonWatchlist = view.findViewById(R.id.button_watchlist)
 
         castSection = view.findViewById(R.id.cast_section)
         similarSection = view.findViewById(R.id.similar_section)
@@ -179,17 +168,10 @@ class DetailsFragment : Fragment() {
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
 
-        buttonThumbsSide.setOnClickListener {
+        buttonThumbsDown.setOnClickListener {
             currentRating = if (currentRating == 2) 0 else 2
             updateRatingButtons()
-            val message = if (currentRating == 2) "Rated neutral" else "Rating removed"
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-        }
-
-        buttonThumbsDown.setOnClickListener {
-            currentRating = if (currentRating == 3) 0 else 3
-            updateRatingButtons()
-            val message = if (currentRating == 3) "Rated thumbs down" else "Rating removed"
+            val message = if (currentRating == 2) "Rated thumbs down" else "Rating removed"
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
 
@@ -201,17 +183,14 @@ class DetailsFragment : Fragment() {
             Toast.makeText(requireContext(), "Trailer coming soon", Toast.LENGTH_SHORT).show()
         }
 
-        buttonWatched.setOnClickListener {
+        buttonWatchlist.setOnClickListener {
             isWatched = !isWatched
-            val message = if (isWatched) "Marked as watched" else "Unmarked as watched"
+            val message = if (isWatched) "Added to watchlist" else "Removed from watchlist"
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
 
-        buttonCollection.setOnClickListener {
-            isInCollection = !isInCollection
-            val message = if (isInCollection) "Added to collection" else "Removed from collection"
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-        }
+        // Setup tooltips for all buttons
+        setupButtonTooltips()
 
         updateRatingButtons()
 
@@ -219,6 +198,108 @@ class DetailsFragment : Fragment() {
         buttonPlay.post {
             buttonPlay.requestFocus()
         }
+    }
+
+    private fun setupButtonTooltips() {
+        val buttons = listOf(
+            buttonPlay to "",
+            buttonTrailer to "Trailer",
+            buttonWatchlist to "Watchlist",
+            buttonThumbsUp to "Thumbs Up",
+            buttonThumbsDown to "Thumbs Down"
+        )
+
+        buttons.forEach { (button, tooltipText) ->
+            button.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    // Cancel any pending hide
+                    tooltipShowJob?.cancel()
+
+                    // Show tooltip immediately
+                    showTooltip(view, tooltipText)
+
+                    // Animate button scale on focus
+                    view.animate()
+                        .scaleX(1.1f)
+                        .scaleY(1.1f)
+                        .setDuration(150)
+                        .start()
+                } else {
+                    // Cancel any pending show
+                    tooltipShowJob?.cancel()
+                    tooltipShowJob = null
+
+                    hideTooltip()
+
+                    // Animate button back to normal
+                    view.animate()
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .setDuration(150)
+                        .start()
+                }
+            }
+        }
+    }
+
+    private fun showTooltip(anchorView: View, text: String) {
+        // Dismiss existing popup if any
+        tooltipPopup?.dismiss()
+
+        // Create tooltip view
+        val tooltipView = TextView(requireContext()).apply {
+            setText(text)
+            //set color to white alpha 50%
+            setTextColor(Color.parseColor("#AAFFFFFF"))
+            textSize = 10f
+            setBackgroundResource(R.drawable.button_tooltip_bg)
+            elevation = 12f
+        }
+
+        // Create popup window
+        tooltipPopup = android.widget.PopupWindow(
+            tooltipView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            false
+        ).apply {
+            elevation = 12f
+
+            // Measure the tooltip
+            tooltipView.measure(
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+
+            // Calculate position to center above button
+            val xOffset = (anchorView.width - tooltipView.measuredWidth) / 2
+            val yOffset = -(tooltipView.measuredHeight + 190) // 8dp above button
+
+            // Show popup above the anchor view
+            showAsDropDown(anchorView, xOffset, yOffset)
+        }
+
+        // Animate in
+        //tooltipView.alpha = 0f
+        //tooltipView.translationY = 5f
+        //tooltipView.animate()
+        //    .alpha(1f)
+        //    .translationY(0f)
+        //    .setDuration(150)
+        //    .start()
+    }
+
+    private fun hideTooltip() {
+        tooltipPopup?.dismiss()
+        tooltipPopup = null
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        tooltipShowJob?.cancel()
+        tooltipShowJob = null
+        tooltipPopup?.dismiss()
+        tooltipPopup = null
     }
 
     private fun bindContent(item: ContentItem) {
@@ -263,7 +344,7 @@ class DetailsFragment : Fragment() {
         HeroSectionHelper.updateHeroMetadata(detailsMetadata, item)
         HeroSectionHelper.updateGenres(detailsGenreText, item.genres)
         HeroSectionHelper.updateCast(detailsCast, item.cast)
-        updateRatingBadges(item)
+        //updateRatingBadges(item)
 
         // Show row sections
         showRowSections()
@@ -580,31 +661,6 @@ class DetailsFragment : Fragment() {
             })
     }
 
-    private fun updateRatingBadges(item: ContentItem) {
-        val hasImdb = bindRatingBadge(
-            ratingImdb,
-            ratingImdbValue,
-            formatImdbRating(item.imdbRating)
-        )
-        val hasRotten = bindRatingBadge(
-            ratingRotten,
-            ratingRottenValue,
-            item.rottenTomatoesRating?.takeIf { !it.equals("N/A", ignoreCase = true) && it.isNotBlank() }
-        )
-        val hasTmdb = bindRatingBadge(
-            ratingTmdb,
-            ratingTmdbValue,
-            formatScore(item.rating)
-        )
-        val hasTrakt = bindRatingBadge(
-            ratingTrakt,
-            ratingTraktValue,
-            formatScore(item.traktRating)
-        )
-
-        ratingContainer.visibility =
-            if (hasImdb || hasRotten || hasTmdb || hasTrakt) View.VISIBLE else View.GONE
-    }
 
     private fun bindRatingBadge(container: View, valueView: TextView, value: String?): Boolean {
         return if (!value.isNullOrBlank()) {
@@ -655,26 +711,20 @@ class DetailsFragment : Fragment() {
 
     private fun updateRatingButtons() {
         // Reset all buttons to outline icons
-        buttonThumbsUp.setImageResource(R.drawable.ic_thumb_up_outline)
-        buttonThumbsSide.setImageResource(R.drawable.ic_thumb_side_outline)
-        buttonThumbsDown.setImageResource(R.drawable.ic_thumb_down_outline)
+        buttonThumbsUp.icon = resources.getDrawable(R.drawable.ic_thumb_up_outline, null)
+        buttonThumbsDown.icon = resources.getDrawable(R.drawable.ic_thumb_down_outline, null)
 
         buttonThumbsUp.isSelected = false
-        buttonThumbsSide.isSelected = false
         buttonThumbsDown.isSelected = false
 
         // Set the selected button to filled icon and mark as selected
         when (currentRating) {
             1 -> {
-                buttonThumbsUp.setImageResource(R.drawable.ic_thumb_up)
+                buttonThumbsUp.icon = resources.getDrawable(R.drawable.ic_thumb_up, null)
                 buttonThumbsUp.isSelected = true
             }
             2 -> {
-                buttonThumbsSide.setImageResource(R.drawable.ic_thumb_side)
-                buttonThumbsSide.isSelected = true
-            }
-            3 -> {
-                buttonThumbsDown.setImageResource(R.drawable.ic_thumb_down)
+                buttonThumbsDown.icon = resources.getDrawable(R.drawable.ic_thumb_down, null)
                 buttonThumbsDown.isSelected = true
             }
         }

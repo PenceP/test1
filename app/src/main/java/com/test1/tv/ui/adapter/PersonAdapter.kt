@@ -55,7 +55,7 @@ class PersonAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PersonViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_person, parent, false)
+            .inflate(R.layout.item_person_card, parent, false)
         return PersonViewHolder(view)
     }
 

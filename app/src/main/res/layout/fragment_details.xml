@@ -136,276 +136,126 @@
                     android:visibility="gone"
                     tools:text="Starring: Chris Pratt, Zoe Saldaña, Dave Bautista, Vin Diesel, Bradley Cooper"
                     tools:visibility="visible" />
-
-                <LinearLayout
-                    android:id="@+id/details_rating_container"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
-
-                    <LinearLayout
-                        android:id="@+id/details_rating_imdb"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:visibility="gone">
-
-                        <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/imdb_logo" />
-
-                        <TextView
-                            android:id="@+id/details_rating_imdb_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:textColor="@android:color/white"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            tools:text="8.0" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/details_rating_rotten"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:visibility="gone">
-
-                        <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/rotten_tomatoes" />
-
-                        <TextView
-                            android:id="@+id/details_rating_rotten_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:textColor="@android:color/white"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            tools:text="94%" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/details_rating_tmdb"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:visibility="gone">
-
-                        <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/metacritic_logo" />
-
-                        <TextView
-                            android:id="@+id/details_rating_tmdb_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:textColor="@android:color/white"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            tools:text="7.8" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/details_rating_trakt"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:visibility="gone">
-
-                        <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/trakt2" />
-
-                        <TextView
-                            android:id="@+id/details_rating_trakt_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:textColor="@android:color/white"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            tools:text="7.5" />
-                    </LinearLayout>
-                </LinearLayout>
             </LinearLayout>
 
-            <!-- Rating Buttons (Thumbs) -->
-            <LinearLayout
-                android:id="@+id/details_feedback_container"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="start"
-                android:orientation="horizontal">
-
-                <ImageButton
-                    android:id="@+id/button_thumbs_up"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/thumb_button_bg"
-                    android:contentDescription="Thumbs Up"
-                    android:focusable="true"
-                    android:padding="6dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_thumb_up_outline"
-                    android:tint="@color/thumb_icon_tint" />
-
-                <ImageButton
-                    android:id="@+id/button_thumbs_side"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/thumb_button_bg"
-                    android:contentDescription="Thumbs Side"
-                    android:focusable="true"
-                    android:padding="6dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_thumb_side_outline"
-                    android:rotation="270"
-                    android:tint="@color/thumb_icon_tint" />
-
-                <ImageButton
-                    android:id="@+id/button_thumbs_down"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:background="@drawable/thumb_button_bg"
-                    android:contentDescription="Thumbs Down"
-                    android:focusable="true"
-                    android:padding="6dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_thumb_down_outline"
-                    android:tint="@color/thumb_icon_tint" />
-            </LinearLayout>
-
-            <!-- Action Buttons (Vertical Stack) -->
+            <!-- Action Buttons (Horizontal Row) -->
             <LinearLayout
                 android:id="@+id/details_action_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:layout_marginBottom="2dp"
-                android:orientation="vertical">
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal"
+                android:gravity="start|center_vertical">
 
+                <!-- Prominent Play Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_play"
-                    style="@style/Widget.Material3.Button.TextButton"
+                    style="@style/Widget.Material3.Button"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="0dp"
+                    android:layout_height="@dimen/details_button_height"
+                    android:layout_marginEnd="@dimen/details_button_spacing"
                     android:contentDescription="@string/details_tooltip_play"
                     android:focusable="true"
-                    android:minHeight="0dp"
-                    android:paddingStart="12dp"
-                    android:paddingTop="0dp"
-                    android:paddingEnd="20dp"
-                    android:paddingBottom="0dp"
+                    android:focusableInTouchMode="true"
+                    android:minWidth="@dimen/details_primary_button_min_width"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="24dp"
                     android:text="Play"
                     android:textAllCaps="false"
-                    android:textColor="@color/action_button_text"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/action_button_bg_tint"
-                    app:cornerRadius="6dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@android:color/white"
+                    app:strokeColor="#FFFFFF"
+                    app:strokeWidth="0dp"
+                    app:cornerRadius="8dp"
                     app:icon="@drawable/ic_play_circle"
                     app:iconGravity="start"
                     app:iconPadding="8dp"
-                    app:iconSize="22dp"
-                    app:iconTint="@color/action_button_icon" />
+                    app:iconSize="@dimen/details_button_icon_size"
+                    app:iconTint="@android:color/black" />
 
+                <!-- Subtle Secondary Buttons (Icon Only) -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_trailer"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="0dp"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="@dimen/details_secondary_button_size"
+                    android:layout_height="@dimen/details_secondary_button_size"
+                    android:layout_marginEnd="@dimen/details_button_spacing"
                     android:contentDescription="@string/details_tooltip_trailer"
                     android:focusable="true"
-                    android:minHeight="0dp"
-                    android:paddingStart="12dp"
-                    android:paddingTop="0dp"
-                    android:paddingEnd="20dp"
-                    android:paddingBottom="0dp"
-                    android:text="Trailer"
-                    android:textAllCaps="false"
-                    android:textColor="@color/action_button_text"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/action_button_bg_tint"
-                    app:cornerRadius="6dp"
+                    android:focusableInTouchMode="true"
+                    android:clickable="true"
+                    android:background="@drawable/details_secondary_button_bg"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="28dp"
                     app:icon="@drawable/ic_movie"
-                    app:iconGravity="start"
-                    app:iconPadding="8dp"
-                    app:iconSize="22dp"
-                    app:iconTint="@color/action_button_icon" />
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="@dimen/details_button_icon_size"
+                    app:iconTint="@android:color/white" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_watched"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="0dp"
-                    android:contentDescription="Mark as Watched"
+                    android:id="@+id/button_watchlist"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="@dimen/details_secondary_button_size"
+                    android:layout_height="@dimen/details_secondary_button_size"
+                    android:layout_marginEnd="@dimen/details_button_spacing"
+                    android:contentDescription="Add to Watchlist"
                     android:focusable="true"
-                    android:minHeight="0dp"
-                    android:paddingStart="12dp"
-                    android:paddingTop="0dp"
-                    android:paddingEnd="20dp"
-                    android:paddingBottom="0dp"
-                    android:text="Mark Watched"
-                    android:textAllCaps="false"
-                    android:textColor="@color/action_button_text"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/action_button_bg_tint"
-                    app:cornerRadius="6dp"
-                    app:icon="@drawable/ic_visibility"
-                    app:iconGravity="start"
-                    app:iconPadding="8dp"
-                    app:iconSize="22dp"
-                    app:iconTint="@color/action_button_icon" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_collection"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:contentDescription="Add to Collection"
-                    android:focusable="true"
-                    android:minHeight="0dp"
-                    android:paddingStart="12dp"
-                    android:paddingTop="0dp"
-                    android:paddingEnd="20dp"
-                    android:paddingBottom="0dp"
-                    android:text="Add to Collection"
-                    android:textAllCaps="false"
-                    android:textColor="@color/action_button_text"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/action_button_bg_tint"
-                    app:cornerRadius="6dp"
+                    android:focusableInTouchMode="true"
+                    android:clickable="true"
+                    android:background="@drawable/details_secondary_button_bg"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="28dp"
                     app:icon="@drawable/ic_playlist_add"
-                    app:iconGravity="start"
-                    app:iconPadding="8dp"
-                    app:iconSize="22dp"
-                    app:iconTint="@color/action_button_icon" />
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="@dimen/details_button_icon_size"
+                    app:iconTint="@android:color/white" />
+
+                <!-- Rating Buttons -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_thumbs_up"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="@dimen/details_secondary_button_size"
+                    android:layout_height="@dimen/details_secondary_button_size"
+                    android:layout_marginEnd="@dimen/details_button_spacing"
+                    android:contentDescription="Thumbs Up"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:clickable="true"
+                    android:background="@drawable/details_secondary_button_bg"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="28dp"
+                    app:icon="@drawable/ic_thumb_up"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="@dimen/details_button_icon_size"
+                    app:iconTint="@android:color/white" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_thumbs_down"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="@dimen/details_secondary_button_size"
+                    android:layout_height="@dimen/details_secondary_button_size"
+                    android:contentDescription="Thumbs Down"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:clickable="true"
+                    android:background="@drawable/details_secondary_button_bg"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="28dp"
+                    app:icon="@drawable/ic_thumb_down"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="@dimen/details_button_icon_size"
+                    app:iconTint="@android:color/white" />
             </LinearLayout>
 
             <!-- Sections (People, Collection, Similar) -->
@@ -420,6 +270,7 @@
                     android:id="@+id/cast_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/details_row_spacing"
                     android:orientation="vertical"
                     android:visibility="gone">
 
@@ -429,7 +280,7 @@
                         android:layout_height="wrap_content"
                         android:text="People"
                         android:textColor="@android:color/white"
-                        android:textSize="16sp"
+                        android:textSize="@dimen/details_row_title_size"
                         android:textStyle="bold" />
 
                     <TextView
@@ -456,7 +307,7 @@
                     android:id="@+id/collection_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="@dimen/details_row_spacing"
                     android:orientation="vertical"
                     android:visibility="gone">
 
@@ -465,7 +316,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@android:color/white"
-                        android:textSize="16sp"
+                        android:textSize="@dimen/details_row_title_size"
                         android:textStyle="bold"
                         tools:text="The Avengers Collection" />
 
@@ -493,7 +344,7 @@
                     android:id="@+id/similar_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="@dimen/details_row_spacing"
                     android:layout_marginBottom="32dp"
                     android:orientation="vertical"
                     android:visibility="gone">
@@ -504,7 +355,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/details_section_similar"
                         android:textColor="@android:color/white"
-                        android:textSize="16sp"
+                        android:textSize="@dimen/details_row_title_size"
                         android:textStyle="bold" />
 
                     <TextView
