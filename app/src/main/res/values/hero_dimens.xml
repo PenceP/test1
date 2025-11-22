@@ -41,11 +41,11 @@
     <dimen name="nav_dock_padding_vertical">32dp</dimen>
 
     <!-- Details Page Action Buttons -->
-    <dimen name="details_button_height">56dp</dimen>
+    <dimen name="details_button_height">48dp</dimen>
     <dimen name="details_button_icon_size">32dp</dimen>
     <dimen name="details_button_spacing">12dp</dimen>
-    <dimen name="details_primary_button_min_width">140dp</dimen>
-    <dimen name="details_secondary_button_size">64dp</dimen>
+    <dimen name="details_primary_button_min_width">100dp</dimen>
+    <dimen name="details_secondary_button_size">54dp</dimen>
 
     <!-- Details Page Row Spacing (match home page) -->
     <dimen name="details_row_spacing">24dp</dimen>
