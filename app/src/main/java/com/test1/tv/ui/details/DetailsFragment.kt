@@ -17,7 +17,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.widget.TooltipCompat
 import androidx.core.os.bundleOf
 import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
@@ -80,8 +79,6 @@ class DetailsFragment : Fragment() {
     private lateinit var buttonPlay: MaterialButton
     private lateinit var buttonTrailer: MaterialButton
     private lateinit var buttonWatchlist: MaterialButton
-    private var tooltipPopup: android.widget.PopupWindow? = null
-    private var tooltipShowJob: kotlinx.coroutines.Job? = null
 
     private lateinit var castSection: LinearLayout
     private lateinit var similarSection: LinearLayout
@@ -191,8 +188,8 @@ class DetailsFragment : Fragment() {
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
 
-        // Setup tooltips for all buttons
-        setupButtonTooltips()
+        // Setup button focus handlers
+        setupButtons()
 
         updateRatingButtons()
 
@@ -202,21 +199,19 @@ class DetailsFragment : Fragment() {
         }
     }
 
-    private fun setupButtonTooltips() {
-        val playButtonConfig = buttonPlay to Pair("", false) // No expanding for Play button
-        val secondaryButtons = listOf(
-            buttonTrailer to Pair("Trailer", true),
-            buttonWatchlist to Pair("Watchlist", true),
-            buttonThumbsUp to Pair("Like", true),
-            buttonThumbsDown to Pair("Dislike", true)
-        )
-
-        // Setup Play button (no expanding, just tooltip and scale)
-        setupPlayButtonFocus(playButtonConfig.first)
+    private fun setupButtons() {
+        // Setup Play button (no expanding, just scale animation)
+        setupPlayButtonFocus(buttonPlay)
 
         // Setup secondary buttons with expanding pill animation
-        secondaryButtons.forEach { (button, config) ->
-            val (labelText, shouldExpand) = config
+        val secondaryButtons = listOf(
+            buttonTrailer to "Trailer",
+            buttonWatchlist to "Watchlist",
+            buttonThumbsUp to "Like",
+            buttonThumbsDown to "Dislike"
+        )
+
+        secondaryButtons.forEach { (button, labelText) ->
             setupExpandingPillButton(button, labelText)
         }
     }
@@ -224,12 +219,6 @@ class DetailsFragment : Fragment() {
     private fun setupPlayButtonFocus(button: MaterialButton) {
         button.setOnFocusChangeListener { view, hasFocus ->
             if (hasFocus) {
-                // Cancel any pending hide
-                tooltipShowJob?.cancel()
-
-                // Show tooltip immediately
-                showTooltip(view, "")
-
                 // Animate button scale on focus
                 view.animate()
                     .scaleX(1.2f)
@@ -237,12 +226,6 @@ class DetailsFragment : Fragment() {
                     .setDuration(150)
                     .start()
             } else {
-                // Cancel any pending show
-                tooltipShowJob?.cancel()
-                tooltipShowJob = null
-
-                hideTooltip()
-
                 // Animate button back to normal
                 view.animate()
                     .scaleX(1.0f)
@@ -254,9 +237,6 @@ class DetailsFragment : Fragment() {
     }
 
     private fun setupExpandingPillButton(button: MaterialButton, labelText: String) {
-        // 1. Get the initial fixed size (the circle size)
-        val collapsedWidth = button.layoutParams.width
-
         button.text = "" // Start empty
 
         button.setOnFocusChangeListener { view, hasFocus ->
@@ -275,29 +255,24 @@ class DetailsFragment : Fragment() {
             val params = materialButton.layoutParams
 
             if (hasFocus) {
-                // Cancel any pending tooltip hide
-                tooltipShowJob?.cancel()
-
-                // Show tooltip
-                showTooltip(view, labelText)
-
                 // STATE: EXPANDED
                 params.width = ViewGroup.LayoutParams.WRAP_CONTENT // Let it grow!
                 materialButton.text = labelText
                 materialButton.iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                materialButton.iconPadding = (12 * resources.displayMetrics.density).toInt() // 12dp spacing between icon and text
+                val horizontalPadding = (16 * resources.displayMetrics.density).toInt() // 16dp horizontal padding
+                materialButton.setPadding(horizontalPadding, materialButton.paddingTop, horizontalPadding, materialButton.paddingBottom)
                 materialButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), android.R.color.black))
                 materialButton.iconTint = ColorStateList.valueOf(Color.BLACK)
             } else {
-                // Cancel any pending tooltip show
-                tooltipShowJob?.cancel()
-                tooltipShowJob = null
-
-                hideTooltip()
-
-                // STATE: COLLAPSED
-                params.width = collapsedWidth // Snap back to circle size
+                // STATE: COLLAPSED - Make it a perfect circle
+                params.width = params.height // Set width to match height for perfect circle
                 materialButton.text = ""
-                materialButton.iconGravity = MaterialButton.ICON_GRAVITY_START
+                // Reset iconGravity to match XML default (textStart) which centers better when no text
+                materialButton.iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                materialButton.iconPadding = 0 // No padding - centers the icon
+                // Remove all padding to let the icon center naturally in the circular button
+                materialButton.setPadding(0, 0, 0, 0)
                 materialButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), android.R.color.white))
                 materialButton.iconTint = ColorStateList.valueOf(Color.WHITE)
             }
@@ -305,66 +280,23 @@ class DetailsFragment : Fragment() {
             // Apply the new width
             materialButton.layoutParams = params
         }
-    }
 
-    private fun showTooltip(anchorView: View, text: String) {
-        // Dismiss existing popup if any
-        tooltipPopup?.dismiss()
-
-        // Create tooltip view
-        val tooltipView = TextView(requireContext()).apply {
-            setText(text)
-            //set color to white alpha 50%
-            setTextColor(Color.parseColor("#AAFFFFFF"))
-            textSize = 10f
-            setBackgroundResource(R.drawable.button_tooltip_bg)
-            elevation = 12f
+        // Set initial width to match height for perfect circle (before any focus happens)
+        button.post {
+            val params = button.layoutParams
+            params.width = params.height
+            button.layoutParams = params
+            // Remove all padding to let the icon center naturally in the circular button
+            button.setPadding(0, 0, 0, 0)
+            button.iconPadding = 0
+            // Reset iconGravity to match XML default
+            button.iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
         }
-
-        // Create popup window
-        tooltipPopup = android.widget.PopupWindow(
-            tooltipView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            false
-        ).apply {
-            elevation = 12f
-
-            // Measure the tooltip
-            tooltipView.measure(
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-            )
-
-            // Calculate position to center above button
-            val xOffset = (anchorView.width - tooltipView.measuredWidth) / 2
-            val yOffset = -(tooltipView.measuredHeight + 190) // 8dp above button
-
-            // Show popup above the anchor view
-            showAsDropDown(anchorView, xOffset, yOffset)
-        }
-
-        // Animate in
-        //tooltipView.alpha = 0f
-        //tooltipView.translationY = 5f
-        //tooltipView.animate()
-        //    .alpha(1f)
-        //    .translationY(0f)
-        //    .setDuration(150)
-        //    .start()
     }
 
-    private fun hideTooltip() {
-        tooltipPopup?.dismiss()
-        tooltipPopup = null
-    }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        tooltipShowJob?.cancel()
-        tooltipShowJob = null
-        tooltipPopup?.dismiss()
-        tooltipPopup = null
     }
 
     private fun bindContent(item: ContentItem) {
