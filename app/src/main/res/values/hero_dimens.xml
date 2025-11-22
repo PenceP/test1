@@ -42,10 +42,10 @@
 
     <!-- Details Page Action Buttons -->
     <dimen name="details_button_height">56dp</dimen>
-    <dimen name="details_button_icon_size">24dp</dimen>
+    <dimen name="details_button_icon_size">32dp</dimen>
     <dimen name="details_button_spacing">12dp</dimen>
     <dimen name="details_primary_button_min_width">140dp</dimen>
-    <dimen name="details_secondary_button_size">56dp</dimen>
+    <dimen name="details_secondary_button_size">64dp</dimen>
 
     <!-- Details Page Row Spacing (match home page) -->
     <dimen name="details_row_spacing">24dp</dimen>

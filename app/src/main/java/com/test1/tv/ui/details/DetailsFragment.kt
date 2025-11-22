@@ -30,6 +30,8 @@ import com.bumptech.glide.request.transition.Transition
 import android.widget.ImageButton
 import com.google.android.material.button.MaterialButton
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 import com.test1.tv.BuildConfig
 import com.test1.tv.DetailsActivity
 import com.test1.tv.Movie
@@ -203,7 +205,7 @@ class DetailsFragment : Fragment() {
     private fun setupButtonTooltips() {
         val buttons = listOf(
             buttonPlay to "",
-            buttonTrailer to "Trailer",
+            buttonTrailer to "Watch Trailer",
             buttonWatchlist to "Watchlist",
             buttonThumbsUp to "Thumbs Up",
             buttonThumbsDown to "Thumbs Down"
@@ -220,8 +222,8 @@ class DetailsFragment : Fragment() {
 
                     // Animate button scale on focus
                     view.animate()
-                        .scaleX(1.1f)
-                        .scaleY(1.1f)
+                        .scaleX(1.2f)
+                        .scaleY(1.2f)
                         .setDuration(150)
                         .start()
                 } else {
@@ -657,8 +659,28 @@ class DetailsFragment : Fragment() {
                     logo.setImageDrawable(resource)
                     logo.visibility = View.VISIBLE
                     title.visibility = View.GONE
+                    applyHeroLogoBounds(resource)
                 }
             })
+    }
+
+    private fun applyHeroLogoBounds(resource: Drawable) {
+        val intrinsicWidth = if (resource.intrinsicWidth > 0) resource.intrinsicWidth else logo.width
+        val intrinsicHeight = if (resource.intrinsicHeight > 0) resource.intrinsicHeight else logo.height
+        if (intrinsicWidth <= 0 || intrinsicHeight <= 0) return
+
+        val maxWidth = resources.getDimensionPixelSize(R.dimen.hero_logo_max_width)
+        val maxHeight = resources.getDimensionPixelSize(R.dimen.hero_logo_max_height)
+        val widthRatio = maxWidth.toFloat() / intrinsicWidth
+        val heightRatio = maxHeight.toFloat() / intrinsicHeight
+        val scale = min(widthRatio, heightRatio)
+
+        val params = logo.layoutParams
+        params.width = (intrinsicWidth * scale).roundToInt()
+        params.height = (intrinsicHeight * scale).roundToInt()
+        logo.layoutParams = params
+        logo.scaleX = 1f
+        logo.scaleY = 1f
     }
 
 
