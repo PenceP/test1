@@ -203,44 +203,107 @@ class DetailsFragment : Fragment() {
     }
 
     private fun setupButtonTooltips() {
-        val buttons = listOf(
-            buttonPlay to "",
-            buttonTrailer to "Watch Trailer",
-            buttonWatchlist to "Watchlist",
-            buttonThumbsUp to "Thumbs Up",
-            buttonThumbsDown to "Thumbs Down"
+        val playButtonConfig = buttonPlay to Pair("", false) // No expanding for Play button
+        val secondaryButtons = listOf(
+            buttonTrailer to Pair("Trailer", true),
+            buttonWatchlist to Pair("Watchlist", true),
+            buttonThumbsUp to Pair("Like", true),
+            buttonThumbsDown to Pair("Dislike", true)
         )
 
-        buttons.forEach { (button, tooltipText) ->
-            button.setOnFocusChangeListener { view, hasFocus ->
-                if (hasFocus) {
-                    // Cancel any pending hide
-                    tooltipShowJob?.cancel()
+        // Setup Play button (no expanding, just tooltip and scale)
+        setupPlayButtonFocus(playButtonConfig.first)
 
-                    // Show tooltip immediately
-                    showTooltip(view, tooltipText)
+        // Setup secondary buttons with expanding pill animation
+        secondaryButtons.forEach { (button, config) ->
+            val (labelText, shouldExpand) = config
+            setupExpandingPillButton(button, labelText)
+        }
+    }
 
-                    // Animate button scale on focus
-                    view.animate()
-                        .scaleX(1.2f)
-                        .scaleY(1.2f)
-                        .setDuration(150)
-                        .start()
-                } else {
-                    // Cancel any pending show
-                    tooltipShowJob?.cancel()
-                    tooltipShowJob = null
+    private fun setupPlayButtonFocus(button: MaterialButton) {
+        button.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) {
+                // Cancel any pending hide
+                tooltipShowJob?.cancel()
 
-                    hideTooltip()
+                // Show tooltip immediately
+                showTooltip(view, "")
 
-                    // Animate button back to normal
-                    view.animate()
-                        .scaleX(1.0f)
-                        .scaleY(1.0f)
-                        .setDuration(150)
-                        .start()
-                }
+                // Animate button scale on focus
+                view.animate()
+                    .scaleX(1.2f)
+                    .scaleY(1.2f)
+                    .setDuration(150)
+                    .start()
+            } else {
+                // Cancel any pending show
+                tooltipShowJob?.cancel()
+                tooltipShowJob = null
+
+                hideTooltip()
+
+                // Animate button back to normal
+                view.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(150)
+                    .start()
             }
+        }
+    }
+
+    private fun setupExpandingPillButton(button: MaterialButton, labelText: String) {
+        // 1. Get the initial fixed size (the circle size)
+        val collapsedWidth = button.layoutParams.width
+
+        button.text = "" // Start empty
+
+        button.setOnFocusChangeListener { view, hasFocus ->
+            val materialButton = view as MaterialButton
+            val parent = materialButton.parent as? ViewGroup
+
+            // 2. Tell the parent layout to animate the next change
+            parent?.let {
+                val transition = android.transition.AutoTransition()
+                transition.duration = 200 // Milliseconds
+                transition.ordering = android.transition.TransitionSet.ORDERING_TOGETHER
+                android.transition.TransitionManager.beginDelayedTransition(it, transition)
+            }
+
+            // 3. MODIFY THE WIDTH
+            val params = materialButton.layoutParams
+
+            if (hasFocus) {
+                // Cancel any pending tooltip hide
+                tooltipShowJob?.cancel()
+
+                // Show tooltip
+                showTooltip(view, labelText)
+
+                // STATE: EXPANDED
+                params.width = ViewGroup.LayoutParams.WRAP_CONTENT // Let it grow!
+                materialButton.text = labelText
+                materialButton.iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                materialButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), android.R.color.black))
+                materialButton.iconTint = ColorStateList.valueOf(Color.BLACK)
+            } else {
+                // Cancel any pending tooltip show
+                tooltipShowJob?.cancel()
+                tooltipShowJob = null
+
+                hideTooltip()
+
+                // STATE: COLLAPSED
+                params.width = collapsedWidth // Snap back to circle size
+                materialButton.text = ""
+                materialButton.iconGravity = MaterialButton.ICON_GRAVITY_START
+                materialButton.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), android.R.color.white))
+                materialButton.iconTint = ColorStateList.valueOf(Color.WHITE)
+            }
+
+            // Apply the new width
+            materialButton.layoutParams = params
         }
     }
 

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="120dp"
+    android:layout_height="120dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:layout_marginEnd="12dp">
+
+    <ImageView
+        android:id="@+id/person_photo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:background="@android:color/darker_gray" />
+
+    <TextView
+        android:id="@+id/person_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#99000000"
+        android:padding="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:gravity="center"
+        tools:text="Brad Pitt" />
+
+    <View
+        android:id="@+id/focus_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/cast_focus_border" />
+
+</FrameLayout>

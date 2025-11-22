@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Semi-transparent black background for glassmorphism -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#99000000" />
+            <corners
+                android:bottomLeftRadius="12dp"
+                android:bottomRightRadius="12dp"
+                android:topLeftRadius="0dp"
+                android:topRightRadius="0dp" />
+        </shape>
+    </item>
+
+    <!-- Subtle top border (white alpha) for glass effect -->
+    <item android:top="0dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#30FFFFFF" />
+            <corners
+                android:bottomLeftRadius="0dp"
+                android:bottomRightRadius="0dp"
+                android:topLeftRadius="0dp"
+                android:topRightRadius="0dp" />
+        </shape>
+    </item>
+</layer-list>

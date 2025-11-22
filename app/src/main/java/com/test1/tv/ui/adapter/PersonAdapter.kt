@@ -31,22 +31,22 @@ class PersonAdapter(
 
             personName.text = person.name
 
-            // Handle focus changes
+            // Handle focus changes with glassmorphism style
             itemView.setOnFocusChangeListener { _, hasFocus ->
                 focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
                 if (hasFocus) {
-                    // Animate scale up
+                    // Animate scale up to 1.1x
                     itemView.animate()
-                        .scaleX(1.08f)
-                        .scaleY(1.08f)
-                        .setDuration(90)
+                        .scaleX(1.1f)
+                        .scaleY(1.1f)
+                        .setDuration(150)
                         .start()
                 } else {
                     // Animate scale down
                     itemView.animate()
                         .scaleX(1.0f)
                         .scaleY(1.0f)
-                        .setDuration(90)
+                        .setDuration(150)
                         .start()
                 }
             }
@@ -55,7 +55,7 @@ class PersonAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PersonViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_person_card, parent, false)
+            .inflate(R.layout.item_person_card_glass, parent, false)
         return PersonViewHolder(view)
     }
 
