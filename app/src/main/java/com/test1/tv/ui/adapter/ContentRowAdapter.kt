@@ -10,6 +10,7 @@ import androidx.leanback.widget.HorizontalGridView
 import androidx.recyclerview.widget.RecyclerView
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
+import com.test1.tv.ui.RowScrollPauser
 
 enum class RowPresentation {
     PORTRAIT,
@@ -72,6 +73,7 @@ class ContentRowAdapter(
                 rowContent.setWindowAlignmentOffsetPercent(HorizontalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
                 rowContent.setItemAlignmentOffset(60)
                 rowContent.setItemAlignmentOffsetPercent(HorizontalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
+                RowScrollPauser.attach(rowContent)
             }
 
             val layoutParams = rowContent.layoutParams

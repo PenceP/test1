@@ -57,6 +57,8 @@ import java.util.Locale
 import androidx.core.widget.NestedScrollView
 import java.util.Date
 import androidx.leanback.widget.OnChildViewHolderSelectedListener
+import androidx.leanback.widget.BaseGridView
+import com.test1.tv.ui.RowScrollPauser
 
 class DetailsFragment : Fragment() {
 
@@ -521,6 +523,7 @@ class DetailsFragment : Fragment() {
         castRow.setItemSpacing(0)
         castRow.setHasFixedSize(true)
         castRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+        RowScrollPauser.attach(castRow)
 
         castEmpty.visibility = View.GONE
         castRow.visibility = View.VISIBLE
@@ -582,6 +585,7 @@ class DetailsFragment : Fragment() {
         similarRow.setItemSpacing(0)
         similarRow.setHasFixedSize(true)
         similarRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+        RowScrollPauser.attach(similarRow)
 
         similarEmpty.visibility = View.GONE
         similarRow.visibility = View.VISIBLE
@@ -634,6 +638,7 @@ class DetailsFragment : Fragment() {
         collectionRow.setItemSpacing(0)
         collectionRow.setHasFixedSize(true)
         collectionRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+        RowScrollPauser.attach(collectionRow)
 
         collectionEmpty.visibility = View.GONE
         collectionRow.visibility = View.VISIBLE
@@ -702,8 +707,9 @@ class DetailsFragment : Fragment() {
                 episodeRow.setItemSpacing(0)
                 episodeRow.setHasFixedSize(true)
                 episodeRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+                RowScrollPauser.attach(episodeRow)
 
-        episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
+                episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
         val firstEpNumber = episodes.firstOrNull()?.episodeNumber
         updatePlayButtonText(seasonNumber, firstEpNumber ?: 1)
 
@@ -728,6 +734,12 @@ class DetailsFragment : Fragment() {
                 restoreShowHeroContent()
             }
         }
+
+        // Anchor focus/keyline to reduce zig-zag navigation
+        episodeRow.windowAlignment = BaseGridView.WINDOW_ALIGN_NO_EDGE
+        episodeRow.windowAlignmentOffsetPercent = 1f
+        episodeRow.itemAlignmentOffsetPercent = 0f
+        episodeRow.isFocusSearchDisabled = false
 
                 seasonRow.post {
                     seasonRow.layoutManager?.findViewByPosition(selectedPosition)?.requestFocus()
@@ -1044,11 +1056,11 @@ class DetailsFragment : Fragment() {
             private val focusOverlay: View = itemView.findViewById(R.id.episode_focus_overlay)
 
             fun bind(episode: TMDBEpisode) {
-                Glide.with(itemView.context)
-                    .load(episode.getStillUrl())
-                    .transition(DrawableTransitionOptions.withCrossFade())
-                    .placeholder(R.drawable.default_background)
-                    .error(R.drawable.default_background)
+        Glide.with(itemView.context)
+            .load(episode.getStillUrl())
+            .transition(DrawableTransitionOptions.withCrossFade())
+            .placeholder(R.drawable.default_background)
+            .error(R.drawable.default_background)
                     .into(episodeImage)
 
                 episodeTitle.text = episode.getDisplayName()

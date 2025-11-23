@@ -48,7 +48,7 @@
     <dimen name="details_secondary_button_size">54dp</dimen>
 
     <!-- Details Page Row Spacing (match home page) -->
-    <dimen name="details_row_spacing">24dp</dimen>
+    <dimen name="details_row_spacing">8dp</dimen>
     <dimen name="details_row_title_size">18sp</dimen>
     <dimen name="details_row_horizontal_padding">6dp</dimen>
 

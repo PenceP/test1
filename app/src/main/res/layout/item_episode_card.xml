@@ -7,7 +7,8 @@
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:background="@drawable/cast_card_background"
-    android:clipToOutline="true">
+    android:clipToOutline="false"
+    android:nextFocusUp="@id/season_row">
 
     <ImageView
         android:id="@+id/episode_image"

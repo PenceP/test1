@@ -37,13 +37,16 @@
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:clipToPadding="false"
+        android:clipChildren="false"
         android:paddingBottom="48dp"
         android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
             <!-- Hero Content -->
             <LinearLayout
@@ -299,7 +302,7 @@
                     android:id="@+id/season_row"
                     android:layout_width="match_parent"
                     android:layout_height="40dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="6dp"
                     android:clipChildren="false"
                     android:clipToPadding="false"
                     android:paddingStart="@dimen/details_row_horizontal_padding"
@@ -313,7 +316,7 @@
                     android:id="@+id/episode_row"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/row_height_episode"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="2dp"
                     android:clipChildren="false"
                     android:clipToPadding="false"
                     android:paddingStart="@dimen/details_row_horizontal_padding"
