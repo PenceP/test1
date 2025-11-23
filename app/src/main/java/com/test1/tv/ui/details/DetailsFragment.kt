@@ -985,8 +985,8 @@ class DetailsFragment : Fragment() {
             private val title: TextView = itemView.findViewById(R.id.season_title)
 
             fun bind(season: TMDBSeason, position: Int) {
-                val label = season.name?.takeIf { it.isNotBlank() }
-                    ?: season.seasonNumber?.let { "Season $it" }
+                val label = season.seasonNumber?.let { "Season $it" }
+                    ?: season.name?.takeIf { it.isNotBlank() }
                     ?: "Season"
                 title.text = label
                 itemView.isSelected = position == selectedPosition
