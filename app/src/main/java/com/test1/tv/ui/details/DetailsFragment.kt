@@ -523,6 +523,7 @@ class DetailsFragment : Fragment() {
         castRow.setItemSpacing(0)
         castRow.setHasFixedSize(true)
         castRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+        configureFixedFocusRow(castRow)
         RowScrollPauser.attach(castRow)
 
         castEmpty.visibility = View.GONE
@@ -585,6 +586,7 @@ class DetailsFragment : Fragment() {
         similarRow.setItemSpacing(0)
         similarRow.setHasFixedSize(true)
         similarRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+        configureFixedFocusRow(similarRow)
         RowScrollPauser.attach(similarRow)
 
         similarEmpty.visibility = View.GONE
@@ -638,6 +640,7 @@ class DetailsFragment : Fragment() {
         collectionRow.setItemSpacing(0)
         collectionRow.setHasFixedSize(true)
         collectionRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+        configureFixedFocusRow(collectionRow)
         RowScrollPauser.attach(collectionRow)
 
         collectionEmpty.visibility = View.GONE
@@ -669,6 +672,7 @@ class DetailsFragment : Fragment() {
             seasonRow.setItemSpacing(0)
             seasonRow.setHasFixedSize(true)
             seasonRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+            configureFixedFocusRow(seasonRow, itemAlignmentOffset = 30, windowAlignmentOffset = 80)
         }
 
         val initialSeasonNumber = seasonAdapter?.getSelectedSeason()?.seasonNumber
@@ -707,6 +711,7 @@ class DetailsFragment : Fragment() {
                 episodeRow.setItemSpacing(0)
                 episodeRow.setHasFixedSize(true)
                 episodeRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+                configureFixedFocusRow(episodeRow)
                 RowScrollPauser.attach(episodeRow)
 
                 episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
@@ -841,6 +846,18 @@ class DetailsFragment : Fragment() {
         } else {
             "${runtimeMinutes}m"
         }
+    }
+
+    private fun configureFixedFocusRow(
+        gridView: HorizontalGridView,
+        itemAlignmentOffset: Int = 60,
+        windowAlignmentOffset: Int = 144
+    ) {
+        gridView.setWindowAlignment(HorizontalGridView.WINDOW_ALIGN_LOW_EDGE)
+        gridView.setWindowAlignmentOffset(windowAlignmentOffset)
+        gridView.setWindowAlignmentOffsetPercent(HorizontalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
+        gridView.setItemAlignmentOffset(itemAlignmentOffset)
+        gridView.setItemAlignmentOffsetPercent(HorizontalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
     }
 
     private fun showEmptyStates() {
