@@ -221,8 +221,8 @@ class DetailsFragment : Fragment() {
             if (hasFocus) {
                 // Animate button scale on focus
                 view.animate()
-                    .scaleX(1.2f)
-                    .scaleY(1.2f)
+                    .scaleX(1.1f)
+                    .scaleY(1.1f)
                     .setDuration(150)
                     .start()
             } else {
