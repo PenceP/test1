@@ -150,6 +150,12 @@ data class TMDBEpisode(
     val id: Int,
     @SerializedName("name")
     val name: String?,
+    @SerializedName("overview")
+    val overview: String?,
+    @SerializedName("air_date")
+    val airDate: String?,
+    @SerializedName("runtime")
+    val runtime: Int?,
     @SerializedName("episode_number")
     val episodeNumber: Int?,
     @SerializedName("season_number")

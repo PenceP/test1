@@ -29,6 +29,7 @@ import com.bumptech.glide.request.transition.Transition
 import android.widget.ImageButton
 import com.google.android.material.button.MaterialButton
 import androidx.recyclerview.widget.RecyclerView
+import java.text.SimpleDateFormat
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -54,6 +55,8 @@ import kotlinx.coroutines.withContext
 import android.util.Log
 import java.util.Locale
 import androidx.core.widget.NestedScrollView
+import java.util.Date
+import androidx.leanback.widget.OnChildViewHolderSelectedListener
 
 class DetailsFragment : Fragment() {
 
@@ -102,6 +105,10 @@ class DetailsFragment : Fragment() {
 
     private var seasonAdapter: SeasonAdapter? = null
     private var episodeAdapter: EpisodeAdapter? = null
+
+    private var showTitleOriginal: String? = null
+    private var showMetadataOriginal: CharSequence? = null
+    private var showOverviewOriginal: String? = null
 
     private var isWatched = false
     private var isInCollection = false
@@ -346,6 +353,9 @@ class DetailsFragment : Fragment() {
         }
 
         title.text = item.title
+        showTitleOriginal = item.title
+        showOverviewOriginal = item.overview ?: getString(R.string.details_section_similar_empty)
+        showMetadataOriginal = HeroSectionHelper.buildMetadataLine(item)
         overview.text = item.overview ?: getString(R.string.details_section_similar_empty)
         overview.visibility = View.VISIBLE
 
@@ -683,16 +693,41 @@ class DetailsFragment : Fragment() {
                     ?.sortedBy { it.episodeNumber ?: Int.MAX_VALUE }
                     .orEmpty()
 
-                episodeAdapter = EpisodeAdapter(episodes)
+                episodeAdapter = EpisodeAdapter(
+                    episodes = episodes,
+                    onEpisodeFocused = { episode -> updateHeroForEpisode(episode) }
+                )
                 episodeRow.adapter = episodeAdapter
                 episodeRow.setNumRows(1)
                 episodeRow.setItemSpacing(0)
                 episodeRow.setHasFixedSize(true)
                 episodeRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
 
-                episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
-                val firstEpNumber = episodes.firstOrNull()?.episodeNumber
-                updatePlayButtonText(seasonNumber, firstEpNumber ?: 1)
+        episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
+        val firstEpNumber = episodes.firstOrNull()?.episodeNumber
+        updatePlayButtonText(seasonNumber, firstEpNumber ?: 1)
+
+        // Hook selection listener for hero swaps
+        episodeRow.setOnChildViewHolderSelectedListener(object : OnChildViewHolderSelectedListener() {
+            override fun onChildViewHolderSelected(
+                parent: RecyclerView,
+                child: RecyclerView.ViewHolder?,
+                position: Int,
+                subposition: Int
+            ) {
+                if (child != null) {
+                    val episode = episodeAdapter?.getEpisode(position)
+                    updateHeroForEpisode(episode)
+                } else {
+                    restoreShowHeroContent()
+                }
+            }
+        })
+        episodeRow.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                restoreShowHeroContent()
+            }
+        }
 
                 seasonRow.post {
                     seasonRow.layoutManager?.findViewByPosition(selectedPosition)?.requestFocus()
@@ -708,7 +743,92 @@ class DetailsFragment : Fragment() {
             buttonPlay.text = getString(R.string.details_play)
             return
         }
-        buttonPlay.text = getString(R.string.details_play) + " S$seasonNumber E$episodeNumber"
+        buttonPlay.text = "${getString(R.string.details_play)} S$seasonNumber E$episodeNumber"
+    }
+
+    private fun updateHeroForEpisode(episode: TMDBEpisode?) {
+        if (episode == null) return
+        val meta = buildEpisodeMetadata(
+            episode.seasonNumber,
+            episode.episodeNumber,
+            episode.airDate,
+            episode.runtime
+        )
+        val overviewText = when {
+            !episode.name.isNullOrBlank() && !episode.overview.isNullOrBlank() ->
+                "${episode.name}\n${episode.overview}"
+            !episode.overview.isNullOrBlank() -> episode.overview
+            !episode.name.isNullOrBlank() -> episode.name
+            else -> showOverviewOriginal ?: ""
+        }
+        updateHeroContent(
+            title = showTitleOriginal ?: title.text.toString(),
+            metadata = meta,
+            overviewText = overviewText
+        )
+    }
+
+    private fun updateHeroContent(title: String, metadata: String, overviewText: String) {
+        if (metadata.isBlank()) {
+            detailsMetadata.visibility = View.GONE
+        } else {
+            detailsMetadata.visibility = View.VISIBLE
+            detailsMetadata.text = metadata
+        }
+        overview.text = overviewText
+        overview.visibility = View.VISIBLE
+    }
+
+    private fun restoreShowHeroContent() {
+        val metadataText = showMetadataOriginal ?: ""
+        if (metadataText.isBlank()) {
+            detailsMetadata.visibility = View.GONE
+        } else {
+            detailsMetadata.visibility = View.VISIBLE
+            detailsMetadata.text = metadataText
+        }
+        overview.text = showOverviewOriginal ?: ""
+        overview.visibility = View.VISIBLE
+    }
+
+    private fun buildEpisodeMetadata(
+        seasonNumber: Int?,
+        episodeNumber: Int?,
+        airDate: String?,
+        runtimeMinutes: Int?
+    ): String {
+        val parts = mutableListOf<String>()
+        if (seasonNumber != null && episodeNumber != null) {
+            parts.add("S$seasonNumber E$episodeNumber")
+        }
+        formatAirDate(airDate)?.let { parts.add(it) }
+        formatRuntime(runtimeMinutes)?.let { parts.add(it) }
+        return parts.joinToString(" • ")
+    }
+
+    private fun formatAirDate(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val date: Date? = parser.parse(raw)
+            date?.let {
+                SimpleDateFormat("MMM d, yyyy", Locale.US).format(it)
+            }
+        } catch (_: Exception) {
+            raw
+        }
+    }
+
+    private fun formatRuntime(runtimeMinutes: Int?): String? {
+        runtimeMinutes ?: return null
+        if (runtimeMinutes <= 0) return null
+        return if (runtimeMinutes >= 60) {
+            val hours = runtimeMinutes / 60
+            val mins = runtimeMinutes % 60
+            if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
+        } else {
+            "${runtimeMinutes}m"
+        }
     }
 
     private fun showEmptyStates() {
@@ -914,7 +1034,8 @@ class DetailsFragment : Fragment() {
     }
 
     private inner class EpisodeAdapter(
-        private val episodes: List<TMDBEpisode>
+        private val episodes: List<TMDBEpisode>,
+        private val onEpisodeFocused: (TMDBEpisode?) -> Unit
     ) : RecyclerView.Adapter<EpisodeAdapter.EpisodeViewHolder>() {
 
         inner class EpisodeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -936,6 +1057,7 @@ class DetailsFragment : Fragment() {
                     focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
                     if (hasFocus) {
                         itemView.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).start()
+                        onEpisodeFocused(episode)
                     } else {
                         itemView.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
                     }
@@ -954,6 +1076,8 @@ class DetailsFragment : Fragment() {
         }
 
         override fun getItemCount(): Int = episodes.size
+
+        fun getEpisode(position: Int): TMDBEpisode? = episodes.getOrNull(position)
     }
 
     companion object {
