@@ -284,6 +284,45 @@
                     app:iconTint="@android:color/white" />
             </LinearLayout>
 
+            <!-- TV Show Seasons & Episodes -->
+            <LinearLayout
+                android:id="@+id/tv_show_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/details_row_spacing"
+                android:orientation="vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:visibility="gone">
+
+                <androidx.leanback.widget.HorizontalGridView
+                    android:id="@+id/season_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginBottom="8dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:paddingStart="@dimen/details_row_horizontal_padding"
+                    android:paddingEnd="@dimen/details_row_horizontal_padding"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <androidx.leanback.widget.HorizontalGridView
+                    android:id="@+id/episode_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/row_height_episode"
+                    android:layout_marginTop="16dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:paddingStart="@dimen/details_row_horizontal_padding"
+                    android:paddingEnd="@dimen/details_row_horizontal_padding"
+                    android:paddingBottom="4dp"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
+
             <!-- Sections (People, Collection, Similar) -->
             <LinearLayout
                 android:id="@+id/rows_container"

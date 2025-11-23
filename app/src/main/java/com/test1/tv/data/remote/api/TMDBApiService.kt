@@ -3,6 +3,7 @@ package com.test1.tv.data.remote.api
 import com.test1.tv.data.model.tmdb.TMDBCollectionDetails
 import com.test1.tv.data.model.tmdb.TMDBMovieDetails
 import com.test1.tv.data.model.tmdb.TMDBMovieListResponse
+import com.test1.tv.data.model.tmdb.TMDBSeasonDetails
 import com.test1.tv.data.model.tmdb.TMDBShowDetails
 import com.test1.tv.data.model.tmdb.TMDBShowListResponse
 import retrofit2.http.GET
@@ -46,4 +47,11 @@ interface TMDBApiService {
         @Query("api_key") apiKey: String,
         @Query("page") page: Int = 1
     ): TMDBShowListResponse
+
+    @GET("tv/{tv_id}/season/{season_number}")
+    suspend fun getSeasonDetails(
+        @Path("tv_id") showId: Int,
+        @Path("season_number") seasonNumber: Int,
+        @Query("api_key") apiKey: String
+    ): TMDBSeasonDetails
 }

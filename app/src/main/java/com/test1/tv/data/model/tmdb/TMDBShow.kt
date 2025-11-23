@@ -56,6 +56,8 @@ data class TMDBShowDetails(
     val numberOfSeasons: Int?,
     @SerializedName("number_of_episodes")
     val numberOfEpisodes: Int?,
+    @SerializedName("seasons")
+    val seasons: List<TMDBSeason>?,
     @SerializedName("status")
     val status: String?,
     @SerializedName("images")
@@ -121,4 +123,55 @@ data class TMDBShowListResponse(
     val totalPages: Int?,
     @SerializedName("total_results")
     val totalResults: Int?
+)
+
+data class TMDBSeason(
+    @SerializedName("id")
+    val id: Int?,
+    @SerializedName("name")
+    val name: String?,
+    @SerializedName("season_number")
+    val seasonNumber: Int?,
+    @SerializedName("episode_count")
+    val episodeCount: Int?,
+    @SerializedName("poster_path")
+    val posterPath: String?,
+    @SerializedName("air_date")
+    val airDate: String?
+) {
+    fun getPosterUrl(): String? = posterPath?.let { "https://image.tmdb.org/t/p/w300$it" }
+    fun getDisplayName(): String {
+        return name ?: seasonNumber?.let { "Season $it" } ?: "Season"
+    }
+}
+
+data class TMDBEpisode(
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("name")
+    val name: String?,
+    @SerializedName("episode_number")
+    val episodeNumber: Int?,
+    @SerializedName("season_number")
+    val seasonNumber: Int?,
+    @SerializedName("still_path")
+    val stillPath: String?
+) {
+    fun getStillUrl(): String? = stillPath?.let { "https://image.tmdb.org/t/p/w500$it" }
+    fun getDisplayName(): String {
+        val number = episodeNumber ?: return name.orEmpty()
+        val title = name?.takeIf { it.isNotBlank() } ?: "Episode $number"
+        return "$number. $title"
+    }
+}
+
+data class TMDBSeasonDetails(
+    @SerializedName("id")
+    val id: Int,
+    @SerializedName("name")
+    val name: String?,
+    @SerializedName("season_number")
+    val seasonNumber: Int?,
+    @SerializedName("episodes")
+    val episodes: List<TMDBEpisode>?
 )

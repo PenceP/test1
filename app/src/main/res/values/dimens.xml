@@ -15,6 +15,7 @@
     <dimen name="row_height_portrait">220dp</dimen>
     <dimen name="row_height_landscape">200dp</dimen>
     <dimen name="row_height_square">140dp</dimen>
+    <dimen name="row_height_episode">140dp</dimen>
     <dimen name="hero_logo_max_width">385dp</dimen>
     <dimen name="hero_logo_max_height">90dp</dimen>
 </resources>

@@ -28,6 +28,7 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import android.widget.ImageButton
 import com.google.android.material.button.MaterialButton
+import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -39,6 +40,8 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.model.tmdb.TMDBCast
 import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBMovie
+import com.test1.tv.data.model.tmdb.TMDBEpisode
+import com.test1.tv.data.model.tmdb.TMDBSeason
 import com.test1.tv.data.model.tmdb.TMDBShow
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.ui.HeroSectionHelper
@@ -93,6 +96,12 @@ class DetailsFragment : Fragment() {
     private lateinit var similarEmpty: TextView
     private lateinit var collectionEmpty: TextView
     private lateinit var detailsScroll: NestedScrollView
+    private lateinit var tvShowSection: LinearLayout
+    private lateinit var seasonRow: HorizontalGridView
+    private lateinit var episodeRow: HorizontalGridView
+
+    private var seasonAdapter: SeasonAdapter? = null
+    private var episodeAdapter: EpisodeAdapter? = null
 
     private var isWatched = false
     private var isInCollection = false
@@ -159,6 +168,9 @@ class DetailsFragment : Fragment() {
         castEmpty = view.findViewById(R.id.cast_empty_text)
         similarEmpty = view.findViewById(R.id.similar_empty_text)
         collectionEmpty = view.findViewById(R.id.collection_empty_text)
+        tvShowSection = view.findViewById(R.id.tv_show_section)
+        seasonRow = view.findViewById(R.id.season_row)
+        episodeRow = view.findViewById(R.id.episode_row)
 
         buttonThumbsUp.setOnClickListener {
             currentRating = if (currentRating == 1) 0 else 1
@@ -365,8 +377,13 @@ class DetailsFragment : Fragment() {
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 when (item.type) {
-                    ContentItem.ContentType.MOVIE -> fetchMovieDetails(item.tmdbId)
-                    ContentItem.ContentType.TV_SHOW -> fetchShowDetails(item.tmdbId)
+                    ContentItem.ContentType.MOVIE -> {
+                        tvShowSection.visibility = View.GONE
+                        fetchMovieDetails(item.tmdbId)
+                    }
+                    ContentItem.ContentType.TV_SHOW -> {
+                        fetchShowDetails(item.tmdbId)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching details data", e)
@@ -462,6 +479,12 @@ class DetailsFragment : Fragment() {
                     )
                 }
                 populateSimilarRowWithItems(similarItems)
+
+                // Populate seasons/episodes
+                val orderedSeasons = showDetails.seasons
+                    ?.filter { (it.seasonNumber ?: 0) > 0 }
+                    ?.sortedBy { it.seasonNumber }
+                populateSeasonsAndEpisodes(tmdbShowId = tmdbId, seasons = orderedSeasons.orEmpty())
 
                 // TV shows don't have collections
             }
@@ -607,12 +630,95 @@ class DetailsFragment : Fragment() {
         collectionSection.visibility = View.VISIBLE
     }
 
+    private fun populateSeasonsAndEpisodes(tmdbShowId: Int, seasons: List<TMDBSeason>) {
+        if (seasons.isEmpty()) {
+            tvShowSection.visibility = View.GONE
+            return
+        }
+
+        tvShowSection.visibility = View.VISIBLE
+        seasonRow.visibility = View.VISIBLE
+
+        if (seasonAdapter == null) {
+            seasonAdapter = SeasonAdapter(
+                seasons = seasons,
+                onSeasonClick = { season, position ->
+                    season.seasonNumber?.let {
+                        loadEpisodesForSeason(tmdbShowId, it, position)
+                        seasonAdapter?.setSelectedPosition(position)
+                    }
+                }
+            )
+            seasonRow.adapter = seasonAdapter
+            seasonRow.setNumRows(1)
+            seasonRow.setItemSpacing(0)
+            seasonRow.setHasFixedSize(true)
+            seasonRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+        }
+
+        val initialSeasonNumber = seasonAdapter?.getSelectedSeason()?.seasonNumber
+            ?: seasons.firstOrNull()?.seasonNumber
+
+        if (initialSeasonNumber != null) {
+            loadEpisodesForSeason(
+                showId = tmdbShowId,
+                seasonNumber = initialSeasonNumber,
+                selectedPosition = seasonAdapter?.selectedPosition ?: 0
+            )
+        }
+    }
+
+    private fun loadEpisodesForSeason(showId: Int, seasonNumber: Int, selectedPosition: Int) {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val seasonDetails = withContext(Dispatchers.IO) {
+                    ApiClient.tmdbApiService.getSeasonDetails(
+                        showId = showId,
+                        seasonNumber = seasonNumber,
+                        apiKey = BuildConfig.TMDB_API_KEY
+                    )
+                }
+
+                val episodes = seasonDetails.episodes
+                    ?.sortedBy { it.episodeNumber ?: Int.MAX_VALUE }
+                    .orEmpty()
+
+                episodeAdapter = EpisodeAdapter(episodes)
+                episodeRow.adapter = episodeAdapter
+                episodeRow.setNumRows(1)
+                episodeRow.setItemSpacing(0)
+                episodeRow.setHasFixedSize(true)
+                episodeRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
+
+                episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
+                val firstEpNumber = episodes.firstOrNull()?.episodeNumber
+                updatePlayButtonText(seasonNumber, firstEpNumber ?: 1)
+
+                seasonRow.post {
+                    seasonRow.layoutManager?.findViewByPosition(selectedPosition)?.requestFocus()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching season details", e)
+            }
+        }
+    }
+
+    private fun updatePlayButtonText(seasonNumber: Int?, episodeNumber: Int?) {
+        if (seasonNumber == null || episodeNumber == null) {
+            buttonPlay.text = getString(R.string.details_play)
+            return
+        }
+        buttonPlay.text = getString(R.string.details_play) + " S$seasonNumber E$episodeNumber"
+    }
+
     private fun showEmptyStates() {
         castEmpty.visibility = View.VISIBLE
         castRow.visibility = View.GONE
         similarEmpty.visibility = View.VISIBLE
         similarRow.visibility = View.GONE
         collectionSection.visibility = View.GONE
+        tvShowSection.visibility = View.GONE
+        episodeRow.visibility = View.GONE
     }
 
     private fun showMissingContent() {
@@ -745,6 +851,109 @@ class DetailsFragment : Fragment() {
                 buttonThumbsDown.isSelected = true
             }
         }
+    }
+
+    private inner class SeasonAdapter(
+        private val seasons: List<TMDBSeason>,
+        private val onSeasonClick: (TMDBSeason, Int) -> Unit
+    ) : RecyclerView.Adapter<SeasonAdapter.SeasonViewHolder>() {
+
+        var selectedPosition: Int = 0
+            private set
+
+        inner class SeasonViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val title: TextView = itemView.findViewById(R.id.season_title)
+
+            fun bind(season: TMDBSeason, position: Int) {
+                val label = season.name?.takeIf { it.isNotBlank() }
+                    ?: season.seasonNumber?.let { "Season $it" }
+                    ?: "Season"
+                title.text = label
+                itemView.isSelected = position == selectedPosition
+
+                itemView.setOnClickListener {
+                    val adapterPosition = bindingAdapterPosition
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        setSelectedPosition(adapterPosition)
+                        onSeasonClick(season, adapterPosition)
+                    }
+                }
+
+                itemView.setOnFocusChangeListener { view, hasFocus ->
+                    view.isSelected = position == selectedPosition
+                    if (hasFocus) {
+                        view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(120).start()
+                    } else {
+                        view.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                    }
+                }
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SeasonViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_season_chip, parent, false)
+            return SeasonViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: SeasonViewHolder, position: Int) {
+            holder.bind(seasons[position], position)
+        }
+
+        override fun getItemCount(): Int = seasons.size
+
+        fun setSelectedPosition(newPosition: Int) {
+            if (newPosition == selectedPosition) return
+            val previous = selectedPosition
+            selectedPosition = newPosition
+            notifyItemChanged(previous)
+            notifyItemChanged(newPosition)
+        }
+
+        fun getSelectedSeason(): TMDBSeason? = seasons.getOrNull(selectedPosition)
+    }
+
+    private inner class EpisodeAdapter(
+        private val episodes: List<TMDBEpisode>
+    ) : RecyclerView.Adapter<EpisodeAdapter.EpisodeViewHolder>() {
+
+        inner class EpisodeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val episodeImage: ImageView = itemView.findViewById(R.id.episode_image)
+            private val episodeTitle: TextView = itemView.findViewById(R.id.episode_title)
+            private val focusOverlay: View = itemView.findViewById(R.id.episode_focus_overlay)
+
+            fun bind(episode: TMDBEpisode) {
+                Glide.with(itemView.context)
+                    .load(episode.getStillUrl())
+                    .transition(DrawableTransitionOptions.withCrossFade())
+                    .placeholder(R.drawable.default_background)
+                    .error(R.drawable.default_background)
+                    .into(episodeImage)
+
+                episodeTitle.text = episode.getDisplayName()
+
+                itemView.setOnFocusChangeListener { _, hasFocus ->
+                    focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
+                    if (hasFocus) {
+                        itemView.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).start()
+                    } else {
+                        itemView.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+                    }
+                }
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EpisodeViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_episode_card, parent, false)
+            return EpisodeViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: EpisodeViewHolder, position: Int) {
+            holder.bind(episodes[position])
+        }
+
+        override fun getItemCount(): Int = episodes.size
     }
 
     companion object {
