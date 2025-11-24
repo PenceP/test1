@@ -59,6 +59,7 @@ import java.util.Date
 import androidx.leanback.widget.OnChildViewHolderSelectedListener
 import androidx.leanback.widget.BaseGridView
 import com.test1.tv.ui.RowScrollPauser
+import com.test1.tv.ui.ScrollThrottler
 import android.transition.TransitionManager
 
 class DetailsFragment : Fragment() {
@@ -109,6 +110,7 @@ class DetailsFragment : Fragment() {
     private lateinit var episodeInfoShelf: LinearLayout
     private lateinit var shelfEpisodeTitle: TextView
     private lateinit var shelfEpisodeOverview: TextView
+    private val scrollThrottler = ScrollThrottler(throttleMs = 120L)
 
     private var seasonAdapter: SeasonAdapter? = null
     private var episodeAdapter: EpisodeAdapter? = null
@@ -534,6 +536,7 @@ class DetailsFragment : Fragment() {
         castRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
         configureFixedFocusRow(castRow)
         RowScrollPauser.attach(castRow)
+        castRow.setOnKeyInterceptListener(scrollThrottler)
 
         castEmpty.visibility = View.GONE
         castRow.visibility = View.VISIBLE
@@ -597,6 +600,7 @@ class DetailsFragment : Fragment() {
         similarRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
         configureFixedFocusRow(similarRow)
         RowScrollPauser.attach(similarRow)
+        similarRow.setOnKeyInterceptListener(scrollThrottler)
 
         similarEmpty.visibility = View.GONE
         similarRow.visibility = View.VISIBLE
@@ -651,6 +655,7 @@ class DetailsFragment : Fragment() {
         collectionRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
         configureFixedFocusRow(collectionRow)
         RowScrollPauser.attach(collectionRow)
+        collectionRow.setOnKeyInterceptListener(scrollThrottler)
 
         collectionEmpty.visibility = View.GONE
         collectionRow.visibility = View.VISIBLE
@@ -721,8 +726,9 @@ class DetailsFragment : Fragment() {
                 episodeRow.setItemSpacing(0)
                 episodeRow.setHasFixedSize(true)
                 episodeRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
-                configureFixedFocusRow(episodeRow)
+                configureFixedFocusRow(episodeRow, itemAlignmentOffset = 6)
                 RowScrollPauser.attach(episodeRow)
+                episodeRow.setOnKeyInterceptListener(scrollThrottler)
 
                 episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
                 val firstEpNumber = episodes.firstOrNull()?.episodeNumber
@@ -792,7 +798,7 @@ class DetailsFragment : Fragment() {
         val airDateText = formatAirDate(episode.airDate)
         val runtimeText = formatRuntime(episode.runtime)
         val baseTitle = when {
-            !episode.name.isNullOrBlank() && seasonEpisode.isNotBlank() -> "$seasonEpisode - ${episode.name}"
+            !episode.name.isNullOrBlank() && seasonEpisode.isNotBlank() -> "${episode.name}"
             !episode.name.isNullOrBlank() -> episode.name
             else -> seasonEpisode
         }
@@ -869,7 +875,7 @@ class DetailsFragment : Fragment() {
 
     private fun configureFixedFocusRow(
         gridView: HorizontalGridView,
-        itemAlignmentOffset: Int = 60,
+        itemAlignmentOffset: Int = 10,
         windowAlignmentOffset: Int = 144
     ) {
         gridView.setWindowAlignment(HorizontalGridView.WINDOW_ALIGN_LOW_EDGE)

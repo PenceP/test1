@@ -39,7 +39,7 @@ class PosterAdapter(
 ) : RecyclerView.Adapter<PosterAdapter.PosterViewHolder>() {
 
     companion object {
-        private const val NEAR_END_THRESHOLD = 10
+        private const val NEAR_END_THRESHOLD = 14
         private const val BORDER_WIDTH_DP = 20f
         private const val PORTRAIT_RADIUS_DP = 18f
         private const val LANDSCAPE_RADIUS_DP = 16f
@@ -55,6 +55,11 @@ class PosterAdapter(
         val cardContainer: CardView? = itemView.findViewById(R.id.poster_card)
 
         fun bind(item: ContentItem, position: Int) {
+            // Reset recycled state
+            posterImage.setImageDrawable(null)
+            titleOverlay.text = ""
+            titleOverlay.visibility = View.VISIBLE
+
             titleOverlay.text = item.title
             titleOverlay.visibility = View.VISIBLE
             cardContainer?.let { ViewCompat.setElevation(it, 6f) }

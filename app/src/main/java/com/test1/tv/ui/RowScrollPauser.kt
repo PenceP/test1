@@ -7,7 +7,7 @@ import com.bumptech.glide.Glide
  * Utility to pause/resume Glide while rows are flinging and lightly limit fling velocity.
  */
 object RowScrollPauser {
-    private const val FLING_FACTOR = 0.55f
+    private const val FLING_FACTOR = 0.05f
 
     fun attach(recyclerView: RecyclerView) {
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -15,6 +15,7 @@ object RowScrollPauser {
                 val glide = Glide.with(recyclerView)
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                     glide.resumeRequests()
+                    recyclerView.stopScroll()
                 } else {
                     glide.pauseRequests()
                 }

@@ -39,3 +39,7 @@
 5. Sidebar glow states – show which section is active by animating a thin neon strip or soft glow behind the focused navigation icon, rather than just
     tint changes; it keeps the navigation minimal but modern.
 
+
+## MICRO CHANGES
+1. change "Similar" row on details page should pull from Trakt "related" api call instead of TMDB similar
+2. add the scroll throttler from detailsfragment to EVERY row on Home, Movies, TV Show pages.
