@@ -683,6 +683,7 @@ class DetailsFragment : Fragment() {
             seasonRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
             configureFixedFocusRow(seasonRow, itemAlignmentOffset = 30, windowAlignmentOffset = 80)
         }
+        // No centering on season row focus; keep shelf hidden when moving away from episodes
 
         val initialSeasonNumber = seasonAdapter?.getSelectedSeason()?.seasonNumber
             ?: seasons.firstOrNull()?.seasonNumber
@@ -738,16 +739,26 @@ class DetailsFragment : Fragment() {
                 position: Int,
                 subposition: Int
             ) {
-                if (child != null) {
+                if (child != null && episodeRow.hasFocus()) {
                     val episode = episodeAdapter?.getEpisode(position)
                     updateEpisodeShelf(episode)
+                    episodeRow.post { scrollToViewCenter(episodeRow) }
                 } else {
                     restoreEpisodeShelf()
                 }
             }
         })
         episodeRow.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
+            if (hasFocus) {
+                episodeRow.post {
+                    episodeRow.focusedChild?.let { focused ->
+                        val pos = episodeRow.getChildAdapterPosition(focused)
+                        val episode = episodeAdapter?.getEpisode(pos)
+                        updateEpisodeShelf(episode)
+                    }
+                    scrollToViewCenter(episodeRow)
+                }
+            } else {
                 restoreEpisodeShelf()
             }
         }
@@ -866,6 +877,26 @@ class DetailsFragment : Fragment() {
         gridView.setWindowAlignmentOffsetPercent(HorizontalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
         gridView.setItemAlignmentOffset(itemAlignmentOffset)
         gridView.setItemAlignmentOffsetPercent(HorizontalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
+    }
+
+    private fun scrollToViewCenter(view: View) {
+        val currentScrollY = detailsScroll.scrollY
+
+        val viewLocation = IntArray(2)
+        view.getLocationOnScreen(viewLocation)
+        val viewY = viewLocation[1]
+
+        val scrollLocation = IntArray(2)
+        detailsScroll.getLocationOnScreen(scrollLocation)
+        val scrollYOnScreen = scrollLocation[1]
+
+        val relativeY = viewY - scrollYOnScreen + currentScrollY
+
+        val screenHeight = detailsScroll.height
+        val viewHeight = view.height
+        val targetScrollY = relativeY - (screenHeight / 2) + (viewHeight / 2)
+
+        detailsScroll.smoothScrollTo(0, targetScrollY)
     }
 
     private fun showEmptyStates() {

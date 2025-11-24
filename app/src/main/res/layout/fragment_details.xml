@@ -38,7 +38,7 @@
         android:focusableInTouchMode="true"
         android:clipToPadding="false"
         android:clipChildren="false"
-        android:paddingBottom="48dp"
+        android:paddingBottom="200dp"
         android:scrollbars="none">
 
         <LinearLayout
