@@ -16,7 +16,7 @@ interface TMDBApiService {
     suspend fun getMovieDetails(
         @Path("movie_id") movieId: Int,
         @Query("api_key") apiKey: String,
-        @Query("append_to_response") appendToResponse: String = "credits,videos,images,release_dates",
+        @Query("append_to_response") appendToResponse: String = "credits,videos,images,release_dates,external_ids",
         @Query("include_image_language") includeImageLanguage: String = "en,null"
     ): TMDBMovieDetails
 
@@ -24,7 +24,7 @@ interface TMDBApiService {
     suspend fun getShowDetails(
         @Path("tv_id") showId: Int,
         @Query("api_key") apiKey: String,
-        @Query("append_to_response") appendToResponse: String = "credits,videos,images,content_ratings",
+        @Query("append_to_response") appendToResponse: String = "credits,videos,images,content_ratings,external_ids",
         @Query("include_image_language") includeImageLanguage: String = "en,null"
     ): TMDBShowDetails
 

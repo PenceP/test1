@@ -43,13 +43,15 @@ import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBMovie
 import com.test1.tv.data.model.tmdb.TMDBEpisode
 import com.test1.tv.data.model.tmdb.TMDBSeason
-import com.test1.tv.data.model.tmdb.TMDBShow
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.adapter.PersonAdapter
 import com.test1.tv.ui.adapter.PosterAdapter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Log
@@ -423,11 +425,7 @@ class DetailsFragment : Fragment() {
                 apiKey = BuildConfig.TMDB_API_KEY
             )
 
-            // Fetch similar movies
-            val similarMovies = ApiClient.tmdbApiService.getSimilarMovies(
-                movieId = tmdbId,
-                apiKey = BuildConfig.TMDB_API_KEY
-            )
+            val relatedItems = fetchRelatedMovies(movieDetails.imdbId ?: movieDetails.externalIds?.imdbId)
 
             // Fetch collection if exists
             val collectionMovies = movieDetails.belongsToCollection?.let { collection ->
@@ -442,7 +440,7 @@ class DetailsFragment : Fragment() {
                 populateCastRow(movieDetails.credits?.cast)
 
                 // Populate Similar row
-                populateSimilarRow(similarMovies.results)
+                populateSimilarRowWithItems(relatedItems)
 
                 // Populate Collection row if exists
                 if (collectionMovies != null && movieDetails.belongsToCollection != null) {
@@ -468,40 +466,14 @@ class DetailsFragment : Fragment() {
                 apiKey = BuildConfig.TMDB_API_KEY
             )
 
-            // Fetch similar shows
-            val similarShows = ApiClient.tmdbApiService.getSimilarShows(
-                showId = tmdbId,
-                apiKey = BuildConfig.TMDB_API_KEY
-            )
+            val relatedItems = fetchRelatedShows(showDetails.externalIds?.imdbId)
 
             withContext(Dispatchers.Main) {
                 // Populate People row
                 populateCastRow(showDetails.credits?.cast)
 
-                // Populate Similar row (convert TMDBShow to ContentItem)
-                val similarItems = similarShows.results?.map { show ->
-                    ContentItem(
-                        id = show.id,
-                        tmdbId = show.id,
-                        title = show.name,
-                        overview = show.overview,
-                        posterUrl = show.getPosterUrl(),
-                        backdropUrl = show.getBackdropUrl(),
-                        logoUrl = null,
-                        year = show.firstAirDate?.take(4),
-                        rating = show.voteAverage,
-                        ratingPercentage = show.voteAverage?.times(10)?.toInt(),
-                        genres = null,
-                        type = ContentItem.ContentType.TV_SHOW,
-                        runtime = null,
-                        cast = null,
-                        certification = null,
-                        imdbRating = null,
-                        rottenTomatoesRating = null,
-                        traktRating = null
-                    )
-                }
-                populateSimilarRowWithItems(similarItems)
+                // Populate Similar row using Trakt related list
+                populateSimilarRowWithItems(relatedItems)
 
                 // Populate seasons/episodes
                 val orderedSeasons = showDetails.seasons
@@ -517,6 +489,128 @@ class DetailsFragment : Fragment() {
                 showEmptyStates()
             }
         }
+    }
+
+    private suspend fun fetchRelatedMovies(imdbId: String?): List<ContentItem> = coroutineScope {
+        if (imdbId.isNullOrBlank()) {
+            Log.w(TAG, "Cannot fetch related movies without imdb id")
+            return@coroutineScope emptyList()
+        }
+
+        val relatedMovies = runCatching {
+            ApiClient.traktApiService.getRelatedMovies(
+                movieId = imdbId,
+                clientId = BuildConfig.TRAKT_CLIENT_ID
+            )
+        }.getOrElse {
+            Log.e(TAG, "Error fetching related movies from Trakt", it)
+            return@coroutineScope emptyList()
+        }
+
+        val jobs = relatedMovies
+            .take(20)
+            .mapNotNull { traktMovie ->
+                val relatedTmdbId = traktMovie.ids.tmdb
+                if (relatedTmdbId == null) {
+                    Log.w(TAG, "Skipping related movie without TMDB id: ${traktMovie.title}")
+                    return@mapNotNull null
+                }
+
+                async(Dispatchers.IO) {
+                    runCatching {
+                        ApiClient.tmdbApiService.getMovieDetails(
+                            movieId = relatedTmdbId,
+                            apiKey = BuildConfig.TMDB_API_KEY
+                        )
+                    }.onFailure { error ->
+                        Log.w(TAG, "Failed to fetch TMDB details for related movie $relatedTmdbId", error)
+                    }.getOrNull()?.let { tmdbDetails ->
+                        ContentItem(
+                            id = tmdbDetails.id,
+                            tmdbId = tmdbDetails.id,
+                            title = tmdbDetails.title,
+                            overview = tmdbDetails.overview,
+                            posterUrl = tmdbDetails.getPosterUrl(),
+                            backdropUrl = tmdbDetails.getBackdropUrl(),
+                            logoUrl = tmdbDetails.getLogoUrl(),
+                            year = tmdbDetails.getYear(),
+                            rating = tmdbDetails.voteAverage,
+                            ratingPercentage = tmdbDetails.getRatingPercentage(),
+                            genres = tmdbDetails.genres?.joinToString(", ") { it.name },
+                            type = ContentItem.ContentType.MOVIE,
+                            runtime = tmdbDetails.runtime?.let { "$it min" },
+                            cast = tmdbDetails.getCastNames(),
+                            certification = tmdbDetails.getCertification(),
+                            imdbRating = null,
+                            rottenTomatoesRating = null,
+                            traktRating = traktMovie.rating
+                        )
+                    }
+                }
+            }
+
+        jobs.awaitAll().filterNotNull()
+    }
+
+    private suspend fun fetchRelatedShows(imdbId: String?): List<ContentItem> = coroutineScope {
+        if (imdbId.isNullOrBlank()) {
+            Log.w(TAG, "Cannot fetch related shows without imdb id")
+            return@coroutineScope emptyList()
+        }
+
+        val relatedShows = runCatching {
+            ApiClient.traktApiService.getRelatedShows(
+                showId = imdbId,
+                clientId = BuildConfig.TRAKT_CLIENT_ID
+            )
+        }.getOrElse {
+            Log.e(TAG, "Error fetching related shows from Trakt", it)
+            return@coroutineScope emptyList()
+        }
+
+        val jobs = relatedShows
+            .take(20)
+            .mapNotNull { traktShow ->
+                val relatedTmdbId = traktShow.ids.tmdb
+                if (relatedTmdbId == null) {
+                    Log.w(TAG, "Skipping related show without TMDB id: ${traktShow.title}")
+                    return@mapNotNull null
+                }
+
+                async(Dispatchers.IO) {
+                    runCatching {
+                        ApiClient.tmdbApiService.getShowDetails(
+                            showId = relatedTmdbId,
+                            apiKey = BuildConfig.TMDB_API_KEY
+                        )
+                    }.onFailure { error ->
+                        Log.w(TAG, "Failed to fetch TMDB details for related show $relatedTmdbId", error)
+                    }.getOrNull()?.let { tmdbDetails ->
+                        ContentItem(
+                            id = tmdbDetails.id,
+                            tmdbId = tmdbDetails.id,
+                            title = tmdbDetails.name,
+                            overview = tmdbDetails.overview,
+                            posterUrl = tmdbDetails.getPosterUrl(),
+                            backdropUrl = tmdbDetails.getBackdropUrl(),
+                            logoUrl = tmdbDetails.getLogoUrl(),
+                            year = tmdbDetails.getYear(),
+                            rating = tmdbDetails.voteAverage,
+                            ratingPercentage = tmdbDetails.getRatingPercentage(),
+                            genres = tmdbDetails.genres?.joinToString(", ") { it.name },
+                            type = ContentItem.ContentType.TV_SHOW,
+                            runtime = tmdbDetails.episodeRunTime?.firstOrNull()?.let { "$it min" },
+                            cast = tmdbDetails.getCastNames(),
+                            certification = tmdbDetails.getCertification(),
+                            imdbRating = null,
+                            rottenTomatoesRating = null,
+                            traktRating = traktShow.rating
+                        )
+                    }
+                }
+            }
+
+        jobs.awaitAll().filterNotNull()
     }
 
     private fun populateCastRow(cast: List<TMDBCast>?) {
@@ -540,39 +634,6 @@ class DetailsFragment : Fragment() {
 
         castEmpty.visibility = View.GONE
         castRow.visibility = View.VISIBLE
-    }
-
-    private fun populateSimilarRow(similar: List<TMDBMovie>?) {
-        if (similar.isNullOrEmpty()) {
-            similarEmpty.visibility = View.VISIBLE
-            similarRow.visibility = View.GONE
-            return
-        }
-
-        val similarItems = similar.take(20).map { movie ->
-            ContentItem(
-                id = movie.id,
-                tmdbId = movie.id,
-                title = movie.title,
-                overview = movie.overview,
-                posterUrl = movie.getPosterUrl(),
-                backdropUrl = movie.getBackdropUrl(),
-                logoUrl = null,
-                year = movie.releaseDate?.take(4),
-                rating = movie.voteAverage,
-                ratingPercentage = movie.voteAverage?.times(10)?.toInt(),
-                genres = null,
-                type = ContentItem.ContentType.MOVIE,
-                runtime = null,
-                cast = null,
-                certification = null,
-                imdbRating = null,
-                rottenTomatoesRating = null,
-                traktRating = null
-            )
-        }
-
-        populateSimilarRowWithItems(similarItems)
     }
 
     private fun populateSimilarRowWithItems(similarItems: List<ContentItem>?) {

@@ -13,6 +13,8 @@ data class TMDBMovie(
     val posterPath: String?,
     @SerializedName("backdrop_path")
     val backdropPath: String?,
+    @SerializedName("imdb_id")
+    val imdbId: String? = null,
     @SerializedName("release_date")
     val releaseDate: String?,
     @SerializedName("vote_average")
@@ -44,6 +46,8 @@ data class TMDBMovieDetails(
     val posterPath: String?,
     @SerializedName("backdrop_path")
     val backdropPath: String?,
+    @SerializedName("imdb_id")
+    val imdbId: String?,
     @SerializedName("release_date")
     val releaseDate: String?,
     @SerializedName("vote_average")
@@ -63,7 +67,9 @@ data class TMDBMovieDetails(
     @SerializedName("release_dates")
     val releaseDates: TMDBReleaseDatesResponse?,
     @SerializedName("belongs_to_collection")
-    val belongsToCollection: TMDBCollection?
+    val belongsToCollection: TMDBCollection?,
+    @SerializedName("external_ids")
+    val externalIds: TMDBExternalIds? = null
 ) {
     fun getPosterUrl(): String? {
         return posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }

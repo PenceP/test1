@@ -21,8 +21,6 @@ import android.view.ViewGroup
 import android.view.SoundEffectConstants
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
@@ -46,6 +44,7 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
+import com.test1.tv.databinding.FragmentHomeBinding
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import java.util.Locale
@@ -58,22 +57,10 @@ import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
 
-    private lateinit var viewModel: HomeViewModel
-    private lateinit var contentRowsView: VerticalGridView
-    private lateinit var loadingIndicator: ProgressBar
+    private var _binding: FragmentHomeBinding? = null
+    private val binding get() = _binding!!
 
-    // Hero section views
-    private lateinit var ambientBackgroundOverlay: View
-    private lateinit var heroBackdrop: ImageView
-    private lateinit var heroLogo: ImageView
-    private lateinit var heroTitle: TextView
-    private lateinit var heroMetadata: TextView
-    private lateinit var heroGenreText: TextView
-    private lateinit var heroOverview: TextView
-    private lateinit var heroCast: TextView
-    private lateinit var homeContentContainer: View
-    private lateinit var comingSoonContainer: View
-    private lateinit var comingSoonText: TextView
+    private lateinit var viewModel: HomeViewModel
 
     private var ambientColorAnimator: ValueAnimator? = null
     private val argbEvaluator = ArgbEvaluator()
@@ -81,12 +68,6 @@ class HomeFragment : Fragment() {
     private var currentAmbientColor: Int = DEFAULT_AMBIENT_COLOR
 
     // Navigation
-    private lateinit var navSearch: MaterialButton
-    private lateinit var navHome: MaterialButton
-    private lateinit var navMovies: MaterialButton
-    private lateinit var navTvShows: MaterialButton
-    private lateinit var navSettings: MaterialButton
-    private lateinit var navigationDockBackground: View
     private var lastFocusedNavButton: View? = null
     private var activeNavButton: MaterialButton? = null
 
@@ -100,8 +81,9 @@ class HomeFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_home, container, false)
+    ): View {
+        _binding = FragmentHomeBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     private var rowsAdapter: ContentRowAdapter? = null
@@ -111,40 +93,11 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        initViews(view)
+        updateAmbientGradient(DEFAULT_AMBIENT_COLOR)
         setupViewModel()
         setupNavigation()
         setupContentRows()
         observeViewModel()
-    }
-
-    private fun initViews(view: View) {
-        // Content rows
-        contentRowsView = view.findViewById(R.id.content_rows)
-        loadingIndicator = view.findViewById(R.id.loading_indicator)
-
-        // Hero section (now directly in main layout)
-        ambientBackgroundOverlay = view.findViewById(R.id.ambient_background_overlay)
-        heroBackdrop = view.findViewById(R.id.hero_backdrop)
-        heroLogo = view.findViewById(R.id.hero_logo)
-        heroTitle = view.findViewById(R.id.hero_title)
-        heroMetadata = view.findViewById(R.id.hero_metadata)
-        heroGenreText = view.findViewById(R.id.hero_genre_text)
-        heroOverview = view.findViewById(R.id.hero_overview)
-        heroCast = view.findViewById(R.id.hero_cast)
-        homeContentContainer = view.findViewById(R.id.home_content_container)
-        comingSoonContainer = view.findViewById(R.id.coming_soon_container)
-        comingSoonText = view.findViewById(R.id.coming_soon_text)
-
-        // Navigation
-        navSearch = view.findViewById(R.id.nav_search)
-        navHome = view.findViewById(R.id.nav_home)
-        navMovies = view.findViewById(R.id.nav_movies)
-        navTvShows = view.findViewById(R.id.nav_tv_shows)
-        navSettings = view.findViewById(R.id.nav_settings)
-        navigationDockBackground = view.findViewById(R.id.navigation_dock_background)
-
-        updateAmbientGradient(DEFAULT_AMBIENT_COLOR)
     }
 
     private fun setupViewModel() {
@@ -164,7 +117,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupNavigation() {
-        val navButtons = listOf(navSearch, navHome, navMovies, navTvShows, navSettings)
+        val navButtons = with(binding) { listOf(navSearch, navHome, navMovies, navTvShows, navSettings) }
         applyNavigationDockEffects()
 
         navButtons.forEach { button ->
@@ -185,49 +138,49 @@ class HomeFragment : Fragment() {
             }
         }
 
-        lastFocusedNavButton = navHome
-        navHome.requestFocus()
-        setActiveNavButton(navHome)
+        lastFocusedNavButton = binding.navHome
+        binding.navHome.requestFocus()
+        setActiveNavButton(binding.navHome)
 
-        navSearch.setOnClickListener {
-            setActiveNavButton(navSearch)
+        binding.navSearch.setOnClickListener {
+            setActiveNavButton(binding.navSearch)
             showComingSoonPage("Search")
         }
 
-        navHome.setOnClickListener {
-            setActiveNavButton(navHome)
+        binding.navHome.setOnClickListener {
+            setActiveNavButton(binding.navHome)
             showHomeContent()
         }
 
-        navMovies.setOnClickListener {
-            setActiveNavButton(navMovies)
+        binding.navMovies.setOnClickListener {
+            setActiveNavButton(binding.navMovies)
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(R.id.main_browse_fragment, com.test1.tv.ui.movies.MoviesFragment())
                 .addToBackStack(null)
                 .commit()
         }
 
-        navTvShows.setOnClickListener {
-            setActiveNavButton(navTvShows)
+        binding.navTvShows.setOnClickListener {
+            setActiveNavButton(binding.navTvShows)
             requireActivity().supportFragmentManager.beginTransaction()
                 .replace(R.id.main_browse_fragment, com.test1.tv.ui.tvshows.TvShowsFragment())
                 .addToBackStack(null)
                 .commit()
         }
 
-        navSettings.setOnClickListener {
-            setActiveNavButton(navSettings)
+        binding.navSettings.setOnClickListener {
+            setActiveNavButton(binding.navSettings)
             showComingSoonPage("Settings")
         }
     }
 
     private fun applyNavigationDockEffects() {
-        navigationDockBackground.alpha = 0.92f
+        binding.navigationDockBackground.alpha = 0.92f
     }
 
     private fun setActiveNavButton(button: MaterialButton) {
         // Clear activated state from all nav buttons
-        listOf(navSearch, navHome, navMovies, navTvShows, navSettings).forEach {
+        with(binding) { listOf(navSearch, navHome, navMovies, navTvShows, navSettings) }.forEach {
             it.isActivated = false
         }
         // Set the current button as activated
@@ -250,21 +203,21 @@ class HomeFragment : Fragment() {
 
     private fun setupContentRows() {
         // Configure vertical grid for rows
-        contentRowsView.setNumColumns(1)
-        contentRowsView.setItemSpacing(3)
+        binding.contentRows.setNumColumns(1)
+        binding.contentRows.setItemSpacing(3)
 
         // Enable smooth scrolling with fixed row heights
-        contentRowsView.setHasFixedSize(true)
-        contentRowsView.setFocusScrollStrategy(VerticalGridView.FOCUS_SCROLL_ALIGNED)
+        binding.contentRows.setHasFixedSize(true)
+        binding.contentRows.setFocusScrollStrategy(VerticalGridView.FOCUS_SCROLL_ALIGNED)
 
         // Set window alignment for fixed focus at top with proper offset
-        contentRowsView.setWindowAlignment(VerticalGridView.WINDOW_ALIGN_LOW_EDGE)
-        contentRowsView.setWindowAlignmentOffset(0)
-        contentRowsView.setWindowAlignmentOffsetPercent(VerticalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
+        binding.contentRows.setWindowAlignment(VerticalGridView.WINDOW_ALIGN_LOW_EDGE)
+        binding.contentRows.setWindowAlignmentOffset(0)
+        binding.contentRows.setWindowAlignmentOffsetPercent(VerticalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
 
         // Set item alignment to prevent rows from being cut off
-        contentRowsView.setItemAlignmentOffset(0)
-        contentRowsView.setItemAlignmentOffsetPercent(VerticalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
+        binding.contentRows.setItemAlignmentOffset(0)
+        binding.contentRows.setItemAlignmentOffsetPercent(VerticalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
     }
 
     private fun observeViewModel() {
@@ -293,16 +246,16 @@ class HomeFragment : Fragment() {
                 )
             }
 
-            if (contentRowsView.adapter !== rowsAdapter) {
-                contentRowsView.adapter = rowsAdapter
+            if (binding.contentRows.adapter !== rowsAdapter) {
+                binding.contentRows.adapter = rowsAdapter
             }
 
             rowsAdapter?.updateRows(rows)
 
-            contentRowsView.post {
+            binding.contentRows.post {
                 if (!hasRequestedInitialFocus) {
                     hasRequestedInitialFocus = true
-                    contentRowsView.requestFocus()
+                    binding.contentRows.requestFocus()
                 }
             }
         }
@@ -315,7 +268,7 @@ class HomeFragment : Fragment() {
 
         // Observe loading state
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
         }
 
         // Observe errors
@@ -338,7 +291,7 @@ class HomeFragment : Fragment() {
         // Load backdrop image with palette extraction
         val heroImageUrl = item.backdropUrl ?: item.posterUrl
         if (heroImageUrl.isNullOrBlank()) {
-            heroBackdrop.setImageResource(R.drawable.default_background)
+            binding.heroBackdrop.setImageResource(R.drawable.default_background)
             animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
         } else {
             Glide.with(this)
@@ -348,7 +301,7 @@ class HomeFragment : Fragment() {
                 .placeholder(R.drawable.default_background)
                 .error(R.drawable.default_background)
                 .override(1920, 1080)  // Optimize for typical TV resolution
-                .into(heroBackdrop)
+                .into(binding.heroBackdrop)
 
             // Load a smaller version for palette extraction to improve performance
             Glide.with(this)
@@ -372,20 +325,20 @@ class HomeFragment : Fragment() {
         }
 
         // Update text content
-        heroTitle.text = item.title
-        heroOverview.text = item.overview ?: ""
-        HeroSectionHelper.updateHeroMetadata(heroMetadata, item)
+        binding.heroTitle.text = item.title
+        binding.heroOverview.text = item.overview ?: ""
+        HeroSectionHelper.updateHeroMetadata(binding.heroMetadata, item)
         updateHeroLogo(item.logoUrl)
-        HeroSectionHelper.updateGenres(heroGenreText, item.genres)
-        HeroSectionHelper.updateCast(heroCast, item.cast)
+        HeroSectionHelper.updateGenres(binding.heroGenreText, item.genres)
+        HeroSectionHelper.updateCast(binding.heroCast, item.cast)
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        heroTitle.visibility = View.VISIBLE
-        heroLogo.visibility = View.GONE
-        heroLogo.setImageDrawable(null)
-        heroLogo.scaleX = 1f
-        heroLogo.scaleY = 1f
+        binding.heroTitle.visibility = View.VISIBLE
+        binding.heroLogo.visibility = View.GONE
+        binding.heroLogo.setImageDrawable(null)
+        binding.heroLogo.scaleX = 1f
+        binding.heroLogo.scaleY = 1f
 
         if (logoUrl.isNullOrBlank()) {
             return
@@ -398,30 +351,30 @@ class HomeFragment : Fragment() {
             .override(600, 200)  // Reasonable size for logos
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    heroLogo.setImageDrawable(resource)
+                    binding.heroLogo.setImageDrawable(resource)
                     applyHeroLogoBounds(resource)
-                    heroLogo.visibility = View.VISIBLE
-                    heroTitle.visibility = View.GONE
+                    binding.heroLogo.visibility = View.VISIBLE
+                    binding.heroTitle.visibility = View.GONE
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {
-                    heroLogo.setImageDrawable(placeholder)
-                    heroLogo.scaleX = 1f
-                    heroLogo.scaleY = 1f
+                    binding.heroLogo.setImageDrawable(placeholder)
+                    binding.heroLogo.scaleX = 1f
+                    binding.heroLogo.scaleY = 1f
                 }
 
                 override fun onLoadFailed(errorDrawable: Drawable?) {
-                    heroLogo.visibility = View.GONE
-                    heroTitle.visibility = View.VISIBLE
-                    heroLogo.scaleX = 1f
-                    heroLogo.scaleY = 1f
+                    binding.heroLogo.visibility = View.GONE
+                    binding.heroTitle.visibility = View.VISIBLE
+                    binding.heroLogo.scaleX = 1f
+                    binding.heroLogo.scaleY = 1f
                 }
             })
     }
 
     private fun applyHeroLogoBounds(resource: Drawable) {
-        val intrinsicWidth = if (resource.intrinsicWidth > 0) resource.intrinsicWidth else heroLogo.width
-        val intrinsicHeight = if (resource.intrinsicHeight > 0) resource.intrinsicHeight else heroLogo.height
+        val intrinsicWidth = if (resource.intrinsicWidth > 0) resource.intrinsicWidth else binding.heroLogo.width
+        val intrinsicHeight = if (resource.intrinsicHeight > 0) resource.intrinsicHeight else binding.heroLogo.height
         if (intrinsicWidth <= 0 || intrinsicHeight <= 0) return
 
         val maxWidth = resources.getDimensionPixelSize(R.dimen.hero_logo_max_width)
@@ -430,18 +383,18 @@ class HomeFragment : Fragment() {
         val heightRatio = maxHeight.toFloat() / intrinsicHeight
         val scale = min(widthRatio, heightRatio)
 
-        val params = heroLogo.layoutParams
+        val params = binding.heroLogo.layoutParams
         params.width = (intrinsicWidth * scale).roundToInt()
         params.height = (intrinsicHeight * scale).roundToInt()
-        heroLogo.layoutParams = params
-        heroLogo.scaleX = 1f
-        heroLogo.scaleY = 1f
+        binding.heroLogo.layoutParams = params
+        binding.heroLogo.scaleX = 1f
+        binding.heroLogo.scaleY = 1f
     }
 
     private fun updateHeroMetadata(item: ContentItem) {
         val metadata = buildMetadataLine(item)
-        heroMetadata.text = metadata ?: ""
-        heroMetadata.visibility = if (metadata.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.heroMetadata.text = metadata ?: ""
+        binding.heroMetadata.visibility = if (metadata.isNullOrBlank()) View.GONE else View.VISIBLE
     }
 
     private fun buildMetadataLine(item: ContentItem): CharSequence? {
@@ -504,7 +457,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun animateAmbientToColor(targetColor: Int) {
-        if (!isAdded || !::ambientBackgroundOverlay.isInitialized) return
+        if (!isAdded || _binding == null) return
         ambientColorAnimator?.cancel()
         val startColor = currentAmbientColor
         if (startColor == targetColor) {
@@ -530,13 +483,13 @@ class HomeFragment : Fragment() {
     private fun updateAmbientGradient(color: Int) {
         currentAmbientColor = color
         val widthCandidates = listOf(
-            heroBackdrop.width,
-            ambientBackgroundOverlay.width,
+            binding.heroBackdrop.width,
+            binding.ambientBackgroundOverlay.width,
             resources.displayMetrics.widthPixels
         ).filter { it > 0 }
         val heightCandidates = listOf(
-            heroBackdrop.height,
-            ambientBackgroundOverlay.height,
+            binding.heroBackdrop.height,
+            binding.ambientBackgroundOverlay.height,
             resources.displayMetrics.heightPixels
         ).filter { it > 0 }
 
@@ -555,7 +508,7 @@ class HomeFragment : Fragment() {
                 ColorUtils.setAlphaComponent(color, 10)
             )
         }
-        ambientBackgroundOverlay.background = gradient
+        binding.ambientBackgroundOverlay.background = gradient
     }
 
     private fun formatCastList(raw: String): String? {
@@ -568,26 +521,28 @@ class HomeFragment : Fragment() {
     }
 
     private fun showComingSoonPage(pageName: String) {
-        comingSoonText.text = "$pageName coming soon"
-        comingSoonContainer.visibility = View.VISIBLE
-        homeContentContainer.visibility = View.GONE
+        binding.comingSoonText.text = "$pageName coming soon"
+        binding.comingSoonContainer.visibility = View.VISIBLE
+        binding.homeContentContainer.visibility = View.GONE
     }
 
+
+
     private fun showHomeContent() {
-        comingSoonContainer.visibility = View.GONE
-        homeContentContainer.visibility = View.VISIBLE
+        binding.comingSoonContainer.visibility = View.GONE
+        binding.homeContentContainer.visibility = View.VISIBLE
     }
 
     private fun focusPrimaryContent() {
-        if (comingSoonContainer.visibility == View.VISIBLE) {
-            comingSoonContainer.requestFocus()
+        if (binding.comingSoonContainer.visibility == View.VISIBLE) {
+            binding.comingSoonContainer.requestFocus()
         } else {
-            contentRowsView.requestFocus()
+            binding.contentRows.requestFocus()
         }
     }
 
     private fun focusNavigationBar() {
-        (lastFocusedNavButton ?: navHome).requestFocus()
+        (lastFocusedNavButton ?: binding.navHome).requestFocus()
     }
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
@@ -653,7 +608,7 @@ class HomeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        hasRequestedInitialFocus = false
+        _binding = null
         heroUpdateJob?.cancel()
         heroUpdateJob = null
         ambientColorAnimator?.cancel()

@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.RowScrollPauser
+import com.test1.tv.ui.ScrollThrottler
 
 enum class RowPresentation {
     PORTRAIT,
@@ -34,6 +35,7 @@ class ContentRowAdapter(
 
     private val rows = initialRows.toMutableList()
     private val rowAdapters = SparseArray<PosterAdapter>()
+    private val scrollThrottler = ScrollThrottler()
 
     inner class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val rowTitle: TextView = itemView.findViewById(R.id.row_title)
@@ -74,6 +76,7 @@ class ContentRowAdapter(
                 rowContent.setItemAlignmentOffset(60)
                 rowContent.setItemAlignmentOffsetPercent(HorizontalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
                 RowScrollPauser.attach(rowContent)
+                rowContent.setOnKeyInterceptListener(scrollThrottler)
             }
 
             val layoutParams = rowContent.layoutParams
