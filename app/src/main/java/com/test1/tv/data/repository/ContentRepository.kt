@@ -6,10 +6,14 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 class ContentRepository(
     private val traktApiService: TraktApiService,
@@ -27,6 +31,9 @@ class ContentRepository(
         const val CATEGORY_CONTINUE_WATCHING = "CONTINUE_WATCHING"
         private const val DEFAULT_PAGE_SIZE = 20
     }
+
+    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val inFlightRefresh = ConcurrentHashMap<String, Boolean>()
 
     suspend fun getTrendingMovies(forceRefresh: Boolean = false): Result<List<ContentItem>> {
         return getTrendingMoviesPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
@@ -124,24 +131,29 @@ class ContentRepository(
         try {
             val cachedPage = cacheRepository.getCachedPage(category, page, pageSize)
             val cacheFresh = cacheRepository.isCacheFresh(category)
-            val shouldFetch = forceRefresh || !cacheFresh || cachedPage.size < pageSize
 
-            if (!shouldFetch) {
-                Log.d(TAG, "Returning cached page $page for $category (${cachedPage.size} items)")
+            if (cachedPage.isNotEmpty() && !forceRefresh) {
+                if (!cacheFresh && page == 1) {
+                    triggerBackgroundRefresh(category, page, pageSize, fetcher)
+                }
+                Log.d(
+                    TAG,
+                    "Serving cached page $page for $category (${cachedPage.size} items), fresh=$cacheFresh"
+                )
                 return@withContext Result.success(cachedPage)
             }
 
-            Log.d(TAG, "Fetching page $page for $category")
+            Log.d(
+                TAG,
+                "Fetching page $page for $category (force=$forceRefresh, cacheFresh=$cacheFresh)"
+            )
             val freshData = fetcher()
             if (freshData.isNotEmpty()) {
                 cacheRepository.cacheContentPage(category, freshData, page, pageSize)
                 Log.d(TAG, "Cached page $page for $category (${freshData.size} items)")
                 Result.success(freshData)
             } else if (cachedPage.isNotEmpty()) {
-                Log.d(
-                    TAG,
-                    "Using cached page $page for $category because API returned empty list"
-                )
+                Log.d(TAG, "Using cached page $page for $category because API returned empty list")
                 Result.success(cachedPage)
             } else {
                 Result.success(emptyList())
@@ -153,6 +165,30 @@ class ContentRepository(
                 Result.success(fallback)
             } else {
                 Result.failure(e)
+            }
+        }
+    }
+
+    private fun triggerBackgroundRefresh(
+        category: String,
+        page: Int,
+        pageSize: Int,
+        fetcher: suspend () -> List<ContentItem>
+    ) {
+        if (inFlightRefresh.putIfAbsent(category, true) == true) return
+
+        refreshScope.launch {
+            try {
+                Log.d(TAG, "Background refresh for stale $category page $page")
+                val freshData = fetcher()
+                if (freshData.isNotEmpty()) {
+                    cacheRepository.cacheContentPage(category, freshData, page, pageSize)
+                    Log.d(TAG, "Background refreshed cache for $category (${freshData.size} items)")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Background refresh failed for $category", e)
+            } finally {
+                inFlightRefresh.remove(category)
             }
         }
     }
