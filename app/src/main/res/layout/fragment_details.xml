@@ -333,7 +333,39 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:clipChildren="false"
-                android:clipToPadding="false">
+                android:clipToPadding="false"
+                android:animateLayoutChanges="true">
+
+                <!-- Episode Info Shelf -->
+                <LinearLayout
+                    android:id="@+id/episode_info_shelf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="16dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/shelf_episode_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        tools:text="S1 E04 - Episode Title" />
+
+                    <TextView
+                        android:id="@+id/shelf_episode_overview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="#CCCCCC"
+                        android:textSize="14sp"
+                        android:maxLines="3"
+                        android:ellipsize="end"
+                        tools:text="Episode overview preview goes here. Up to three lines of text for quick reading." />
+                </LinearLayout>
 
                 <!-- People Section -->
                 <LinearLayout
