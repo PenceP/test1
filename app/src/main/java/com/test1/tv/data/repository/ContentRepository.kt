@@ -219,7 +219,8 @@ class ContentRepository(
                 try {
                     val tmdbDetails = tmdbApiService.getMovieDetails(
                         movieId = tmdbId,
-                        apiKey = BuildConfig.TMDB_API_KEY
+                        apiKey = BuildConfig.TMDB_API_KEY,
+                        appendToResponse = "images,external_ids,credits"
                     )
                     val omdbRatings = fetchOmdbRatings(traktMovie.movie.ids.imdb)
 
@@ -268,7 +269,12 @@ class ContentRepository(
                 try {
                     val tmdbDetails = tmdbApiService.getMovieDetails(
                         movieId = tmdbId,
+<<<<<<< HEAD
                         apiKey = BuildConfig.TMDB_API_KEY
+=======
+                        apiKey = BuildConfig.TMDB_API_KEY,
+                        appendToResponse = "images,external_ids,credits"
+>>>>>>> e48ec6a (Add ActorDetailsActivity and ActorDetailsFragment for displaying actor information. Update AndroidManifest.xml to include new activity. Enhance ContentRepository and TMDBApiService for fetching actor details and credits. Implement UI layout for actor details with dynamic content loading.)
                     )
                     val omdbRatings = fetchOmdbRatings(traktMovie.ids.imdb)
 
@@ -317,7 +323,8 @@ class ContentRepository(
                 try {
                     val tmdbDetails = tmdbApiService.getShowDetails(
                         showId = tmdbId,
-                        apiKey = BuildConfig.TMDB_API_KEY
+                        apiKey = BuildConfig.TMDB_API_KEY,
+                        appendToResponse = "images,external_ids,credits"
                     )
                     val omdbRatings = fetchOmdbRatings(traktShow.show.ids.imdb)
 
@@ -366,7 +373,12 @@ class ContentRepository(
                 try {
                     val tmdbDetails = tmdbApiService.getShowDetails(
                         showId = tmdbId,
+<<<<<<< HEAD
                         apiKey = BuildConfig.TMDB_API_KEY
+=======
+                        apiKey = BuildConfig.TMDB_API_KEY,
+                        appendToResponse = "images,external_ids,credits"
+>>>>>>> e48ec6a (Add ActorDetailsActivity and ActorDetailsFragment for displaying actor information. Update AndroidManifest.xml to include new activity. Enhance ContentRepository and TMDBApiService for fetching actor details and credits. Implement UI layout for actor details with dynamic content loading.)
                     )
                     val omdbRatings = fetchOmdbRatings(traktShow.ids.imdb)
 

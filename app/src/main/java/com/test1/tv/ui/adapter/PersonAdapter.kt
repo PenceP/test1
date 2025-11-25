@@ -12,7 +12,8 @@ import com.test1.tv.R
 import com.test1.tv.data.model.tmdb.TMDBCast
 
 class PersonAdapter(
-    private val people: List<TMDBCast>
+    private val people: List<TMDBCast>,
+    private val onPersonClick: ((TMDBCast) -> Unit)? = null
 ) : RecyclerView.Adapter<PersonAdapter.PersonViewHolder>() {
 
     inner class PersonViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -30,6 +31,11 @@ class PersonAdapter(
                 .into(personPhoto)
 
             personName.text = person.name
+
+            // Handle click
+            itemView.setOnClickListener {
+                onPersonClick?.invoke(person)
+            }
 
             // Handle focus changes with glassmorphism style
             itemView.setOnFocusChangeListener { _, hasFocus ->

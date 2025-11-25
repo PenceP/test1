@@ -2,6 +2,7 @@ package com.test1.tv.ui.details
 
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -33,6 +34,7 @@ import java.text.SimpleDateFormat
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import com.test1.tv.ActorDetailsActivity
 import com.test1.tv.BuildConfig
 import com.test1.tv.DetailsActivity
 import com.test1.tv.Movie
@@ -621,7 +623,9 @@ class DetailsFragment : Fragment() {
         }
 
         val sortedCast = cast.sortedBy { it.order ?: Int.MAX_VALUE }.take(20)
-        val adapter = PersonAdapter(sortedCast)
+        val adapter = PersonAdapter(sortedCast) { person ->
+            handlePersonClick(person)
+        }
 
         castRow.adapter = adapter
         castRow.setNumRows(1)
@@ -1238,6 +1242,16 @@ class DetailsFragment : Fragment() {
 
     private fun focusDetailsContent() {
         detailsScroll.requestFocus()
+    }
+
+    private fun handlePersonClick(person: TMDBCast) {
+        Log.d(TAG, "Person clicked: ${person.name}")
+        val intent = Intent(requireContext(), ActorDetailsActivity::class.java).apply {
+            putExtra(ActorDetailsActivity.PERSON_ID, person.id)
+            putExtra(ActorDetailsActivity.PERSON_NAME, person.name)
+            contentItem?.let { putExtra(ActorDetailsActivity.ORIGIN_CONTENT, it) }
+        }
+        startActivity(intent)
     }
 
     private fun extractPaletteFromBitmap(bitmap: Bitmap) {

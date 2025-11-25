@@ -3,6 +3,7 @@ package com.test1.tv.data.remote.api
 import com.test1.tv.data.model.tmdb.TMDBCollectionDetails
 import com.test1.tv.data.model.tmdb.TMDBMovieDetails
 import com.test1.tv.data.model.tmdb.TMDBMovieListResponse
+import com.test1.tv.data.model.tmdb.TMDBPersonDetails
 import com.test1.tv.data.model.tmdb.TMDBSeasonDetails
 import com.test1.tv.data.model.tmdb.TMDBShowDetails
 import com.test1.tv.data.model.tmdb.TMDBShowListResponse
@@ -54,4 +55,11 @@ interface TMDBApiService {
         @Path("season_number") seasonNumber: Int,
         @Query("api_key") apiKey: String
     ): TMDBSeasonDetails
+
+    @GET("person/{person_id}")
+    suspend fun getPersonDetails(
+        @Path("person_id") personId: Int,
+        @Query("api_key") apiKey: String,
+        @Query("append_to_response") appendToResponse: String = "movie_credits,tv_credits"
+    ): TMDBPersonDetails
 }

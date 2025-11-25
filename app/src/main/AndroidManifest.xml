@@ -36,6 +36,9 @@
             android:name=".DetailsActivity"
             android:exported="false" />
         <activity
+            android:name=".ActorDetailsActivity"
+            android:exported="false" />
+        <activity
             android:name=".PlaybackActivity"
             android:exported="false" />
         <activity

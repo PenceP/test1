@@ -53,6 +53,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -92,6 +95,7 @@ class HomeFragment : Fragment() {
     private var rowsAdapter: ContentRowAdapter? = null
     private var hasRequestedInitialFocus = false
     private var heroUpdateJob: Job? = null
+    private var heroEnrichmentJob: Job? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -335,6 +339,7 @@ class HomeFragment : Fragment() {
         updateHeroLogo(item.logoUrl)
         HeroSectionHelper.updateGenres(binding.heroGenreText, item.genres)
         HeroSectionHelper.updateCast(binding.heroCast, item.cast)
+        ensureHeroExtras(item)
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
@@ -374,6 +379,46 @@ class HomeFragment : Fragment() {
                     binding.heroLogo.scaleY = 1f
                 }
             })
+    }
+
+    private fun ensureHeroExtras(item: ContentItem) {
+        if (!item.cast.isNullOrBlank() && !item.genres.isNullOrBlank()) return
+        heroEnrichmentJob?.cancel()
+        heroEnrichmentJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val enriched = runCatching {
+                when (item.type) {
+                    ContentItem.ContentType.MOVIE -> {
+                        val details = ApiClient.tmdbApiService.getMovieDetails(
+                            movieId = item.tmdbId,
+                            apiKey = com.test1.tv.BuildConfig.TMDB_API_KEY,
+                            appendToResponse = "credits,images"
+                        )
+                        item.copy(
+                            cast = details.getCastNames(),
+                            genres = details.genres?.joinToString(", ") { it.name }
+                        )
+                    }
+                    ContentItem.ContentType.TV_SHOW -> {
+                        val details = ApiClient.tmdbApiService.getShowDetails(
+                            showId = item.tmdbId,
+                            apiKey = com.test1.tv.BuildConfig.TMDB_API_KEY,
+                            appendToResponse = "credits,images,content_ratings"
+                        )
+                        item.copy(
+                            cast = details.getCastNames(),
+                            genres = details.genres?.joinToString(", ") { it.name }
+                        )
+                    }
+                }
+            }.getOrNull()
+
+            enriched?.let { enrichedItem ->
+                withContext(Dispatchers.Main) {
+                    HeroSectionHelper.updateGenres(binding.heroGenreText, enrichedItem.genres)
+                    HeroSectionHelper.updateCast(binding.heroCast, enrichedItem.cast)
+                }
+            }
+        }
     }
 
     private fun applyHeroLogoBounds(resource: Drawable) {
