@@ -13,11 +13,13 @@
         android:id="@+id/row_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="0dp"
+        android:layout_marginBottom="8dp"
         android:layout_marginStart="16dp"
         android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.02" />
 
     <!-- Horizontal GridView for content items -->
     <androidx.leanback.widget.HorizontalGridView

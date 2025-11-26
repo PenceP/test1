@@ -35,6 +35,16 @@
     <string name="action_mark_watched_feedback">Marked %1$s as watched</string>
     <string name="action_add_to_list_feedback">Added %1$s to your list</string>
     <string name="shared_element_hero">hero</string>
+    <string name="actor_movies_header">Movies</string>
+    <string name="actor_shows_header">TV Shows</string>
+    <string name="actor_movies_empty">No movies found</string>
+    <string name="actor_shows_empty">No shows found</string>
+    <string name="search_hint">Search movies, shows, people</string>
+    <string name="search_voice">Voice search</string>
+    <string name="search_movies">Movies</string>
+    <string name="search_shows">TV Shows</string>
+    <string name="search_people">People</string>
+    <string name="search_empty">No results</string>
 
     <!-- Error messages -->
     <string name="error_fragment_message">An error occurred</string>

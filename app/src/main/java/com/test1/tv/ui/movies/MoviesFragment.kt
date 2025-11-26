@@ -18,6 +18,7 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.android.material.button.MaterialButton
+import com.test1.tv.MainActivity
 import com.test1.tv.R
 import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.model.ContentItem
@@ -142,11 +143,11 @@ class MoviesFragment : Fragment() {
         setActiveNavButton(navMovies)
 
         navSearch.setOnClickListener {
-            Toast.makeText(requireContext(), "Search coming soon", Toast.LENGTH_SHORT).show()
+            (activity as? MainActivity)?.navigateToSection(MainActivity.Section.SEARCH)
         }
 
         navHome.setOnClickListener {
-            requireActivity().supportFragmentManager.popBackStack()
+            (activity as? MainActivity)?.navigateToSection(MainActivity.Section.HOME)
         }
 
         navMovies.setOnClickListener {
@@ -154,10 +155,7 @@ class MoviesFragment : Fragment() {
         }
 
         navTvShows.setOnClickListener {
-            requireActivity().supportFragmentManager.beginTransaction()
-                .replace(R.id.main_browse_fragment, com.test1.tv.ui.tvshows.TvShowsFragment())
-                .addToBackStack(null)
-                .commit()
+            (activity as? MainActivity)?.navigateToSection(MainActivity.Section.TV_SHOWS)
         }
 
         navSettings.setOnClickListener {

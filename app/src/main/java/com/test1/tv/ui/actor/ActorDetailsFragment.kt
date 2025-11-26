@@ -369,16 +369,20 @@ class ActorDetailsFragment : Fragment() {
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {
-                    binding.heroLogo.setImageDrawable(placeholder)
-                    binding.heroLogo.scaleX = 1f
-                    binding.heroLogo.scaleY = 1f
+                    _binding?.let {
+                        it.heroLogo.setImageDrawable(placeholder)
+                        it.heroLogo.scaleX = 1f
+                        it.heroLogo.scaleY = 1f
+                    }
                 }
 
                 override fun onLoadFailed(errorDrawable: Drawable?) {
-                    binding.heroLogo.visibility = View.GONE
-                    binding.heroTitle.visibility = View.VISIBLE
-                    binding.heroLogo.scaleX = 1f
-                    binding.heroLogo.scaleY = 1f
+                    _binding?.let {
+                        it.heroLogo.visibility = View.GONE
+                        it.heroTitle.visibility = View.VISIBLE
+                        it.heroLogo.scaleX = 1f
+                        it.heroLogo.scaleY = 1f
+                    }
                 }
             })
     }

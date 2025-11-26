@@ -666,8 +666,7 @@ class DetailsFragment : Fragment() {
         val adapter = PosterAdapter(
             initialItems = similarItems.take(20),
             onItemClick = { item, _ ->
-                // TODO: Navigate to details of clicked item
-                Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
+                DetailsActivity.start(requireContext(), item)
             },
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },
@@ -722,8 +721,7 @@ class DetailsFragment : Fragment() {
         val adapter = PosterAdapter(
             initialItems = collectionItems,
             onItemClick = { item, _ ->
-                // TODO: Navigate to details of clicked item
-                Toast.makeText(requireContext(), "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
+                DetailsActivity.start(requireContext(), item)
             },
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },

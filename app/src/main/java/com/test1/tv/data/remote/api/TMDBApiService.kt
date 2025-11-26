@@ -7,6 +7,7 @@ import com.test1.tv.data.model.tmdb.TMDBPersonDetails
 import com.test1.tv.data.model.tmdb.TMDBSeasonDetails
 import com.test1.tv.data.model.tmdb.TMDBShowDetails
 import com.test1.tv.data.model.tmdb.TMDBShowListResponse
+import com.test1.tv.data.model.tmdb.TMDBSearchResponse
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -62,4 +63,12 @@ interface TMDBApiService {
         @Query("api_key") apiKey: String,
         @Query("append_to_response") appendToResponse: String = "movie_credits,tv_credits"
     ): TMDBPersonDetails
+
+    @GET("search/multi")
+    suspend fun multiSearch(
+        @Query("api_key") apiKey: String,
+        @Query("query") query: String,
+        @Query("page") page: Int = 1,
+        @Query("include_adult") includeAdult: Boolean = false
+    ): TMDBSearchResponse
 }

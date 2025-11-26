@@ -38,6 +38,7 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.test1.tv.MainActivity
 import com.test1.tv.DetailsActivity
 import com.test1.tv.R
 import com.test1.tv.data.local.AppDatabase
@@ -151,7 +152,7 @@ class HomeFragment : Fragment() {
 
         binding.navSearch.setOnClickListener {
             setActiveNavButton(binding.navSearch)
-            showComingSoonPage("Search")
+            (activity as? MainActivity)?.navigateToSection(MainActivity.Section.SEARCH)
         }
 
         binding.navHome.setOnClickListener {
@@ -161,18 +162,12 @@ class HomeFragment : Fragment() {
 
         binding.navMovies.setOnClickListener {
             setActiveNavButton(binding.navMovies)
-            requireActivity().supportFragmentManager.beginTransaction()
-                .replace(R.id.main_browse_fragment, com.test1.tv.ui.movies.MoviesFragment())
-                .addToBackStack(null)
-                .commit()
+            (activity as? MainActivity)?.navigateToSection(MainActivity.Section.MOVIES)
         }
 
         binding.navTvShows.setOnClickListener {
             setActiveNavButton(binding.navTvShows)
-            requireActivity().supportFragmentManager.beginTransaction()
-                .replace(R.id.main_browse_fragment, com.test1.tv.ui.tvshows.TvShowsFragment())
-                .addToBackStack(null)
-                .commit()
+            (activity as? MainActivity)?.navigateToSection(MainActivity.Section.TV_SHOWS)
         }
 
         binding.navSettings.setOnClickListener {
@@ -360,23 +355,29 @@ class HomeFragment : Fragment() {
             .override(600, 200)  // Reasonable size for logos
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    binding.heroLogo.setImageDrawable(resource)
-                    applyHeroLogoBounds(resource)
-                    binding.heroLogo.visibility = View.VISIBLE
-                    binding.heroTitle.visibility = View.GONE
+                    _binding?.let {
+                        it.heroLogo.setImageDrawable(resource)
+                        applyHeroLogoBounds(resource)
+                        it.heroLogo.visibility = View.VISIBLE
+                        it.heroTitle.visibility = View.GONE
+                    }
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {
-                    binding.heroLogo.setImageDrawable(placeholder)
-                    binding.heroLogo.scaleX = 1f
-                    binding.heroLogo.scaleY = 1f
+                    _binding?.let {
+                        it.heroLogo.setImageDrawable(placeholder)
+                        it.heroLogo.scaleX = 1f
+                        it.heroLogo.scaleY = 1f
+                    }
                 }
 
                 override fun onLoadFailed(errorDrawable: Drawable?) {
-                    binding.heroLogo.visibility = View.GONE
-                    binding.heroTitle.visibility = View.VISIBLE
-                    binding.heroLogo.scaleX = 1f
-                    binding.heroLogo.scaleY = 1f
+                    _binding?.let {
+                        it.heroLogo.visibility = View.GONE
+                        it.heroTitle.visibility = View.VISIBLE
+                        it.heroLogo.scaleX = 1f
+                        it.heroLogo.scaleY = 1f
+                    }
                 }
             })
     }
