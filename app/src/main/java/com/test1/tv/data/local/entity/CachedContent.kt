@@ -1,10 +1,17 @@
 package com.test1.tv.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.test1.tv.data.model.ContentItem
 
-@Entity(tableName = "cached_content")
+@Entity(
+    tableName = "cached_content",
+    indices = [
+        Index(value = ["category", "position"]),  // Fast queries by category and position
+        Index(value = ["category", "cachedAt"])   // Fast cache freshness checks
+    ]
+)
 data class CachedContent(
     @PrimaryKey
     val id: String, // Format: "TYPE_CATEGORY_TMDB_ID" e.g., "MOVIE_TRENDING_12345"

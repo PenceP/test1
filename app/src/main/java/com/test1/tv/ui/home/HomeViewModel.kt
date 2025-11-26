@@ -66,10 +66,29 @@ class HomeViewModel(
     private fun loadInitialRows(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _isLoading.value = true
-            rowStates.forEachIndexed { index, _ ->
-                loadRowPage(index, page = 1, forceRefresh = forceRefresh)
-            }
+
+            // Netflix strategy: Load first 2 rows immediately for instant UI
+            loadRowPage(0, page = 1, forceRefresh = forceRefresh)  // Continue Watching
+            loadRowPage(1, page = 1, forceRefresh = forceRefresh)  // Trending Movies
+
             _isLoading.value = false
+
+            // Lazy load remaining rows with small delays (Netflix uses ~100ms stagger)
+            launch {
+                kotlinx.coroutines.delay(50)
+                loadRowPage(2, page = 1, forceRefresh = forceRefresh)  // Popular Movies
+            }
+            launch {
+                kotlinx.coroutines.delay(100)
+                loadRowPage(3, page = 1, forceRefresh = forceRefresh)  // Trending Shows
+            }
+            launch {
+                kotlinx.coroutines.delay(150)
+                loadRowPage(4, page = 1, forceRefresh = forceRefresh)  // Popular Shows
+            }
+
+            // Prefetch next pages after all rows loaded
+            kotlinx.coroutines.delay(200)
             prefetchNextPages()
         }
     }

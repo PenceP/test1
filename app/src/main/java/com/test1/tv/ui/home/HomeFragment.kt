@@ -35,6 +35,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.bumptech.glide.signature.ObjectKey
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.test1.tv.DetailsActivity
@@ -73,7 +74,9 @@ class HomeFragment : Fragment() {
 
     companion object {
         private const val TAG = "HomeFragment"
+        private const val HERO_IMAGE_REQUEST_TAG = "hero_image"
         private const val AMBIENT_ANIMATION_DURATION = 650L
+        private const val HERO_UPDATE_DEBOUNCE_MS = 500L  // Increased from 250ms
         private val DEFAULT_AMBIENT_COLOR = Color.parseColor("#0A0F1F")
     }
 
@@ -301,6 +304,7 @@ class HomeFragment : Fragment() {
                 .placeholder(R.drawable.default_background)
                 .error(R.drawable.default_background)
                 .override(1920, 1080)  // Optimize for typical TV resolution
+                .signature(ObjectKey(HERO_IMAGE_REQUEST_TAG + "_" + item.id))  // Unique signature
                 .into(binding.heroBackdrop)
 
             // Load a smaller version for palette extraction to improve performance
@@ -565,10 +569,13 @@ class HomeFragment : Fragment() {
         // Cancel any pending hero update
         heroUpdateJob?.cancel()
 
-        // Debounce hero section updates - only update if user stays on item for 250ms
-        // This prevents the hero section from queuing updates during fast scrolling
+        // Cancel any in-progress Glide requests to prevent out-of-sync updates
+        Glide.with(this).clear(binding.heroBackdrop)
+
+        // Debounce hero section updates - only update if user stays on item for 500ms
+        // This prevents the hero section from updating during fast scrolling
         heroUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
-            delay(250)
+            delay(HERO_UPDATE_DEBOUNCE_MS)
             viewModel.updateHeroContent(item)
         }
     }

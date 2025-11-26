@@ -132,20 +132,29 @@ class ContentRepository(
             val cachedPage = cacheRepository.getCachedPage(category, page, pageSize)
             val cacheFresh = cacheRepository.isCacheFresh(category)
 
-            if (cachedPage.isNotEmpty() && !forceRefresh) {
-                if (!cacheFresh && page == 1) {
-                    triggerBackgroundRefresh(category, page, pageSize, fetcher)
-                }
+            // Prioritize showing cached data immediately (even if stale)
+            // Only fetch if: forced refresh, no cache, or cache has too few items
+            val hasEnoughCachedItems = cachedPage.size >= pageSize
+            val shouldUseCacheImmediately = !forceRefresh && hasEnoughCachedItems
+
+            if (shouldUseCacheImmediately) {
                 Log.d(
                     TAG,
                     "Serving cached page $page for $category (${cachedPage.size} items), fresh=$cacheFresh"
                 )
+
+                // Trigger background refresh if cache is stale
+                if (!cacheFresh && page == 1) {
+                    triggerBackgroundRefresh(category, page, pageSize, fetcher)
+                }
+
                 return@withContext Result.success(cachedPage)
             }
 
+            // Only fetch synchronously if we have no/insufficient cache or forced
             Log.d(
                 TAG,
-                "Fetching page $page for $category (force=$forceRefresh, cacheFresh=$cacheFresh)"
+                "Fetching page $page for $category (force=$forceRefresh, cacheFresh=$cacheFresh, cachedItems=${cachedPage.size})"
             )
             val freshData = fetcher()
             if (freshData.isNotEmpty()) {

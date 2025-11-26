@@ -66,11 +66,11 @@ class PosterAdapter(
 
             Glide.with(itemView.context)
                 .load(item.posterUrl)
-                .thumbnail(0.25f)  // Load a 25% quality version first for faster display
-                .transition(DrawableTransitionOptions.withCrossFade())
+                .onlyRetrieveFromCache(true)  // Force cache-only for instant loading
+                .transition(DrawableTransitionOptions.withCrossFade(150))
                 .placeholder(R.drawable.default_background)
                 .error(R.drawable.default_background)
-                .override(300, 450)  // Optimize image size for portrait posters
+                .override(300, 450)
                 .into(object : CustomTarget<Drawable>() {
                     override fun onLoadCleared(placeholder: Drawable?) {
                         posterImage.setImageDrawable(placeholder)
@@ -81,6 +81,30 @@ class PosterAdapter(
                         super.onLoadFailed(errorDrawable)
                         posterImage.setImageDrawable(errorDrawable)
                         titleOverlay.visibility = View.VISIBLE
+
+                        // If cache fails, load from network in background
+                        Glide.with(itemView.context)
+                            .load(item.posterUrl)
+                            .onlyRetrieveFromCache(false)
+                            .override(300, 450)
+                            .into(object : CustomTarget<Drawable>() {
+                                override fun onLoadCleared(placeholder: Drawable?) {
+                                    // Keep current state
+                                }
+
+                                override fun onResourceReady(
+                                    resource: Drawable,
+                                    transition: Transition<in Drawable>?
+                                ) {
+                                    posterImage.setImageDrawable(resource)
+                                    titleOverlay.visibility = View.GONE  // Hide title when network load succeeds
+                                    val accentColor = extractAccentColor(resource)
+                                    posterAccentColors[getColorKey(item)] = accentColor
+                                    if (itemView.isFocused) {
+                                        applyFocusOverlay(true, accentColor)
+                                    }
+                                }
+                            })
                     }
 
                     override fun onResourceReady(
