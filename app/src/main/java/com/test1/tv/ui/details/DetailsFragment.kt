@@ -427,7 +427,13 @@ class DetailsFragment : Fragment() {
                 apiKey = BuildConfig.TMDB_API_KEY
             )
 
-            val relatedItems = fetchRelatedMovies(movieDetails.imdbId ?: movieDetails.externalIds?.imdbId)
+            val relatedItems = fetchRelatedMovies(
+                resolveImdbId(
+                    primary = movieDetails.imdbId,
+                    external = movieDetails.externalIds?.imdbId,
+                    trakt = null
+                )
+            )
 
             // Fetch collection if exists
             val collectionMovies = movieDetails.belongsToCollection?.let { collection ->
@@ -530,6 +536,11 @@ class DetailsFragment : Fragment() {
                         ContentItem(
                             id = tmdbDetails.id,
                             tmdbId = tmdbDetails.id,
+                            imdbId = resolveImdbId(
+                                primary = tmdbDetails.imdbId,
+                                external = tmdbDetails.externalIds?.imdbId,
+                                trakt = traktMovie.ids.imdb
+                            ),
                             title = tmdbDetails.title,
                             overview = tmdbDetails.overview,
                             posterUrl = tmdbDetails.getPosterUrl(),
@@ -591,6 +602,11 @@ class DetailsFragment : Fragment() {
                         ContentItem(
                             id = tmdbDetails.id,
                             tmdbId = tmdbDetails.id,
+                            imdbId = resolveImdbId(
+                                primary = null,
+                                external = tmdbDetails.externalIds?.imdbId,
+                                trakt = traktShow.ids.imdb
+                            ),
                             title = tmdbDetails.name,
                             overview = tmdbDetails.overview,
                             posterUrl = tmdbDetails.getPosterUrl(),
@@ -683,6 +699,7 @@ class DetailsFragment : Fragment() {
             ContentItem(
                 id = movie.id,
                 tmdbId = movie.id,
+                imdbId = movie.imdbId,
                 title = movie.title,
                 overview = movie.overview,
                 posterUrl = movie.getPosterUrl(),
@@ -1067,11 +1084,18 @@ class DetailsFragment : Fragment() {
         return if (slashIndex > 0) raw.substring(0, slashIndex).trim() else raw
     }
 
+    private fun resolveImdbId(
+        primary: String?,
+        external: String?,
+        trakt: String?
+    ): String? = primary ?: external ?: trakt
+
 
     private fun Movie.toContentItem(): ContentItem {
         return ContentItem(
             id = id.toInt(),
             tmdbId = id.toInt(),
+            imdbId = null,
             title = title ?: "",
             overview = description,
             posterUrl = cardImageUrl,

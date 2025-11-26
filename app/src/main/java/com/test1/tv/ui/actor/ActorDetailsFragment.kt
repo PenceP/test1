@@ -136,6 +136,7 @@ class ActorDetailsFragment : Fragment() {
                         ContentItem(
                             id = movie.id,
                             tmdbId = movie.id,
+                            imdbId = null,
                             title = movie.title,
                             overview = movie.overview,
                             posterUrl = movie.getPosterUrl(),
@@ -149,7 +150,6 @@ class ActorDetailsFragment : Fragment() {
                             runtime = null,
                             cast = null,
                             certification = null,
-                            imdbId = null,
                             imdbRating = null,
                             rottenTomatoesRating = null,
                             traktRating = null
@@ -165,6 +165,7 @@ class ActorDetailsFragment : Fragment() {
                         ContentItem(
                             id = show.id,
                             tmdbId = show.id,
+                            imdbId = null,
                             title = show.name,
                             overview = show.overview,
                             posterUrl = show.getPosterUrl(),
@@ -178,7 +179,6 @@ class ActorDetailsFragment : Fragment() {
                             runtime = null,
                             cast = null,
                             certification = null,
-                            imdbId = null,
                             imdbRating = null,
                             rottenTomatoesRating = null,
                             traktRating = null

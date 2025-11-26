@@ -16,6 +16,7 @@ data class CachedContent(
     @PrimaryKey
     val id: String, // Format: "TYPE_CATEGORY_TMDB_ID" e.g., "MOVIE_TRENDING_12345"
     val tmdbId: Int,
+    val imdbId: String?,
     val title: String,
     val overview: String?,
     val posterUrl: String?,
@@ -40,6 +41,7 @@ data class CachedContent(
         return ContentItem(
             id = tmdbId,
             tmdbId = tmdbId,
+            imdbId = imdbId,
             title = title,
             overview = overview,
             posterUrl = posterUrl,
@@ -68,6 +70,7 @@ data class CachedContent(
             return CachedContent(
                 id = "${item.type.name}_${category}_${item.tmdbId}",
                 tmdbId = item.tmdbId,
+                imdbId = item.imdbId,
                 title = item.title,
                 overview = item.overview,
                 posterUrl = item.posterUrl,

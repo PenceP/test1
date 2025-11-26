@@ -227,6 +227,11 @@ class ContentRepository(
                     ContentItem(
                         id = tmdbId,
                         tmdbId = tmdbId,
+                        imdbId = resolveImdbId(
+                            primary = tmdbDetails.imdbId,
+                            external = tmdbDetails.externalIds?.imdbId,
+                            trakt = traktMovie.movie.ids.imdb
+                        ),
                         title = tmdbDetails.title,
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
@@ -269,18 +274,19 @@ class ContentRepository(
                 try {
                     val tmdbDetails = tmdbApiService.getMovieDetails(
                         movieId = tmdbId,
-<<<<<<< HEAD
-                        apiKey = BuildConfig.TMDB_API_KEY
-=======
                         apiKey = BuildConfig.TMDB_API_KEY,
                         appendToResponse = "images,external_ids,credits"
->>>>>>> e48ec6a (Add ActorDetailsActivity and ActorDetailsFragment for displaying actor information. Update AndroidManifest.xml to include new activity. Enhance ContentRepository and TMDBApiService for fetching actor details and credits. Implement UI layout for actor details with dynamic content loading.)
                     )
                     val omdbRatings = fetchOmdbRatings(traktMovie.ids.imdb)
 
                     ContentItem(
                         id = tmdbId,
                         tmdbId = tmdbId,
+                        imdbId = resolveImdbId(
+                            primary = tmdbDetails.imdbId,
+                            external = tmdbDetails.externalIds?.imdbId,
+                            trakt = traktMovie.ids.imdb
+                        ),
                         title = tmdbDetails.title,
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
@@ -331,6 +337,11 @@ class ContentRepository(
                     ContentItem(
                         id = tmdbId,
                         tmdbId = tmdbId,
+                        imdbId = resolveImdbId(
+                            primary = null,
+                            external = tmdbDetails.externalIds?.imdbId,
+                            trakt = traktShow.show.ids.imdb
+                        ),
                         title = tmdbDetails.name,
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
@@ -373,18 +384,19 @@ class ContentRepository(
                 try {
                     val tmdbDetails = tmdbApiService.getShowDetails(
                         showId = tmdbId,
-<<<<<<< HEAD
-                        apiKey = BuildConfig.TMDB_API_KEY
-=======
                         apiKey = BuildConfig.TMDB_API_KEY,
                         appendToResponse = "images,external_ids,credits"
->>>>>>> e48ec6a (Add ActorDetailsActivity and ActorDetailsFragment for displaying actor information. Update AndroidManifest.xml to include new activity. Enhance ContentRepository and TMDBApiService for fetching actor details and credits. Implement UI layout for actor details with dynamic content loading.)
                     )
                     val omdbRatings = fetchOmdbRatings(traktShow.ids.imdb)
 
                     ContentItem(
                         id = tmdbId,
                         tmdbId = tmdbId,
+                        imdbId = resolveImdbId(
+                            primary = null,
+                            external = tmdbDetails.externalIds?.imdbId,
+                            trakt = traktShow.ids.imdb
+                        ),
                         title = tmdbDetails.name,
                         overview = tmdbDetails.overview,
                         posterUrl = tmdbDetails.getPosterUrl(),
@@ -453,6 +465,12 @@ class ContentRepository(
         }
         */
     }
+
+    private fun resolveImdbId(
+        primary: String?,
+        external: String?,
+        trakt: String?
+    ): String? = primary ?: external ?: trakt
 }
 
 data class OmdbRatings(

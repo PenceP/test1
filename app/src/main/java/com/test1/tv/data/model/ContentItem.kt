@@ -10,6 +10,7 @@ import kotlinx.parcelize.Parcelize
 data class ContentItem(
     val id: Int,
     val tmdbId: Int,
+    val imdbId: String?,
     val title: String,
     val overview: String?,
     val posterUrl: String?,
