@@ -1220,7 +1220,7 @@ class DetailsFragment : Fragment() {
         private const val TAG = "DetailsFragment"
         private const val ARG_CONTENT_ITEM = "arg_content_item"
         private const val ARG_MOVIE = "arg_movie"
-        private const val AMBIENT_ANIMATION_DURATION = 650L
+        private const val AMBIENT_ANIMATION_DURATION = 250L
         private val DEFAULT_AMBIENT_COLOR = Color.parseColor("#0A0F1F")
 
         fun newInstance(item: ContentItem): DetailsFragment {

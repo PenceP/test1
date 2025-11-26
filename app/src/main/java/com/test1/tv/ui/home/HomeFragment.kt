@@ -75,8 +75,8 @@ class HomeFragment : Fragment() {
     companion object {
         private const val TAG = "HomeFragment"
         private const val HERO_IMAGE_REQUEST_TAG = "hero_image"
-        private const val AMBIENT_ANIMATION_DURATION = 650L
-        private const val HERO_UPDATE_DEBOUNCE_MS = 500L  // Increased from 250ms
+        private const val AMBIENT_ANIMATION_DURATION = 250L
+        private const val HERO_UPDATE_DEBOUNCE_MS = 400L  // Increased from 250ms
         private val DEFAULT_AMBIENT_COLOR = Color.parseColor("#0A0F1F")
     }
 
