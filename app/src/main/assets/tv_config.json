@@ -1,0 +1,30 @@
+{
+  "home": {
+    "rows": [
+      {
+        "id": "trending_shows",
+        "type": "trakt_list",
+        "title": "Trending Shows",
+        "poster_orientation": "landscape",
+        "trakt_list": {
+          "kind": "shows",
+          "list_type": "builtin",
+          "slug": "trending",
+          "url": "https://trakt.tv/shows/trending"
+        }
+      },
+      {
+        "id": "popular_shows",
+        "type": "trakt_list",
+        "title": "Popular Shows",
+        "poster_orientation": "landscape",
+        "trakt_list": {
+          "kind": "shows",
+          "list_type": "builtin",
+          "slug": "popular",
+          "url": "https://trakt.tv/shows/popular"
+        }
+      }
+    ]
+  }
+}

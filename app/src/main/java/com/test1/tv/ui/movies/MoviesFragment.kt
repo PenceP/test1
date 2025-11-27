@@ -27,6 +27,8 @@ import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.ui.HeroSectionHelper
+import com.test1.tv.ui.HeroBackgroundController
+import com.test1.tv.ui.RowLayoutHelper
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import android.graphics.drawable.Drawable
 import androidx.lifecycle.lifecycleScope
@@ -49,6 +51,8 @@ class MoviesFragment : Fragment() {
     private lateinit var heroGenreText: TextView
     private lateinit var heroOverview: TextView
     private lateinit var heroCast: TextView
+    private lateinit var ambientOverlay: View
+    private lateinit var heroBackgroundController: HeroBackgroundController
     private var heroEnrichmentJob: Job? = null
 
     // Navigation
@@ -95,6 +99,12 @@ class MoviesFragment : Fragment() {
         heroGenreText = view.findViewById(R.id.hero_genre_text)
         heroOverview = view.findViewById(R.id.hero_overview)
         heroCast = view.findViewById(R.id.hero_cast)
+        ambientOverlay = view.findViewById(R.id.ambient_background_overlay)
+        heroBackgroundController = HeroBackgroundController(
+            fragment = this,
+            backdropView = heroBackdrop,
+            ambientOverlay = ambientOverlay
+        )
 
         // Navigation
         navSearch = view.findViewById(R.id.nav_search)
@@ -176,22 +186,7 @@ class MoviesFragment : Fragment() {
     }
 
     private fun setupContentRows() {
-        // Configure vertical grid for rows
-        contentRowsView.setNumColumns(1)
-        contentRowsView.setItemSpacing(60)
-
-        // Enable smooth scrolling with fixed row heights
-        contentRowsView.setHasFixedSize(true)
-        contentRowsView.setFocusScrollStrategy(VerticalGridView.FOCUS_SCROLL_ALIGNED)
-
-        // Set window alignment for fixed focus at top with proper offset
-        contentRowsView.setWindowAlignment(VerticalGridView.WINDOW_ALIGN_LOW_EDGE)
-        contentRowsView.setWindowAlignmentOffset(0)
-        contentRowsView.setWindowAlignmentOffsetPercent(VerticalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
-
-        // Set item alignment to prevent rows from being cut off
-        contentRowsView.setItemAlignmentOffset(0)
-        contentRowsView.setItemAlignmentOffsetPercent(VerticalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
+        RowLayoutHelper.configureVerticalGrid(contentRowsView)
     }
 
     private fun observeViewModel() {
@@ -250,15 +245,10 @@ class MoviesFragment : Fragment() {
     private fun updateHeroSection(item: ContentItem) {
         Log.d(TAG, "Updating hero section with: ${item.title}")
 
-        // Load backdrop image
-        Glide.with(this)
-            .load(item.backdropUrl)
-            .thumbnail(0.2f)
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .placeholder(R.drawable.default_background)
-            .error(R.drawable.default_background)
-            .override(1920, 1080)
-            .into(heroBackdrop)
+        heroBackgroundController.updateBackdrop(
+            backdropUrl = item.backdropUrl ?: item.posterUrl,
+            fallbackDrawable = requireContext().getDrawable(R.drawable.default_background)
+        )
 
         // Update text content
         heroTitle.text = item.title

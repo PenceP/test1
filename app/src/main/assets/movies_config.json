@@ -1,0 +1,30 @@
+{
+  "home": {
+    "rows": [
+      {
+        "id": "trending_movies",
+        "type": "trakt_list",
+        "title": "Trending Movies",
+        "poster_orientation": "portrait",
+        "trakt_list": {
+          "kind": "movies",
+          "list_type": "builtin",
+          "slug": "trending",
+          "url": "https://trakt.tv/movies/trending"
+        }
+      },
+      {
+        "id": "popular_movies",
+        "type": "trakt_list",
+        "title": "Popular Movies",
+        "poster_orientation": "portrait",
+        "trakt_list": {
+          "kind": "movies",
+          "list_type": "builtin",
+          "slug": "popular",
+          "url": "https://trakt.tv/movies/popular"
+        }
+      }
+    ]
+  }
+}

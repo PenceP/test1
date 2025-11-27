@@ -46,8 +46,10 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
+import com.test1.tv.data.repository.HomeConfigRepository
 import com.test1.tv.databinding.FragmentHomeBinding
 import com.test1.tv.ui.HeroSectionHelper
+import com.test1.tv.ui.RowLayoutHelper
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import java.util.Locale
 import kotlin.math.max
@@ -118,9 +120,10 @@ class HomeFragment : Fragment() {
             omdbApiService = ApiClient.omdbApiService,
             cacheRepository = cacheRepository
         )
+        val homeConfig = HomeConfigRepository(requireContext()).loadConfig()
 
         // Create ViewModel
-        val factory = HomeViewModelFactory(contentRepository)
+        val factory = HomeViewModelFactory(contentRepository, homeConfig)
         viewModel = ViewModelProvider(this, factory)[HomeViewModel::class.java]
     }
 
@@ -205,22 +208,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupContentRows() {
-        // Configure vertical grid for rows
-        binding.contentRows.setNumColumns(1)
-        binding.contentRows.setItemSpacing(3)
-
-        // Enable smooth scrolling with fixed row heights
-        binding.contentRows.setHasFixedSize(true)
-        binding.contentRows.setFocusScrollStrategy(VerticalGridView.FOCUS_SCROLL_ALIGNED)
-
-        // Set window alignment for fixed focus at top with proper offset
-        binding.contentRows.setWindowAlignment(VerticalGridView.WINDOW_ALIGN_LOW_EDGE)
-        binding.contentRows.setWindowAlignmentOffset(0)
-        binding.contentRows.setWindowAlignmentOffsetPercent(VerticalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
-
-        // Set item alignment to prevent rows from being cut off
-        binding.contentRows.setItemAlignmentOffset(0)
-        binding.contentRows.setItemAlignmentOffsetPercent(VerticalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
+        RowLayoutHelper.configureVerticalGrid(binding.contentRows)
     }
 
     private fun observeViewModel() {

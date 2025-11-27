@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Genre Pills -->
-    <dimen name="genre_pill_padding_horizontal">8dp</dimen>
-    <dimen name="genre_pill_padding_vertical">4dp</dimen>
-    <dimen name="genre_pill_margin">8dp</dimen>
-
-    <!-- Poster + Row dimensions -->
+    <dimen name="row_item_spacing">3dp</dimen>
     <dimen name="poster_width_portrait">120dp</dimen>
     <dimen name="poster_height_portrait">180dp</dimen>
     <dimen name="poster_width_landscape">280dp</dimen>
@@ -16,6 +11,9 @@
     <dimen name="row_height_landscape">200dp</dimen>
     <dimen name="row_height_square">140dp</dimen>
     <dimen name="row_height_episode">140dp</dimen>
-    <dimen name="hero_logo_max_width">385dp</dimen>
-    <dimen name="hero_logo_max_height">90dp</dimen>
+
+    
+
+    <dimen name="hero_logo_max_width">400dp</dimen>
+    <dimen name="hero_logo_max_height">200dp</dimen>
 </resources>

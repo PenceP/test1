@@ -1,0 +1,62 @@
+{
+  "home": {
+    "rows": [
+      {
+        "id": "trending_movies",
+        "type": "trakt_list",
+        "title": "Trending Movies",
+        "poster_orientation": "portrait",
+        "trakt_list": {
+          "kind": "movies",
+          "list_type": "builtin",
+          "slug": "trending",
+          "url": "https://trakt.tv/movies/trending"
+        }
+      },
+      {
+        "id": "popular_shows",
+        "type": "trakt_list",
+        "title": "Popular Shows",
+        "poster_orientation": "landscape",
+        "trakt_list": {
+          "kind": "shows",
+          "list_type": "builtin",
+          "slug": "popular",
+          "url": "https://trakt.tv/shows/popular"
+        }
+      },
+      {
+        "id": "director_collections",
+        "type": "collection",
+        "title": "Director Collections",
+        "poster_orientation": "square",
+        "items": [
+          {
+            "id": "nolan",
+            "label": "Christopher Nolan",
+            "image_url": "asset://directors/nolan.png",
+            "trakt_list": {
+              "kind": "mixed",
+              "list_type": "user",
+              "user": "your_trakt_username",
+              "slug": "christopher-nolan",
+              "url": "https://trakt.tv/users/your_trakt_username/lists/christopher-nolan"
+            }
+          },
+          {
+            "id": "villeneuve",
+            "label": "Denis Villeneuve",
+            "image_url": "https://example.com/images/directors/villeneuve.jpg",
+            "trakt_list": {
+              "kind": "mixed",
+              "list_type": "user",
+              "user": "your_trakt_username",
+              "slug": "denis-villeneuve",
+              "url": "https://trakt.tv/users/your_trakt_username/lists/denis-villeneuve"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
