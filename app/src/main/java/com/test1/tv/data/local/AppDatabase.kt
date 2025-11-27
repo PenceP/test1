@@ -5,16 +5,22 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.test1.tv.data.local.dao.CachedContentDao
+import com.test1.tv.data.local.dao.TraktAccountDao
+import com.test1.tv.data.local.dao.TraktUserItemDao
 import com.test1.tv.data.local.entity.CachedContent
+import com.test1.tv.data.local.entity.TraktAccount
+import com.test1.tv.data.local.entity.TraktUserItem
 
 @Database(
-    entities = [CachedContent::class],
-    version = 5,
+    entities = [CachedContent::class, TraktAccount::class, TraktUserItem::class],
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun cachedContentDao(): CachedContentDao
+    abstract fun traktAccountDao(): TraktAccountDao
+    abstract fun traktUserItemDao(): TraktUserItemDao
 
     companion object {
         @Volatile

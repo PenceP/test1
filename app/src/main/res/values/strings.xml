@@ -45,6 +45,12 @@
     <string name="search_shows">TV Shows</string>
     <string name="search_people">People</string>
     <string name="search_empty">No results</string>
+    <string name="trakt_authorize_title">Authorize Trakt</string>
+    <string name="trakt_authorize_loading">Requesting activation code...</string>
+    <string name="trakt_authorize_message">Go to %1$s and enter code %2$s.\nCode expires in about %3$d minutes.</string>
+    <string name="trakt_authorize_open">Open activation</string>
+    <string name="trakt_authorize_close">Close</string>
+    <string name="trakt_authorize_error">Could not fetch Trakt activation code. Please try again.</string>
 
     <!-- Error messages -->
     <string name="error_fragment_message">An error occurred</string>

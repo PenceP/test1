@@ -95,7 +95,7 @@ class SettingsActivity : FragmentActivity() {
             else -> AccountsFragment()
         }
 
-        supportFragmentManager.beginTransaction()
+        val transaction = supportFragmentManager.beginTransaction()
             .setCustomAnimations(
                 R.anim.fade_in,
                 R.anim.fade_out,
@@ -103,6 +103,11 @@ class SettingsActivity : FragmentActivity() {
                 R.anim.fade_out
             )
             .replace(R.id.fragment_container, fragment)
-            .commit()
+
+        if (supportFragmentManager.isStateSaved) {
+            transaction.commitAllowingStateLoss()
+        } else {
+            transaction.commit()
+        }
     }
 }
