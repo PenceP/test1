@@ -172,7 +172,8 @@ class HomeFragment : Fragment() {
 
         binding.navSettings.setOnClickListener {
             setActiveNavButton(binding.navSettings)
-            showComingSoonPage("Settings")
+            val intent = Intent(requireContext(), com.test1.tv.ui.settings.SettingsActivity::class.java)
+            startActivity(intent)
         }
     }
 

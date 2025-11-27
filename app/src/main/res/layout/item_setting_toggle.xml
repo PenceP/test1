@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp"
+    android:focusable="true"
+    android:clickable="true">
+
+    <TextView
+        android:id="@+id/toggle_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="#E4E4E7"
+        android:textSize="18sp"
+        android:letterSpacing="0.005"
+        tools:text="Auto-select Link" />
+
+    <FrameLayout
+        android:id="@+id/toggle_container"
+        android:layout_width="64dp"
+        android:layout_height="32dp"
+        android:focusable="true">
+
+        <View
+            android:id="@+id/toggle_track"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_toggle_off" />
+
+        <View
+            android:id="@+id/toggle_thumb"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_toggle_thumb" />
+    </FrameLayout>
+</LinearLayout>

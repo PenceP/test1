@@ -1,5 +1,6 @@
 package com.test1.tv.ui.tvshows
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
@@ -159,7 +160,8 @@ class TvShowsFragment : Fragment() {
         }
 
         navSettings.setOnClickListener {
-            Toast.makeText(requireContext(), "Settings coming soon", Toast.LENGTH_SHORT).show()
+            val intent = Intent(requireContext(), com.test1.tv.ui.settings.SettingsActivity::class.java)
+            startActivity(intent)
         }
     }
 
