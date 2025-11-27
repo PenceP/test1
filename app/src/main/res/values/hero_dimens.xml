@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Shared Hero Section Dimensions -->
-    <dimen name="hero_title_size">34sp</dimen>
-    <dimen name="hero_metadata_size">13sp</dimen>
-    <dimen name="hero_genre_size">12sp</dimen>
-    <dimen name="hero_overview_size">12sp</dimen>
-    <dimen name="hero_cast_size">11sp</dimen>
+    <dimen name="hero_title_size">@dimen/text_hero_title</dimen>
+    <dimen name="hero_metadata_size">@dimen/text_hero_metadata</dimen>
+    <dimen name="hero_genre_size">@dimen/text_hero_genre</dimen>
+    <dimen name="hero_overview_size">@dimen/text_hero_overview</dimen>
+    <dimen name="hero_cast_size">@dimen/text_hero_cast</dimen>
 
     <dimen name="hero_title_margin_top">0dp</dimen>
     <dimen name="hero_metadata_margin_top">3dp</dimen>

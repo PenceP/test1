@@ -176,7 +176,7 @@
             android:id="@+id/hero_info_container"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="@fraction/hero_weight"
+            android:layout_weight="0.8"
             android:gravity="top"
             android:orientation="vertical"
             android:paddingStart="@dimen/hero_container_padding_start"
@@ -209,7 +209,7 @@
                 android:shadowDy="2"
                 android:shadowRadius="4"
                 android:textColor="@android:color/white"
-                android:textSize="34sp"
+                android:textSize="@dimen/hero_title_size"
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end"
@@ -221,7 +221,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textColor="#F0FFFFFF"
-                android:textSize="12sp"
+                android:textSize="@dimen/hero_metadata_size"
                 android:textStyle="bold"
                 tools:text="98% Match • 2025 • PG-13 • 1h 48m" />
 
@@ -232,7 +232,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:textColor="@android:color/white"
-                android:textSize="13sp"
+                android:textSize="@dimen/hero_genre_size"
                 android:ellipsize="end"
                 android:maxLines="1"
                 tools:text="Science Fiction • Adventure • Action" />
@@ -246,7 +246,7 @@
                 android:ellipsize="end"
                 android:maxLines="4"
                 android:textColor="@android:color/white"
-                android:textSize="14sp"
+                android:textSize="@dimen/hero_overview_size"
                 android:lineSpacingMultiplier="1.1"
                 tools:text="A well-meaning but rather inept angel named Gabriel meddles in the lives of a struggling gig worker and a wealthy capitalist." />
 
@@ -263,7 +263,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="#CCCCCC"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/hero_cast_size"
                     tools:text="Starring: Cailee Spaeny, David Jonsson, Archie Renaux, Isabela Merced" />
 
                 <View
@@ -279,7 +279,7 @@
             android:id="@+id/content_rows"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="@fraction/rows_weight"
+            android:layout_weight="1.2"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:clipToPadding="false"

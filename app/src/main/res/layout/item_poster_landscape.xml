@@ -15,7 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:cardBackgroundColor="@android:color/black"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="@dimen/radius_poster"
         app:cardElevation="4dp"
         app:cardUseCompatPadding="false">
 
@@ -40,7 +40,7 @@
             android:paddingEnd="12dp"
             android:paddingBottom="10dp"
             android:textColor="@android:color/white"
-            android:textSize="13sp"
+            android:textSize="@dimen/text_hero_metadata"
             android:visibility="visible"
             tools:text="Continue Watching" />
     </androidx.cardview.widget.CardView>

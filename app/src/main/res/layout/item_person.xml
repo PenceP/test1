@@ -44,6 +44,6 @@
         android:maxLines="2"
         android:ellipsize="end"
         android:textColor="@android:color/white"
-        android:textSize="12sp"
+        android:textSize="@dimen/text_small"
         tools:text="Actor Name" />
 </LinearLayout>

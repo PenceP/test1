@@ -15,7 +15,21 @@
     <dimen name="row_height_square">140dp</dimen>
     <dimen name="row_height_episode">140dp</dimen>
 
-    
+    <!-- Text sizes -->
+    <dimen name="text_row_title">20sp</dimen>
+    <dimen name="text_hero_title">34sp</dimen>
+    <dimen name="text_hero_metadata">12sp</dimen>
+    <dimen name="text_hero_genre">13sp</dimen>
+    <dimen name="text_hero_overview">14sp</dimen>
+    <dimen name="text_hero_cast">14sp</dimen>
+    <dimen name="text_empty_state">28sp</dimen>
+    <dimen name="text_account_title">24sp</dimen>
+    <dimen name="text_account_body">16sp</dimen>
+    <dimen name="text_small">10sp</dimen>
+
+    <!-- Corner radii -->
+    <dimen name="radius_poster">18dp</dimen>
+    <dimen name="radius_card">12dp</dimen>
 
     <dimen name="hero_logo_max_width">400dp</dimen>
     <dimen name="hero_logo_max_height">200dp</dimen>
