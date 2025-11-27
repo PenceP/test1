@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="row_item_spacing">3dp</dimen>
+    <dimen name="layout_margin_top_hero_container">6dp</dimen>
+    <fraction name="hero_weight">80%</fraction>
+    <fraction name="rows_weight">120%</fraction>
     <dimen name="poster_width_portrait">120dp</dimen>
     <dimen name="poster_height_portrait">180dp</dimen>
     <dimen name="poster_width_landscape">280dp</dimen>
