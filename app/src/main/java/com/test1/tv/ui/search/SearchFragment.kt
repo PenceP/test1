@@ -14,8 +14,8 @@ import android.widget.ProgressBar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.test1.tv.ActorDetailsActivity
@@ -65,27 +65,9 @@ class SearchFragment : Fragment() {
         backgroundImageView = view.findViewById(R.id.search_background)
 
         rowsState.clear()
-        rowsState.add(
-            ContentRow(
-                getString(R.string.search_movies),
-                mutableListOf(),
-                RowPresentation.PORTRAIT
-            )
-        )
-        rowsState.add(
-            ContentRow(
-                getString(R.string.search_shows),
-                mutableListOf(),
-                RowPresentation.PORTRAIT
-            )
-        )
-        rowsState.add(
-            ContentRow(
-                getString(R.string.search_people),
-                mutableListOf(),
-                RowPresentation.PORTRAIT
-            )
-        )
+        rowsState.add(ContentRow(getString(R.string.search_movies), mutableListOf(), RowPresentation.PORTRAIT))
+        rowsState.add(ContentRow(getString(R.string.search_shows), mutableListOf(), RowPresentation.PORTRAIT))
+        rowsState.add(ContentRow(getString(R.string.search_people), mutableListOf(), RowPresentation.PORTRAIT))
 
         rowsAdapter = ContentRowAdapter(
             initialRows = rowsState,
@@ -151,8 +133,7 @@ class SearchFragment : Fragment() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (
-            requestCode == REQUEST_RECORD_AUDIO &&
+        if (requestCode == REQUEST_RECORD_AUDIO &&
             grantResults.isNotEmpty() &&
             grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
@@ -181,8 +162,10 @@ class SearchFragment : Fragment() {
     private fun updateRow(index: Int, items: List<ContentItem>) {
         val row = rowsState.getOrNull(index) ?: return
 
+        // Create a new list instead of modifying the existing one
         val newItems = if (items.isNotEmpty()) {
             if (index == 2) {
+                // mark people to route to actor page
                 items.map { it.copy(cast = "__PERSON__") }
             } else {
                 items
@@ -192,7 +175,6 @@ class SearchFragment : Fragment() {
                 ContentItem(
                     id = -1,
                     tmdbId = -1,
-                    imdbId = null,
                     title = getString(R.string.search_empty),
                     overview = null,
                     posterUrl = null,
@@ -206,6 +188,7 @@ class SearchFragment : Fragment() {
                     runtime = null,
                     cast = if (index == 2) "__PERSON_PLACEHOLDER__" else null,
                     certification = null,
+                    imdbId = null,
                     imdbRating = null,
                     rottenTomatoesRating = null,
                     traktRating = null
@@ -213,6 +196,7 @@ class SearchFragment : Fragment() {
             )
         }
 
+        // Create a new ContentRow object with the new items
         rowsState[index] = ContentRow(
             title = row.title,
             items = newItems.toMutableList(),
@@ -224,8 +208,9 @@ class SearchFragment : Fragment() {
 
     private fun handleItemClick(item: ContentItem) {
         if (item.tmdbId == -1) return
-        if (item.cast == "__PERSON_PLACEHOLDER__") return
-
+        if (item.cast == "__PERSON_PLACEHOLDER__") {
+            return
+        }
         if (item.cast == "__PERSON__") {
             ActorDetailsActivity.start(
                 context = requireContext(),
@@ -239,29 +224,36 @@ class SearchFragment : Fragment() {
     }
 
     /**
-     * Updates the dynamic background based on the focused content item.
+     * Updates the dynamic background based on the focused content item
      */
     private fun updateDynamicBackground(item: ContentItem) {
+        // Skip if it's a placeholder or person result
         if (item.tmdbId == -1 || item.cast == "__PERSON__" || item.cast == "__PERSON_PLACEHOLDER__") {
             return
         }
 
+        // Only update if the backdrop URL is different
         val backdropUrl = item.backdropUrl
-        if (backdropUrl == currentBackdropUrl) return
+        if (backdropUrl == currentBackdropUrl) {
+            return
+        }
 
         currentBackdropUrl = backdropUrl
 
         if (backdropUrl.isNullOrBlank()) {
+            // Fade to dark background if no backdrop
             backgroundImageView.animate()
                 .alpha(0f)
                 .setDuration(300)
                 .start()
         } else {
+            // Load the backdrop with a crossfade
             Glide.with(this)
                 .load(backdropUrl)
                 .transition(DrawableTransitionOptions.withCrossFade(400))
                 .into(backgroundImageView)
 
+            // Ensure the background is visible
             if (backgroundImageView.alpha < 0.3f) {
                 backgroundImageView.animate()
                     .alpha(0.3f)

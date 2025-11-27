@@ -39,6 +39,7 @@ class SearchViewModel(
 
         searchJob = viewModelScope.launch {
             _isLoading.value = true
+            // tiny debounce
             delay(200)
             runCatching {
                 searchRepository.search(query)
