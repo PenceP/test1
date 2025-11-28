@@ -4,6 +4,7 @@ import android.content.Context
 import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
+import com.test1.tv.data.repository.WatchStatusRepository
 import com.test1.tv.data.remote.ApiClient
 
 object ContentRepositoryProvider {
@@ -11,11 +12,14 @@ object ContentRepositoryProvider {
     fun provide(context: Context): ContentRepository {
         val database = AppDatabase.getDatabase(context)
         val cacheRepository = CacheRepository(database.cachedContentDao())
+        val watchStatusRepository = WatchStatusRepository(database.watchStatusDao())
+        com.test1.tv.data.repository.WatchStatusProvider.set(watchStatusRepository)
         return ContentRepository(
             traktApiService = ApiClient.traktApiService,
             tmdbApiService = ApiClient.tmdbApiService,
             omdbApiService = ApiClient.omdbApiService,
-            cacheRepository = cacheRepository
+            cacheRepository = cacheRepository,
+            watchStatusRepository = watchStatusRepository
         )
     }
 }

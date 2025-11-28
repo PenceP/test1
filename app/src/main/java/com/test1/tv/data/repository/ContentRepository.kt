@@ -9,6 +9,7 @@ import com.test1.tv.data.remote.api.TraktApiService
 import com.test1.tv.data.model.tmdb.TMDBCast
 import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBShow
+import com.test1.tv.data.repository.WatchStatusRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,7 +23,8 @@ class ContentRepository(
     private val traktApiService: TraktApiService,
     private val tmdbApiService: TMDBApiService,
     private val omdbApiService: com.test1.tv.data.remote.api.OMDbApiService,
-    private val cacheRepository: CacheRepository
+    private val cacheRepository: CacheRepository,
+    private val watchStatusRepository: WatchStatusRepository? = null
 ) {
 
     companion object {
@@ -256,7 +258,8 @@ class ContentRepository(
                         certification = tmdbDetails.getCertification(),
                         imdbRating = omdbRatings?.imdb,
                         rottenTomatoesRating = omdbRatings?.rottenTomatoes,
-                        traktRating = traktMovie.movie.rating
+                        traktRating = traktMovie.movie.rating,
+                        watchProgress = watchStatusRepository?.getProgress(tmdbId, ContentItem.ContentType.MOVIE)
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for movie $tmdbId", e)
@@ -311,7 +314,8 @@ class ContentRepository(
                         certification = tmdbDetails.getCertification(),
                         imdbRating = omdbRatings?.imdb,
                         rottenTomatoesRating = omdbRatings?.rottenTomatoes,
-                        traktRating = traktMovie.rating
+                        traktRating = traktMovie.rating,
+                        watchProgress = watchStatusRepository?.getProgress(tmdbId, ContentItem.ContentType.MOVIE)
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for movie $tmdbId", e)
@@ -366,7 +370,8 @@ class ContentRepository(
                         certification = tmdbDetails.getCertification(),
                         imdbRating = omdbRatings?.imdb,
                         rottenTomatoesRating = omdbRatings?.rottenTomatoes,
-                        traktRating = traktShow.show.rating
+                        traktRating = traktShow.show.rating,
+                        watchProgress = watchStatusRepository?.getProgress(tmdbId, ContentItem.ContentType.TV_SHOW)
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for show $tmdbId", e)
@@ -500,7 +505,8 @@ class ContentRepository(
                         certification = tmdbDetails.getCertification(),
                         imdbRating = omdbRatings?.imdb,
                         rottenTomatoesRating = omdbRatings?.rottenTomatoes,
-                        traktRating = traktShow.rating
+                        traktRating = traktShow.rating,
+                        watchProgress = watchStatusRepository?.getProgress(tmdbId, ContentItem.ContentType.TV_SHOW)
                     )
                 } catch (e: Exception) {
                     Log.e(TAG, "Error fetching TMDB details for show $tmdbId", e)

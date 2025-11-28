@@ -51,6 +51,7 @@ import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.data.repository.HomeConfigRepository
 import com.test1.tv.data.repository.TraktAuthRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
+import com.test1.tv.data.repository.WatchStatusRepository
 import com.test1.tv.data.repository.TraktAccountRepository
 import com.test1.tv.databinding.FragmentHomeBinding
 import com.test1.tv.ui.HeroSectionHelper
@@ -60,6 +61,7 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -132,11 +134,15 @@ class HomeFragment : Fragment() {
         // Initialize repositories
         val database = AppDatabase.getDatabase(requireContext())
         val cacheRepository = CacheRepository(database.cachedContentDao())
+        val watchStatusRepository = WatchStatusRepository(database.watchStatusDao())
+        runBlocking { watchStatusRepository.preload() }
+        com.test1.tv.data.repository.WatchStatusProvider.set(watchStatusRepository)
         val contentRepository = ContentRepository(
             traktApiService = ApiClient.traktApiService,
             tmdbApiService = ApiClient.tmdbApiService,
             omdbApiService = ApiClient.omdbApiService,
-            cacheRepository = cacheRepository
+            cacheRepository = cacheRepository,
+            watchStatusRepository = watchStatusRepository
         )
         val homeConfig = HomeConfigRepository(requireContext()).loadConfig()
         val accountRepo = TraktAccountRepository(ApiClient.traktApiService, database.traktAccountDao())
@@ -145,7 +151,8 @@ class HomeFragment : Fragment() {
             traktApiService = ApiClient.traktApiService,
             tmdbApiService = ApiClient.tmdbApiService,
             accountRepository = accountRepo,
-            continueWatchingDao = database.continueWatchingDao()
+            continueWatchingDao = database.continueWatchingDao(),
+            watchStatusRepository = watchStatusRepository
         )
         traktAuthRepository = TraktAuthRepository(ApiClient.traktApiService)
 

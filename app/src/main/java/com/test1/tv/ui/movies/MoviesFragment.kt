@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runBlocking
 
 class MoviesFragment : Fragment() {
 
@@ -118,11 +119,15 @@ class MoviesFragment : Fragment() {
         // Initialize repositories
         val database = AppDatabase.getDatabase(requireContext())
         val cacheRepository = CacheRepository(database.cachedContentDao())
+        val watchStatusRepository = com.test1.tv.data.repository.WatchStatusRepository(database.watchStatusDao())
+        runBlocking { watchStatusRepository.preload() }
+        com.test1.tv.data.repository.WatchStatusProvider.set(watchStatusRepository)
         val contentRepository = ContentRepository(
             traktApiService = ApiClient.traktApiService,
             tmdbApiService = ApiClient.tmdbApiService,
             omdbApiService = ApiClient.omdbApiService,
-            cacheRepository = cacheRepository
+            cacheRepository = cacheRepository,
+            watchStatusRepository = watchStatusRepository
         )
 
         // Create ViewModel

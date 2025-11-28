@@ -60,7 +60,10 @@ class PosterAdapter(
             posterImage.setImageDrawable(null)
             titleOverlay.text = ""
             titleOverlay.visibility = View.VISIBLE
+            watchedBadge?.setImageResource(R.drawable.ic_check_badge)
             watchedBadge?.visibility = View.GONE
+            watchedBadge?.alpha = 1f
+            watchedBadge?.elevation = 24f
 
             val artworkUrl = if (presentation == RowPresentation.LANDSCAPE_16_9) {
                 item.backdropUrl ?: item.posterUrl
@@ -195,8 +198,16 @@ class PosterAdapter(
                 itemView.setOnLongClickListener(null)
             }
 
-            val isWatched = item.watchProgress?.let { it >= 0.9 } == true
+            val progress = item.watchProgress
+                ?: com.test1.tv.data.repository.WatchStatusProvider.getProgress(item.tmdbId, item.type)
+            val isWatched = progress?.let { it >= 0.9 } == true
             watchedBadge?.visibility = if (isWatched) View.VISIBLE else View.GONE
+            if (isWatched) {
+                android.util.Log.d("PosterBadge", "watched badge on '${item.title}' progress=$progress")
+                (cardContainer ?: itemView).post {
+                    watchedBadge?.bringToFront()
+                }
+            }
         }
 
         private fun applyFocusOverlay(hasFocus: Boolean, accentColor: Int) {

@@ -24,7 +24,8 @@ class ContinueWatchingRepository(
     private val traktApiService: TraktApiService,
     private val tmdbApiService: TMDBApiService,
     private val accountRepository: TraktAccountRepository,
-    private val continueWatchingDao: ContinueWatchingDao
+    private val continueWatchingDao: ContinueWatchingDao,
+    private val watchStatusRepository: WatchStatusRepository
 ) {
     companion object {
         private const val TAG = "ContinueWatching"
@@ -154,6 +155,20 @@ class ContinueWatchingRepository(
         lastActivitiesCached = latestActivityMillis
         continueWatchingDao.clear()
         continueWatchingDao.upsertAll(result.map { it.toEntity() })
+        watchStatusRepository.upsertAll(
+            (moviePairs + showPairs + watchedShowPairs + historyMoviePairs + historyShowPairs).mapNotNull { pair ->
+                val item = pair.second
+                val type = item.type
+                val progress = item.watchProgress ?: return@mapNotNull null
+                com.test1.tv.data.local.entity.WatchStatusEntity(
+                    key = "${type.name}_${item.tmdbId}",
+                    tmdbId = item.tmdbId,
+                    type = type.name,
+                    progress = progress,
+                    updatedAt = System.currentTimeMillis()
+                )
+            }
+        )
         accountRepository.updateSyncTimestamps(
             lastSyncAt = System.currentTimeMillis(),
             history = null,
