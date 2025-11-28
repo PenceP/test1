@@ -6,10 +6,12 @@ import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import com.test1.tv.ui.details.DetailsFragment
 import com.test1.tv.data.model.ContentItem
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Details activity class that loads [DetailsFragment].
  */
+@AndroidEntryPoint
 class DetailsActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

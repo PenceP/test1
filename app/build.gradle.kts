@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
     id("kotlin-kapt")
     id("kotlin-parcelize")
 }
@@ -71,6 +72,14 @@ dependencies {
     implementation(libs.androidx.palette)
     implementation(libs.glide)
     kapt("com.github.bumptech.glide:compiler:4.16.0")
+
+    // Hilt (Dependency Injection)
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+
+    // Hilt Testing
+    testImplementation(libs.hilt.testing)
+    kaptTest(libs.hilt.compiler)
 
     // Networking
     implementation(libs.retrofit)

@@ -27,7 +27,9 @@ import com.test1.tv.data.repository.SearchRepository
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import com.test1.tv.ui.adapter.RowPresentation
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class SearchFragment : Fragment() {
 
     private lateinit var searchField: EditText

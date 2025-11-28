@@ -6,10 +6,12 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.actor.ActorDetailsFragment
 import android.content.Intent
 import android.content.Context
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Actor details activity class that loads [ActorDetailsFragment].
  */
+@AndroidEntryPoint
 class ActorDetailsActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

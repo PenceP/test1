@@ -48,6 +48,7 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
+import dagger.hilt.android.AndroidEntryPoint
 import com.test1.tv.data.repository.HomeConfigRepository
 import com.test1.tv.data.repository.TraktAuthRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
@@ -70,6 +71,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 
+@AndroidEntryPoint
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null

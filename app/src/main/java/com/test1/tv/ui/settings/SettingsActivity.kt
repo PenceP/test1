@@ -13,7 +13,9 @@ import com.test1.tv.R
 import com.test1.tv.ui.settings.adapter.SubmenuAdapter
 import com.test1.tv.ui.settings.fragments.AccountsFragment
 import com.test1.tv.ui.settings.model.SubmenuItem
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class SettingsActivity : FragmentActivity() {
 
     private lateinit var backgroundImage: ImageView

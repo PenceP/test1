@@ -8,10 +8,12 @@ import com.test1.tv.ui.home.HomeFragment
 import com.test1.tv.ui.movies.MoviesFragment
 import com.test1.tv.ui.search.SearchFragment
 import com.test1.tv.ui.tvshows.TvShowsFragment
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Hosts the main sections and handles navigation/back behavior.
  */
+@AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

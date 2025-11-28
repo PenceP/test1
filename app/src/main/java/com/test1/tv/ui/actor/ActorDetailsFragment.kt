@@ -44,7 +44,9 @@ import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class ActorDetailsFragment : Fragment() {
 
     private var _binding: FragmentActorDetailsBinding? = null

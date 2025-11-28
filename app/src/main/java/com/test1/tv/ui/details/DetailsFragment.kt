@@ -65,7 +65,9 @@ import androidx.leanback.widget.BaseGridView
 import com.test1.tv.ui.RowScrollPauser
 import com.test1.tv.ui.ScrollThrottler
 import android.transition.TransitionManager
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class DetailsFragment : Fragment() {
 
     private var contentItem: ContentItem? = null
