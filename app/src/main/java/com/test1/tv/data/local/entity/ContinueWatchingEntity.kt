@@ -1,13 +1,11 @@
-package com.test1.tv.data.model
+package com.test1.tv.data.local.entity
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
-/**
- * Unified model that combines Trakt and TMDB data for displaying content
- */
-@Parcelize
-data class ContentItem(
+@Entity(tableName = "continue_watching")
+data class ContinueWatchingEntity(
+    @PrimaryKey val cacheId: String,
     val id: Int,
     val tmdbId: Int,
     val imdbId: String?,
@@ -20,16 +18,13 @@ data class ContentItem(
     val rating: Double?,
     val ratingPercentage: Int?,
     val genres: String?,
-    val type: ContentType,
+    val type: String,
     val runtime: String?,
     val cast: String?,
     val certification: String?,
     val imdbRating: String?,
     val rottenTomatoesRating: String?,
     val traktRating: Double?,
-    val watchProgress: Double? = null
-) : Parcelable {
-    enum class ContentType {
-        MOVIE, TV_SHOW
-    }
-}
+    val watchProgress: Double?,
+    val updatedAt: Long
+)

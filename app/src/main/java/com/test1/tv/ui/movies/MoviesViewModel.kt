@@ -72,6 +72,20 @@ class MoviesViewModel(
                     _error.value = "Failed to load popular movies: ${e.message}"
                 }
 
+                contentRepository.getLatest4KMovies(forceRefresh).onSuccess { movies ->
+                    if (movies.isNotEmpty()) {
+                        rows.add(
+                            ContentRow(
+                                title = "Latest 4K Releases",
+                                items = movies.toMutableList(),
+                                presentation = RowPresentation.PORTRAIT
+                            )
+                        )
+                    }
+                }.onFailure { e ->
+                    _error.value = "Failed to load 4K releases: ${e.message}"
+                }
+
                 _contentRows.value = rows
             } catch (e: Exception) {
                 _error.value = "Failed to load content: ${e.message}"

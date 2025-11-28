@@ -15,7 +15,9 @@ enum class HomeRowType {
     @SerializedName("trakt_list")
     TRAKT_LIST,
     @SerializedName("collection")
-    COLLECTION
+    COLLECTION,
+    @SerializedName("continue_watching")
+    CONTINUE_WATCHING
 }
 
 data class HomeConfig(
@@ -31,6 +33,7 @@ data class HomeRow(
     val type: HomeRowType?,
     val title: String,
     val poster_orientation: PosterOrientation? = null,
+    val requires_trakt: Boolean? = null,
     val trakt_list: TraktListConfig? = null,
     val items: List<CollectionItemConfig>? = null
 )

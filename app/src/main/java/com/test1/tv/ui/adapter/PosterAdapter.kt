@@ -53,25 +53,36 @@ class PosterAdapter(
         val focusOverlay: View = itemView.findViewById(R.id.focus_overlay)
         val titleOverlay: TextView = itemView.findViewById(R.id.poster_title_overlay)
         val cardContainer: CardView? = itemView.findViewById(R.id.poster_card)
+        val watchedBadge: ImageView? = itemView.findViewById(R.id.watched_badge)
 
         fun bind(item: ContentItem, position: Int) {
             // Reset recycled state
             posterImage.setImageDrawable(null)
             titleOverlay.text = ""
             titleOverlay.visibility = View.VISIBLE
+            watchedBadge?.visibility = View.GONE
 
-            val isPlaceholder = item.tmdbId == -1 || item.posterUrl.isNullOrBlank()
+            val artworkUrl = if (presentation == RowPresentation.LANDSCAPE_16_9) {
+                item.backdropUrl ?: item.posterUrl
+            } else {
+                item.posterUrl
+            }
+            val isPlaceholder = item.tmdbId == -1 || artworkUrl.isNullOrBlank()
 
             titleOverlay.text = item.title
             titleOverlay.visibility = View.VISIBLE
             cardContainer?.let { ViewCompat.setElevation(it, 6f) }
 
             if (isPlaceholder) {
-                posterImage.setImageResource(R.drawable.default_background)
+                if (item.title.contains("Trakt", ignoreCase = true)) {
+                    posterImage.setImageResource(R.drawable.ic_trakt_logo)
+                } else {
+                    posterImage.setImageResource(R.drawable.default_background)
+                }
                 posterAccentColors[getColorKey(item)] = DEFAULT_BORDER_COLOR
             } else {
                 Glide.with(itemView.context)
-                    .load(item.posterUrl)
+                    .load(artworkUrl)
                     .onlyRetrieveFromCache(true)  // Force cache-only for instant loading
                     .transition(DrawableTransitionOptions.withCrossFade(150))
                     .placeholder(R.drawable.default_background)
@@ -90,7 +101,7 @@ class PosterAdapter(
 
                             // If cache fails, load from network in background
                             Glide.with(itemView.context)
-                                .load(item.posterUrl)
+                                .load(artworkUrl)
                                 .onlyRetrieveFromCache(false)
                                 .override(300, 450)
                                 .into(object : CustomTarget<Drawable>() {
@@ -183,6 +194,9 @@ class PosterAdapter(
                 itemView.isLongClickable = false
                 itemView.setOnLongClickListener(null)
             }
+
+            val isWatched = item.watchProgress?.let { it >= 0.9 } == true
+            watchedBadge?.visibility = if (isWatched) View.VISIBLE else View.GONE
         }
 
         private fun applyFocusOverlay(hasFocus: Boolean, accentColor: Int) {

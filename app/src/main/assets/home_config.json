@@ -2,6 +2,13 @@
   "home": {
     "rows": [
       {
+        "id": "continue_watching",
+        "type": "continue_watching",
+        "title": "Continue Watching",
+        "poster_orientation": "landscape",
+        "requires_trakt": true
+      },
+      {
         "id": "trending_movies",
         "type": "trakt_list",
         "title": "Trending Movies",
@@ -34,7 +41,7 @@
           {
             "id": "nolan",
             "label": "Christopher Nolan",
-            "image_url": "asset://directors/nolan.png",
+            "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgJ3FFKJRLbaG2TtVc60s-agyYeKw9XVjozz_T2jAje8X-J3E5mAfyWdN9655joT2vubzvKwxXBm3M6DAKmFYqmlRPlvWvtDAHeA6aiz10&s=10",
             "trakt_list": {
               "kind": "mixed",
               "list_type": "user",

@@ -7,13 +7,15 @@ import androidx.room.RoomDatabase
 import com.test1.tv.data.local.dao.CachedContentDao
 import com.test1.tv.data.local.dao.TraktAccountDao
 import com.test1.tv.data.local.dao.TraktUserItemDao
+import com.test1.tv.data.local.dao.ContinueWatchingDao
 import com.test1.tv.data.local.entity.CachedContent
 import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.data.local.entity.TraktUserItem
+import com.test1.tv.data.local.entity.ContinueWatchingEntity
 
 @Database(
-    entities = [CachedContent::class, TraktAccount::class, TraktUserItem::class],
-    version = 6,
+    entities = [CachedContent::class, TraktAccount::class, TraktUserItem::class, ContinueWatchingEntity::class],
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -21,6 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cachedContentDao(): CachedContentDao
     abstract fun traktAccountDao(): TraktAccountDao
     abstract fun traktUserItemDao(): TraktUserItemDao
+    abstract fun continueWatchingDao(): ContinueWatchingDao
 
     companion object {
         @Volatile

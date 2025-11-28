@@ -6,6 +6,9 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
+import com.test1.tv.data.model.tmdb.TMDBCast
+import com.test1.tv.data.model.tmdb.TMDBCollection
+import com.test1.tv.data.model.tmdb.TMDBShow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +32,7 @@ class ContentRepository(
         const val CATEGORY_TRENDING_SHOWS = "TRENDING_SHOWS"
         const val CATEGORY_POPULAR_SHOWS = "POPULAR_SHOWS"
         const val CATEGORY_CONTINUE_WATCHING = "CONTINUE_WATCHING"
+        const val CATEGORY_LATEST_4K_MOVIES = "LATEST_4K_MOVIES"
         private const val DEFAULT_PAGE_SIZE = 20
     }
 
@@ -49,6 +53,10 @@ class ContentRepository(
 
     suspend fun getPopularShows(forceRefresh: Boolean = false): Result<List<ContentItem>> {
         return getPopularShowsPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
+    }
+
+    suspend fun getLatest4KMovies(forceRefresh: Boolean = false): Result<List<ContentItem>> {
+        return getLatest4KMoviesPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
     }
 
     suspend fun getTrendingMoviesPage(
@@ -112,12 +120,13 @@ class ContentRepository(
     }
 
     suspend fun prefetchCategoryPage(category: String, page: Int, pageSize: Int) {
+        if (category == CATEGORY_CONTINUE_WATCHING) return
         when (category) {
             CATEGORY_TRENDING_MOVIES -> getTrendingMoviesPage(page, pageSize, forceRefresh = false)
             CATEGORY_POPULAR_MOVIES -> getPopularMoviesPage(page, pageSize, forceRefresh = false)
             CATEGORY_TRENDING_SHOWS -> getTrendingShowsPage(page, pageSize, forceRefresh = false)
             CATEGORY_POPULAR_SHOWS -> getPopularShowsPage(page, pageSize, forceRefresh = false)
-            CATEGORY_CONTINUE_WATCHING -> getTrendingShowsPage(page, pageSize, forceRefresh = false)
+            CATEGORY_LATEST_4K_MOVIES -> getLatest4KMoviesPage(page, pageSize, forceRefresh = false)
         }
     }
 
@@ -367,6 +376,85 @@ class ContentRepository(
         }.awaitAll().filterNotNull()
     }
 
+    suspend fun getLatest4KMoviesPage(
+        page: Int,
+        pageSize: Int,
+        forceRefresh: Boolean = false
+    ): Result<List<ContentItem>> {
+        return getPagedContent(
+            category = CATEGORY_LATEST_4K_MOVIES,
+            page = page,
+            pageSize = pageSize,
+            forceRefresh = forceRefresh
+        ) {
+            fetchUserListMoviesFromApis(
+                user = "giladg",
+                list = "latest-4k-releases",
+                page = page,
+                pageSize = pageSize
+            )
+        }
+    }
+
+    private suspend fun fetchUserListMoviesFromApis(
+        user: String,
+        list: String,
+        page: Int,
+        pageSize: Int
+    ): List<ContentItem> = withContext(Dispatchers.IO) {
+        val traktMovies = traktApiService.getListMovies(
+            user = user,
+            list = list,
+            clientId = BuildConfig.TRAKT_CLIENT_ID,
+            page = page,
+            limit = pageSize
+        )
+
+        traktMovies.mapNotNull { traktItem ->
+            val tmdbId = traktItem.movie?.ids?.tmdb ?: return@mapNotNull null
+
+            async {
+                try {
+                    val tmdbDetails = tmdbApiService.getMovieDetails(
+                        movieId = tmdbId,
+                        apiKey = BuildConfig.TMDB_API_KEY,
+                        appendToResponse = "images,external_ids,credits"
+                    )
+                    val omdbRatings = fetchOmdbRatings(traktItem.movie.ids.imdb)
+
+                    ContentItem(
+                        id = tmdbId,
+                        tmdbId = tmdbId,
+                        imdbId = resolveImdbId(
+                            primary = tmdbDetails.imdbId,
+                            external = tmdbDetails.externalIds?.imdbId,
+                            trakt = traktItem.movie.ids.imdb
+                        ),
+                        title = tmdbDetails.title,
+                        overview = tmdbDetails.overview,
+                        posterUrl = tmdbDetails.getPosterUrl(),
+                        backdropUrl = tmdbDetails.getBackdropUrl(),
+                        logoUrl = tmdbDetails.getLogoUrl(),
+                        year = tmdbDetails.getYear(),
+                        rating = tmdbDetails.voteAverage,
+                        ratingPercentage = tmdbDetails.getRatingPercentage(),
+                        genres = tmdbDetails.genres?.joinToString(", ") { it.name },
+                        type = ContentItem.ContentType.MOVIE,
+                        runtime = formatRuntime(tmdbDetails.runtime),
+                        cast = tmdbDetails.getCastNames(),
+                        certification = tmdbDetails.getCertification(),
+                        imdbRating = omdbRatings?.imdb,
+                        rottenTomatoesRating = omdbRatings?.rottenTomatoes,
+                        traktRating = traktItem.movie.rating
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error fetching TMDB details for movie $tmdbId", e)
+                    null
+                }
+            }
+        }.awaitAll().filterNotNull()
+    }
+
     private suspend fun fetchPopularShowsFromApis(
         page: Int,
         pageSize: Int
@@ -464,6 +552,26 @@ class ContentRepository(
             null
         }
         */
+    }
+
+    data class MovieDetailsBundle(
+        val cast: List<TMDBCast>?,
+        val similar: List<ContentItem>?,
+        val collection: TMDBCollection?
+    )
+
+    data class ShowDetailsBundle(
+        val cast: List<TMDBCast>?,
+        val similar: List<ContentItem>?,
+        val details: TMDBShow
+    )
+
+    suspend fun getMovieDetailsBundle(movieId: Int): Result<MovieDetailsBundle> {
+        return Result.failure(UnsupportedOperationException("getMovieDetailsBundle not implemented"))
+    }
+
+    suspend fun getShowDetailsBundle(showId: Int): Result<ShowDetailsBundle> {
+        return Result.failure(UnsupportedOperationException("getShowDetailsBundle not implemented"))
     }
 
     private fun resolveImdbId(

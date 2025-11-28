@@ -12,6 +12,11 @@ import com.test1.tv.data.model.trakt.TraktWatchlistItem
 import com.test1.tv.data.model.trakt.TraktCollectionItem
 import com.test1.tv.data.model.trakt.TraktHistoryItem
 import com.test1.tv.data.model.trakt.TraktLastActivities
+import com.test1.tv.data.model.trakt.TraktWatchedMovie
+import com.test1.tv.data.model.trakt.TraktWatchedShow
+import com.test1.tv.data.model.trakt.TraktListItem
+import com.test1.tv.data.model.trakt.TraktShowProgress
+import com.test1.tv.data.model.trakt.TraktPlaybackItem
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -127,6 +132,62 @@ interface TraktApiService {
         @Query("limit") limit: Int = 200,
         @Query("extended") extended: String = "full"
     ): List<TraktHistoryItem>
+
+    @GET("sync/watched/movies")
+    suspend fun getWatchedMovies(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("extended") extended: String = "full"
+    ): List<TraktWatchedMovie>
+
+    @GET("sync/watched/shows")
+    suspend fun getWatchedShows(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("extended") extended: String = "full"
+    ): List<TraktWatchedShow>
+
+    @GET("shows/{id}/progress/watched")
+    suspend fun getShowProgress(
+        @Path("id") showId: Int,
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("hidden") hidden: Boolean = false,
+        @Query("specials") specials: Boolean = false
+    ): TraktShowProgress
+
+    @GET("sync/playback/movies")
+    suspend fun getPlaybackMovies(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): List<TraktPlaybackItem>
+
+    @GET("sync/playback/episodes")
+    suspend fun getPlaybackEpisodes(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): List<TraktPlaybackItem>
+
+    @GET("users/{user}/lists/{list}/items/movies")
+    suspend fun getListMovies(
+        @Path("user") user: String,
+        @Path("list") list: String,
+        @Header("Authorization") authHeader: String? = null,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("extended") extended: String = "full",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 40
+    ): List<TraktListItem>
 
     @GET("movies/trending")
     suspend fun getTrendingMovies(

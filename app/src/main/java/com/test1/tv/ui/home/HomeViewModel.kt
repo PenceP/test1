@@ -10,6 +10,7 @@ import com.test1.tv.data.model.home.HomeRowType
 import com.test1.tv.data.model.home.PosterOrientation
 import com.test1.tv.data.model.home.TraktListConfig
 import com.test1.tv.data.repository.ContentRepository
+import com.test1.tv.data.repository.ContinueWatchingRepository
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.RowPresentation
 import kotlinx.coroutines.launch
@@ -35,7 +36,8 @@ data class RowAppendEvent(
 
 class HomeViewModel(
     private val contentRepository: ContentRepository,
-    private val homeConfig: HomeConfig?
+    private val homeConfig: HomeConfig?,
+    private val continueWatchingRepository: ContinueWatchingRepository?
 ) : ViewModel() {
 
     private val rowStates = mutableListOf<ContentRowState>()
@@ -56,45 +58,58 @@ class HomeViewModel(
     val heroContent: LiveData<ContentItem?> = _heroContent
 
     init {
-        buildRowsFromConfig()
-        loadInitialRows()
+        viewModelScope.launch {
+            buildRows()
+            loadInitialRows()
+        }
     }
 
-    private fun loadInitialRows(forceRefresh: Boolean = false) {
-        viewModelScope.launch {
-            _isLoading.value = true
+    private suspend fun loadInitialRows(forceRefresh: Boolean = false) {
+        _isLoading.value = true
 
-            // Netflix strategy: Load first 2 rows immediately for instant UI
-            if (rowStates.isNotEmpty()) {
-                val first = rowStates[0]
-                if (!first.hasMore && first.items.isNotEmpty()) {
-                    publishRows()
-                    if (_heroContent.value == null) {
-                        _heroContent.value = first.items.first()
+        // Netflix strategy: Load first 2 rows immediately for instant UI
+        if (rowStates.isNotEmpty()) {
+            val first = rowStates[0]
+            if (!first.hasMore && first.items.isNotEmpty()) {
+                publishRows()
+                if (_heroContent.value == null) {
+                    first.items.firstOrNull { it.tmdbId != -1 }?.let {
+                        _heroContent.value = it
                     }
+                }
+            } else {
+                if (first.category == ContentRepository.CATEGORY_CONTINUE_WATCHING) {
+                    loadContinueWatching(0, forceRefresh = forceRefresh)
                 } else {
                     loadRowPage(0, page = 1, forceRefresh = forceRefresh)
                 }
             }
+        }
 
-            _isLoading.value = false
+        _isLoading.value = false
 
-            // Lazy load remaining rows with small delays (Netflix uses ~100ms stagger)
+        // Lazy load remaining rows with small delays (Netflix uses ~100ms stagger)
+        kotlinx.coroutines.coroutineScope {
             rowStates.drop(1).forEachIndexed { idx, state ->
                 launch {
                     kotlinx.coroutines.delay(50L * (idx + 1))
                     if (!state.hasMore && state.items.isNotEmpty()) {
                         publishRows()
                     } else {
-                        loadRowPage(idx + 1, page = 1, forceRefresh = forceRefresh)
+                        val targetIndex = idx + 1
+                        if (state.category == ContentRepository.CATEGORY_CONTINUE_WATCHING) {
+                            loadContinueWatching(targetIndex, forceRefresh = forceRefresh)
+                        } else {
+                            loadRowPage(targetIndex, page = 1, forceRefresh = forceRefresh)
+                        }
                     }
                 }
             }
-
-            // Prefetch next pages after all rows loaded
-            kotlinx.coroutines.delay(200)
-            prefetchNextPages()
         }
+
+        // Prefetch next pages after all rows loaded
+        kotlinx.coroutines.delay(200)
+        prefetchNextPages()
     }
 
     fun requestNextPage(rowIndex: Int) {
@@ -102,7 +117,20 @@ class HomeViewModel(
         if (state.isLoading || !state.hasMore) return
 
         viewModelScope.launch {
-            loadRowPage(rowIndex, page = state.currentPage + 1, forceRefresh = false)
+            if (state.category == ContentRepository.CATEGORY_CONTINUE_WATCHING) {
+                loadContinueWatching(rowIndex)
+            } else {
+                loadRowPage(rowIndex, page = state.currentPage + 1, forceRefresh = false)
+            }
+        }
+    }
+
+    fun refreshAfterAuth() {
+        viewModelScope.launch {
+            rowStates.clear()
+            _contentRows.value = emptyList()
+            buildRows()
+            loadInitialRows(forceRefresh = true)
         }
     }
 
@@ -126,7 +154,7 @@ class HomeViewModel(
             ContentRepository.CATEGORY_POPULAR_SHOWS ->
                 contentRepository.getPopularShowsPage(page, state.pageSize, forceRefresh)
             ContentRepository.CATEGORY_CONTINUE_WATCHING ->
-                contentRepository.getTrendingShowsPage(page, state.pageSize, forceRefresh)
+                Result.success(emptyList())
             else -> Result.success(emptyList())
         }
 
@@ -138,6 +166,91 @@ class HomeViewModel(
 
         state.isLoading = false
     }
+
+    private suspend fun loadContinueWatching(rowIndex: Int, forceRefresh: Boolean = false) {
+        val repo = continueWatchingRepository ?: return
+        val state = rowStates.getOrNull(rowIndex) ?: return
+        if (state.isLoading) return
+        if (!repo.hasAccount()) {
+            if (state.items.isEmpty()) {
+                state.items.add(createPlaceholderItem("Login with Trakt to populate"))
+                publishRows()
+            }
+            state.hasMore = false
+            return
+        }
+        state.isLoading = true
+        val items = runCatching { repo.load(forceRefresh = forceRefresh) }.getOrDefault(emptyList())
+        applyRowItems(rowIndex, state, page = 1, items = items)
+        state.hasMore = false
+        state.isLoading = false
+    }
+
+    private fun createContinueRowState(
+        orientation: PosterOrientation,
+        isAuthenticated: Boolean
+    ): ContentRowState {
+        val presentation = mapOrientation(orientation)
+        if (!isAuthenticated) {
+            return ContentRowState(
+                category = ContentRepository.CATEGORY_CONTINUE_WATCHING,
+                title = "Continue Watching",
+                presentation = presentation,
+                pageSize = 20,
+                items = mutableListOf(createPlaceholderItem("Login with Trakt to populate")),
+                currentPage = 1,
+                hasMore = false
+            )
+        }
+        return ContentRowState(
+            category = ContentRepository.CATEGORY_CONTINUE_WATCHING,
+            title = "Continue Watching",
+            presentation = presentation,
+            pageSize = 20,
+            items = mutableListOf(),
+            currentPage = 0,
+            hasMore = true
+        )
+    }
+
+    private fun createLoginPlaceholderRow(
+        category: String,
+        title: String,
+        presentation: RowPresentation
+    ): ContentRowState {
+        return ContentRowState(
+            category = category,
+            title = title,
+            presentation = presentation,
+            pageSize = 1,
+            items = mutableListOf(createPlaceholderItem("Login with Trakt to populate")),
+            currentPage = 1,
+            hasMore = false
+        )
+    }
+
+    private fun createPlaceholderItem(message: String): ContentItem =
+        ContentItem(
+            id = -1,
+            tmdbId = -1,
+            imdbId = null,
+            title = message,
+            overview = null,
+            posterUrl = null,
+            backdropUrl = null,
+            logoUrl = null,
+            year = null,
+            rating = null,
+            ratingPercentage = null,
+            genres = null,
+            type = ContentItem.ContentType.MOVIE,
+            runtime = null,
+            cast = null,
+            certification = null,
+            imdbRating = null,
+            rottenTomatoesRating = null,
+            traktRating = null
+        )
 
     private fun applyRowItems(
         rowIndex: Int,
@@ -160,8 +273,10 @@ class HomeViewModel(
 
         if (page == 1) {
             publishRows()
-            if (_heroContent.value == null && state.items.isNotEmpty()) {
-                _heroContent.value = state.items.first()
+            if (_heroContent.value == null) {
+                state.items.firstOrNull { it.tmdbId != -1 }?.let {
+                    _heroContent.value = it
+                }
             }
         } else if (items.isNotEmpty()) {
             _rowAppendEvents.value = RowAppendEvent(rowIndex, items.toList())
@@ -221,17 +336,24 @@ class HomeViewModel(
         }
     }
 
-    private fun buildRowsFromConfig() {
+    private suspend fun buildRows() {
+        rowStates.clear()
+        val isAuthenticated = continueWatchingRepository?.hasAccount() == true
+        buildRowsFromConfig(isAuthenticated)
+    }
+
+    private fun buildRowsFromConfig(isAuthenticated: Boolean) {
         val configRows = homeConfig?.home?.rows.orEmpty()
         if (configRows.isEmpty()) {
-            rowStates.addAll(
+            val defaults = mutableListOf<ContentRowState>()
+            defaults.add(
+                createContinueRowState(
+                    orientation = PosterOrientation.LANDSCAPE,
+                    isAuthenticated = isAuthenticated
+                )
+            )
+            defaults.addAll(
                 listOf(
-                    ContentRowState(
-                        category = ContentRepository.CATEGORY_CONTINUE_WATCHING,
-                        title = "Continue Watching",
-                        presentation = RowPresentation.LANDSCAPE_16_9,
-                        pageSize = 12
-                    ),
                     ContentRowState(
                         category = ContentRepository.CATEGORY_TRENDING_MOVIES,
                         title = "Trending Movies",
@@ -254,13 +376,33 @@ class HomeViewModel(
                     )
                 )
             )
+            rowStates.addAll(defaults)
             return
         }
 
         configRows.forEach { row ->
             val type = row.type ?: return@forEach
             val orientation = row.poster_orientation ?: PosterOrientation.PORTRAIT
+            val requiresTrakt = row.requires_trakt == true
+            if (requiresTrakt && !isAuthenticated && type != HomeRowType.CONTINUE_WATCHING) {
+                rowStates.add(
+                    createLoginPlaceholderRow(
+                        category = row.id,
+                        title = row.title,
+                        presentation = mapOrientation(row.poster_orientation)
+                    )
+                )
+                return@forEach
+            }
             when (type) {
+                HomeRowType.CONTINUE_WATCHING -> {
+                    rowStates.add(
+                        createContinueRowState(
+                            orientation = orientation,
+                            isAuthenticated = isAuthenticated
+                        )
+                    )
+                }
                 HomeRowType.TRAKT_LIST -> {
                     val state = createTraktListState(row.trakt_list, row.title, orientation)
                     if (state != null) rowStates.add(state)

@@ -3,6 +3,7 @@ package com.test1.tv.ui.home
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.content.Intent
+import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
@@ -41,12 +42,16 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.test1.tv.MainActivity
 import com.test1.tv.DetailsActivity
 import com.test1.tv.R
+import com.test1.tv.BuildConfig
 import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.data.repository.HomeConfigRepository
+import com.test1.tv.data.repository.TraktAuthRepository
+import com.test1.tv.data.repository.ContinueWatchingRepository
+import com.test1.tv.data.repository.TraktAccountRepository
 import com.test1.tv.databinding.FragmentHomeBinding
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.RowLayoutHelper
@@ -61,6 +66,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 
 class HomeFragment : Fragment() {
 
@@ -99,6 +105,10 @@ class HomeFragment : Fragment() {
     private var hasRequestedInitialFocus = false
     private var heroUpdateJob: Job? = null
     private var heroEnrichmentJob: Job? = null
+    private lateinit var traktAuthRepository: TraktAuthRepository
+    private lateinit var traktAccountRepository: TraktAccountRepository
+    private var resumedOnce = false
+    private var authDialog: androidx.appcompat.app.AlertDialog? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -108,6 +118,14 @@ class HomeFragment : Fragment() {
         setupNavigation()
         setupContentRows()
         observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!resumedOnce) {
+            resumedOnce = true
+            viewModel.refreshAfterAuth()
+        }
     }
 
     private fun setupViewModel() {
@@ -121,9 +139,18 @@ class HomeFragment : Fragment() {
             cacheRepository = cacheRepository
         )
         val homeConfig = HomeConfigRepository(requireContext()).loadConfig()
+        val accountRepo = TraktAccountRepository(ApiClient.traktApiService, database.traktAccountDao())
+        traktAccountRepository = accountRepo
+        val continueWatchingRepo = ContinueWatchingRepository(
+            traktApiService = ApiClient.traktApiService,
+            tmdbApiService = ApiClient.tmdbApiService,
+            accountRepository = accountRepo,
+            continueWatchingDao = database.continueWatchingDao()
+        )
+        traktAuthRepository = TraktAuthRepository(ApiClient.traktApiService)
 
         // Create ViewModel
-        val factory = HomeViewModelFactory(contentRepository, homeConfig)
+        val factory = HomeViewModelFactory(contentRepository, homeConfig, continueWatchingRepo)
         viewModel = ViewModelProvider(this, factory)[HomeViewModel::class.java]
     }
 
@@ -586,6 +613,12 @@ class HomeFragment : Fragment() {
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
         Log.d(TAG, "Item clicked: ${item.title}")
+
+        if (item.tmdbId == -1 && item.title.contains("trakt", ignoreCase = true)) {
+            promptTraktAuth()
+            return
+        }
+
         val intent = Intent(requireContext(), DetailsActivity::class.java).apply {
             putExtra(DetailsActivity.CONTENT_ITEM, item)
         }
@@ -596,6 +629,107 @@ class HomeFragment : Fragment() {
             DetailsActivity.SHARED_ELEMENT_NAME
         )
         startActivity(intent, options.toBundle())
+    }
+
+    private fun promptTraktAuth() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.trakt_authorize_title))
+                .setMessage(getString(R.string.trakt_authorize_loading))
+                .setCancelable(false)
+                .show()
+
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    traktAuthRepository.createDeviceCode()
+                }
+            }
+
+            dialog.dismiss()
+
+            result.onSuccess { code ->
+                showTraktActivationDialog(code.userCode, code.verificationUrl, code.expiresIn)
+                pollForDeviceToken(code.deviceCode, code.interval, code.expiresIn)
+            }.onFailure {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.trakt_authorize_error),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun showTraktActivationDialog(userCode: String, verificationUrl: String, expiresIn: Int) {
+        val minutes = (expiresIn / 60).coerceAtLeast(1)
+        val message = getString(
+            R.string.trakt_authorize_message,
+            verificationUrl,
+            userCode.uppercase(Locale.US),
+            minutes
+        )
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.trakt_authorize_title))
+            .setMessage(message)
+            .setPositiveButton(R.string.trakt_authorize_open) { _, _ ->
+                val intent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(verificationUrl)
+                )
+                startActivity(intent)
+            }
+            .setNegativeButton(R.string.trakt_authorize_close, null)
+            .show().also { authDialog = it }
+    }
+
+    private fun pollForDeviceToken(deviceCode: String, intervalSeconds: Int, expiresIn: Int) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            val expiresAt = startTime + expiresIn * 1000L
+            val pollDelay = (intervalSeconds.coerceAtLeast(1)) * 1000L
+
+            while (isActive && System.currentTimeMillis() < expiresAt) {
+                val tokenResult = runCatching {
+                    ApiClient.traktApiService.pollDeviceToken(
+                        clientId = BuildConfig.TRAKT_CLIENT_ID,
+                        clientSecret = BuildConfig.TRAKT_CLIENT_SECRET,
+                        deviceCode = deviceCode
+                    )
+                }
+
+                val token = tokenResult.getOrNull()
+                if (token != null) {
+                    saveTraktAccount(token)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Trakt authorized!", Toast.LENGTH_SHORT).show()
+                        viewModel.refreshAfterAuth()
+                        authDialog?.dismiss()
+                    }
+                    return@launch
+                }
+
+                delay(pollDelay.toLong())
+            }
+            withContext(Dispatchers.Main) {
+                Toast.makeText(requireContext(), "Trakt code expired. Please try again.", Toast.LENGTH_LONG).show()
+                authDialog?.dismiss()
+            }
+        }
+    }
+
+    private suspend fun saveTraktAccount(token: com.test1.tv.data.model.trakt.TraktTokenResponse) {
+        val authHeader = "Bearer ${token.accessToken}"
+        val profile = runCatching {
+            ApiClient.traktApiService.getUserProfile(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID
+            )
+        }.getOrNull()
+
+        if (profile != null) {
+            traktAccountRepository.saveDeviceToken(token, profile)
+        }
     }
 
     private fun handleItemFocused(item: ContentItem, rowIndex: Int, itemIndex: Int) {
