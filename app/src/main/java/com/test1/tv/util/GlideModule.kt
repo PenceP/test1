@@ -9,6 +9,7 @@ import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.cache.InternalCacheDiskCacheFactory
 import com.bumptech.glide.load.engine.cache.LruResourceCache
+import com.bumptech.glide.load.engine.cache.MemorySizeCalculator
 import com.bumptech.glide.module.AppGlideModule
 import com.bumptech.glide.request.RequestOptions
 
@@ -16,9 +17,11 @@ import com.bumptech.glide.request.RequestOptions
 class CustomGlideModule : AppGlideModule() {
 
     override fun applyOptions(context: Context, builder: GlideBuilder) {
-        // Increase memory cache size for smoother scrolling
-        val memoryCacheSizeBytes = 1024 * 1024 * 50 // 50 MB
-        builder.setMemoryCache(LruResourceCache(memoryCacheSizeBytes.toLong()))
+        // Dynamic memory cache sized to ~2 screens worth (handles 4K backdrops)
+        val calculator = MemorySizeCalculator.Builder(context)
+            .setMemoryCacheScreens(2f)
+            .build()
+        builder.setMemoryCache(LruResourceCache(calculator.memoryCacheSize.toLong()))
 
         // Increase disk cache size
         val diskCacheSizeBytes = 1024 * 1024 * 250 // 250 MB

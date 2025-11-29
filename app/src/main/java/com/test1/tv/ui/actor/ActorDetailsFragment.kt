@@ -47,6 +47,7 @@ class ActorDetailsFragment : Fragment() {
     private var personName: String? = null
 
     private lateinit var heroBackgroundController: HeroBackgroundController
+    private lateinit var heroLogoLoader: HeroLogoLoader
 
     private var rowsAdapter: ContentRowAdapter? = null
     private var heroUpdateJob: Job? = null
@@ -83,6 +84,13 @@ class ActorDetailsFragment : Fragment() {
             defaultAmbientColor = DEFAULT_AMBIENT_COLOR
         )
         heroBackgroundController.updateBackdrop(null, ContextCompat.getDrawable(requireContext(), R.drawable.default_background))
+        heroLogoLoader = HeroLogoLoader(
+            fragment = this,
+            logoView = binding.heroLogo,
+            titleView = binding.heroTitle,
+            maxWidthRes = R.dimen.hero_logo_max_width,
+            maxHeightRes = R.dimen.hero_logo_max_height
+        )
         setupContentRows()
 
         if (personId != -1) {
@@ -313,14 +321,7 @@ class ActorDetailsFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        HeroLogoLoader.load(
-            fragment = this,
-            logoUrl = logoUrl,
-            logoView = binding.heroLogo,
-            titleView = binding.heroTitle,
-            maxWidthRes = R.dimen.hero_logo_max_width,
-            maxHeightRes = R.dimen.hero_logo_max_height
-        )
+        heroLogoLoader.load(logoUrl)
     }
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
@@ -355,5 +356,6 @@ class ActorDetailsFragment : Fragment() {
         _binding = null
         heroUpdateJob?.cancel()
         heroUpdateJob = null
+        heroLogoLoader.cancel()
     }
 }

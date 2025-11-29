@@ -56,6 +56,7 @@ class MoviesFragment : Fragment() {
     private lateinit var heroCast: TextView
     private lateinit var ambientOverlay: View
     private lateinit var heroBackgroundController: HeroBackgroundController
+    private lateinit var heroLogoLoader: HeroLogoLoader
     private var heroEnrichmentJob: Job? = null
     private lateinit var heroSyncManager: HeroSyncManager
     private lateinit var rowsDelegate: RowsScreenDelegate
@@ -87,6 +88,13 @@ class MoviesFragment : Fragment() {
         heroSyncManager = HeroSyncManager(viewLifecycleOwner) { content ->
             updateHeroSection(content)
         }
+        heroLogoLoader = HeroLogoLoader(
+            fragment = this,
+            logoView = heroLogo,
+            titleView = heroTitle,
+            maxWidthRes = R.dimen.hero_logo_max_width,
+            maxHeightRes = R.dimen.hero_logo_max_height
+        )
         rowsDelegate = RowsScreenDelegate(
             fragment = this,
             lifecycleOwner = viewLifecycleOwner,
@@ -112,7 +120,7 @@ class MoviesFragment : Fragment() {
                     Toast.LENGTH_SHORT
                 ).show()
             },
-            onRequestMore = {},
+            onRequestMore = { rowIndex -> viewModel.requestNextPage(rowIndex) },
             onNavigate = { section ->
                 when (section) {
                     RowsScreenDelegate.NavTarget.SEARCH -> (activity as? MainActivity)?.navigateToSection(MainActivity.Section.SEARCH)
@@ -184,14 +192,7 @@ class MoviesFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        HeroLogoLoader.load(
-            fragment = this,
-            logoUrl = logoUrl,
-            logoView = heroLogo,
-            titleView = heroTitle,
-            maxWidthRes = R.dimen.hero_logo_max_width,
-            maxHeightRes = R.dimen.hero_logo_max_height
-        )
+        heroLogoLoader.load(logoUrl)
     }
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
@@ -219,5 +220,6 @@ class MoviesFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         viewModel.cleanupCache()
+        heroLogoLoader.cancel()
     }
 }

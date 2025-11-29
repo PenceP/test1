@@ -28,6 +28,11 @@ import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.AccentColorCache
 import androidx.palette.graphics.Palette
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -57,6 +62,10 @@ class PosterAdapter(
         return getItem(position).tmdbId.toLong()
     }
 
+    override fun getItemViewType(position: Int): Int {
+        return if (presentation == RowPresentation.LANDSCAPE_16_9) 1 else 0
+    }
+
     fun hasPresentation(expected: RowPresentation): Boolean {
         return presentation == expected
     }
@@ -67,6 +76,7 @@ class PosterAdapter(
         val titleOverlay: TextView = itemView.findViewById(R.id.poster_title_overlay)
         val cardContainer: CardView? = itemView.findViewById(R.id.poster_card)
         val watchedBadge: ImageView? = itemView.findViewById(R.id.watched_badge)
+        private var paletteJob: Job? = null
 
         fun bind(item: ContentItem, position: Int) {
             // Reset recycled state
@@ -84,6 +94,11 @@ class PosterAdapter(
                 item.posterUrl
             }
             val isPlaceholder = item.tmdbId == -1 || artworkUrl.isNullOrBlank()
+            val (overrideWidth, overrideHeight) = if (presentation == RowPresentation.LANDSCAPE_16_9) {
+                600 to 338
+            } else {
+                300 to 450
+            }
 
             titleOverlay.text = item.title
             titleOverlay.visibility = View.VISIBLE
@@ -105,7 +120,7 @@ class PosterAdapter(
                     .transition(DrawableTransitionOptions.withCrossFade(150))
                     .placeholder(R.drawable.default_background)
                     .error(R.drawable.default_background)
-                    .override(300, 450)
+                    .override(overrideWidth, overrideHeight)
                     .into(object : CustomTarget<Drawable>() {
                         override fun onLoadCleared(placeholder: Drawable?) {
                             posterImage.setImageDrawable(placeholder)
@@ -121,7 +136,7 @@ class PosterAdapter(
                             Glide.with(itemView.context)
                                 .load(artworkUrl)
                                 .onlyRetrieveFromCache(false)
-                                .override(300, 450)
+                                .override(overrideWidth, overrideHeight)
                                 .into(object : CustomTarget<Drawable>() {
                                     override fun onLoadCleared(placeholder: Drawable?) {
                                         // Keep current state
@@ -133,9 +148,12 @@ class PosterAdapter(
                                     ) {
                                         posterImage.setImageDrawable(resource)
                                         titleOverlay.visibility = View.GONE  // Hide title when network load succeeds
-                                        val accentColor = cachedAccent ?: extractAccentColor(resource)
-                                        accentColorCache.put(item, accentColor)
-                                        if (itemView.isFocused) applyFocusOverlay(true, accentColor)
+                                        if (cachedAccent != null) {
+                                            accentColorCache.put(item, cachedAccent)
+                                            if (itemView.isFocused) applyFocusOverlay(true, cachedAccent)
+                                        } else {
+                                            extractAccentColorAsync(item, resource)
+                                        }
                                     }
                                 })
                         }
@@ -146,10 +164,13 @@ class PosterAdapter(
                         ) {
                             posterImage.setImageDrawable(resource)
                             titleOverlay.visibility = View.GONE
-                            val accentColor = cachedAccent ?: extractAccentColor(resource)
-                            accentColorCache.put(item, accentColor)
-                            if (itemView.isFocused) {
-                                applyFocusOverlay(true, accentColor)
+                            if (cachedAccent != null) {
+                                accentColorCache.put(item, cachedAccent)
+                                if (itemView.isFocused) {
+                                    applyFocusOverlay(true, cachedAccent)
+                                }
+                            } else {
+                                extractAccentColorAsync(item, resource)
                             }
                         }
                     })
@@ -208,6 +229,11 @@ class PosterAdapter(
             }
         }
 
+        fun recycle() {
+            paletteJob?.cancel()
+            paletteJob = null
+        }
+
         private fun applyFocusOverlay(hasFocus: Boolean, accentColor: Int) {
             if (hasFocus) {
                 val radius = if (presentation == RowPresentation.LANDSCAPE_16_9) {
@@ -256,17 +282,28 @@ class PosterAdapter(
         private fun dpToPx(context: Context, dp: Float): Float =
             dp * context.resources.displayMetrics.density
 
-        private fun extractAccentColor(drawable: Drawable?): Int {
-            drawable ?: return DEFAULT_BORDER_COLOR
-            val bitmap = when (drawable) {
-                is BitmapDrawable -> drawable.bitmap
-                else -> drawable.toBitmap()
+        private fun extractAccentColorAsync(item: ContentItem, drawable: Drawable) {
+            paletteJob?.cancel()
+            paletteJob = CoroutineScope(Dispatchers.Default).launch {
+                val color = runCatching {
+                    val bitmap = when (drawable) {
+                        is BitmapDrawable -> drawable.bitmap
+                        else -> drawable.toBitmap(50, 75)
+                    }
+                    val palette = Palette.from(bitmap).generate()
+                    palette.vibrantSwatch?.rgb
+                        ?: palette.darkVibrantSwatch?.rgb
+                        ?: palette.dominantSwatch?.rgb
+                        ?: DEFAULT_BORDER_COLOR
+                }.getOrDefault(DEFAULT_BORDER_COLOR)
+
+                accentColorCache.put(item, color)
+                withContext(Dispatchers.Main) {
+                    if (itemView.isFocused) {
+                        applyFocusOverlay(true, color)
+                    }
+                }
             }
-            val palette = Palette.from(bitmap).generate()
-            return palette.vibrantSwatch?.rgb
-                ?: palette.darkVibrantSwatch?.rgb
-                ?: palette.dominantSwatch?.rgb
-                ?: DEFAULT_BORDER_COLOR
         }
 
         private fun getColorKey(item: ContentItem): Int =
@@ -286,5 +323,11 @@ class PosterAdapter(
 
     override fun onBindViewHolder(holder: PosterViewHolder, position: Int) {
         holder.bind(getItem(position), position)
+    }
+
+    override fun onViewRecycled(holder: PosterViewHolder) {
+        super.onViewRecycled(holder)
+        holder.recycle()
+        Glide.with(holder.itemView).clear(holder.posterImage)
     }
 }

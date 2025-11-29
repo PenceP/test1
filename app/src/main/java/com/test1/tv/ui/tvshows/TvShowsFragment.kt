@@ -59,6 +59,7 @@ class TvShowsFragment : Fragment() {
     private var heroEnrichmentJob: Job? = null
     private lateinit var heroSyncManager: HeroSyncManager
     private lateinit var rowsDelegate: RowsScreenDelegate
+    private lateinit var heroLogoLoader: HeroLogoLoader
 
     // Navigation
     private lateinit var navSearch: MaterialButton
@@ -86,6 +87,13 @@ class TvShowsFragment : Fragment() {
         heroSyncManager = HeroSyncManager(viewLifecycleOwner) { content ->
             updateHeroSection(content)
         }
+        heroLogoLoader = HeroLogoLoader(
+            fragment = this,
+            logoView = heroLogo,
+            titleView = heroTitle,
+            maxWidthRes = R.dimen.hero_logo_max_width,
+            maxHeightRes = R.dimen.hero_logo_max_height
+        )
         rowsDelegate = RowsScreenDelegate(
             fragment = this,
             lifecycleOwner = viewLifecycleOwner,
@@ -111,7 +119,7 @@ class TvShowsFragment : Fragment() {
                     Toast.LENGTH_SHORT
                 ).show()
             },
-            onRequestMore = {},
+            onRequestMore = { rowIndex -> viewModel.requestNextPage(rowIndex) },
             onNavigate = { section ->
                 when (section) {
                     RowsScreenDelegate.NavTarget.SEARCH -> (activity as? MainActivity)?.navigateToSection(MainActivity.Section.SEARCH)
@@ -183,14 +191,7 @@ class TvShowsFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        HeroLogoLoader.load(
-            fragment = this,
-            logoUrl = logoUrl,
-            logoView = heroLogo,
-            titleView = heroTitle,
-            maxWidthRes = R.dimen.hero_logo_max_width,
-            maxHeightRes = R.dimen.hero_logo_max_height
-        )
+        heroLogoLoader.load(logoUrl)
     }
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
@@ -218,5 +219,6 @@ class TvShowsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         viewModel.cleanupCache()
+        heroLogoLoader.cancel()
     }
 }

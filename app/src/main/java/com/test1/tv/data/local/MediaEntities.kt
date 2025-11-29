@@ -28,6 +28,8 @@ data class MediaContentEntity(
     val contentType: String,  // "movie" or "tv"
     val category: String,     // "trending_movies", "popular_shows", etc.
     val position: Int,        // Position within category for ordering
+    val genres: String? = null, // Comma-separated genres
+    val cast: String? = null,   // Comma-separated cast
     val cachedAt: Long = System.currentTimeMillis()
 )
 

@@ -28,7 +28,7 @@ import com.test1.tv.data.local.entity.WatchStatusEntity
         MediaRatingEntity::class,
         WatchProgressEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

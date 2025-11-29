@@ -1,13 +1,9 @@
 package com.test1.tv.ui.details
 
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
@@ -15,16 +11,13 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.os.bundleOf
-import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.leanback.widget.HorizontalGridView
-import androidx.palette.graphics.Palette
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import android.widget.ImageButton
@@ -134,8 +127,8 @@ class DetailsFragment : Fragment() {
     private var isWatched = false
     private var isInCollection = false
     private var currentRating: Int = 0 // 0 = none, 1 = thumbs up, 2 = thumbs down
-
     private lateinit var heroBackgroundController: HeroBackgroundController
+    private lateinit var heroLogoLoader: HeroLogoLoader
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -179,7 +172,6 @@ class DetailsFragment : Fragment() {
         buttonPlay = view.findViewById(R.id.button_play)
         buttonTrailer = view.findViewById(R.id.button_trailer)
         buttonWatchlist = view.findViewById(R.id.button_watchlist)
-
         heroBackgroundController = HeroBackgroundController(
             fragment = this,
             backdropView = backdrop,
@@ -187,6 +179,13 @@ class DetailsFragment : Fragment() {
             defaultAmbientColor = DEFAULT_AMBIENT_COLOR
         )
         heroBackgroundController.updateBackdrop(null, resources.getDrawable(R.drawable.default_background, null))
+        heroLogoLoader = HeroLogoLoader(
+            fragment = this,
+            logoView = logo,
+            titleView = title,
+            maxWidthRes = R.dimen.hero_logo_max_width,
+            maxHeightRes = R.dimen.hero_logo_max_height
+        )
 
         castSection = view.findViewById(R.id.cast_section)
         similarSection = view.findViewById(R.id.similar_section)
@@ -345,6 +344,7 @@ class DetailsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        heroLogoLoader.cancel()
     }
 
     private fun bindContent(item: ContentItem) {
@@ -987,14 +987,7 @@ class DetailsFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        HeroLogoLoader.load(
-            fragment = this,
-            logoUrl = logoUrl,
-            logoView = logo,
-            titleView = title,
-            maxWidthRes = R.dimen.hero_logo_max_width,
-            maxHeightRes = R.dimen.hero_logo_max_height
-        )
+        heroLogoLoader.load(logoUrl)
     }
 
 

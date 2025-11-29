@@ -37,6 +37,15 @@ class TvShowsViewModel @Inject constructor(
     private val _heroContent = MutableLiveData<ContentItem?>()
     val heroContent: LiveData<ContentItem?> = _heroContent
 
+    private var trendingPage = 1
+    private var popularPage = 1
+    private var trendingHasMore = true
+    private var popularHasMore = true
+    private var trendingLoading = false
+    private var popularLoading = false
+    private val pageSize = 20
+    private val rows = mutableListOf<ContentRow>()
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             watchStatusRepository.preload()
@@ -51,50 +60,111 @@ class TvShowsViewModel @Inject constructor(
             _error.value = null
 
             try {
-                val rows = mutableListOf<ContentRow>()
+                rows.clear()
+                trendingPage = 1
+                popularPage = 1
+                trendingHasMore = true
+                popularHasMore = true
 
-                val trendingResource = mediaRepository.getTrendingShows().last()
-                val trending = mapResource(trendingResource)
-                trending.onSuccess { shows ->
-                    if (shows.isNotEmpty()) {
-                        rows.add(
-                            ContentRow(
-                                title = "Trending Shows",
-                                items = shows.toMutableList(),
-                                presentation = RowPresentation.PORTRAIT
-                            )
+                val trending = loadTrendingPage(trendingPage, forceRefresh)
+                if (trending.isNotEmpty()) {
+                    rows.add(
+                        ContentRow(
+                            title = "Trending Shows",
+                            items = trending.toMutableList(),
+                            presentation = RowPresentation.PORTRAIT
                         )
-                        if (_heroContent.value == null) {
-                            _heroContent.value = shows.first()
-                        }
+                    )
+                    trendingHasMore = trending.size >= pageSize
+                    if (_heroContent.value == null) {
+                        _heroContent.value = trending.first()
                     }
-                }.onFailure { e ->
-                    _error.value = "Failed to load trending shows: ${e.message}"
                 }
 
-                val popularResource = mediaRepository.getPopularShows().last()
-                val popular = mapResource(popularResource)
-                popular.onSuccess { shows ->
-                    if (shows.isNotEmpty()) {
-                        rows.add(
-                            ContentRow(
-                                title = "Popular Shows",
-                                items = shows.toMutableList(),
-                                presentation = RowPresentation.PORTRAIT
-                            )
+                val popular = loadPopularPage(popularPage, forceRefresh)
+                if (popular.isNotEmpty()) {
+                    rows.add(
+                        ContentRow(
+                            title = "Popular Shows",
+                            items = popular.toMutableList(),
+                            presentation = RowPresentation.PORTRAIT
                         )
-                    }
-                }.onFailure { e ->
-                    _error.value = "Failed to load popular shows: ${e.message}"
+                    )
+                    popularHasMore = popular.size >= pageSize
                 }
 
-                _contentRows.value = rows
+                _contentRows.value = rows.toList()
             } catch (e: Exception) {
                 _error.value = "Failed to load content: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun requestNextPage(rowIndex: Int) {
+        when (rowIndex) {
+            0 -> loadMoreTrending()
+            1 -> loadMorePopular()
+        }
+    }
+
+    private fun loadMoreTrending() {
+        if (!trendingHasMore || trendingLoading) return
+        trendingLoading = true
+        viewModelScope.launch {
+            val nextPage = trendingPage + 1
+            val newItems = loadTrendingPage(nextPage, forceRefresh = false)
+            if (newItems.isNotEmpty()) {
+                trendingPage = nextPage
+                trendingHasMore = newItems.size >= pageSize
+                appendToRow(0, newItems)
+            } else {
+                trendingHasMore = false
+            }
+            trendingLoading = false
+        }
+    }
+
+    private fun loadMorePopular() {
+        if (!popularHasMore || popularLoading) return
+        popularLoading = true
+        viewModelScope.launch {
+            val nextPage = popularPage + 1
+            val newItems = loadPopularPage(nextPage, forceRefresh = false)
+            if (newItems.isNotEmpty()) {
+                popularPage = nextPage
+                popularHasMore = newItems.size >= pageSize
+                appendToRow(1, newItems)
+            } else {
+                popularHasMore = false
+            }
+            popularLoading = false
+        }
+    }
+
+    private suspend fun loadTrendingPage(page: Int, forceRefresh: Boolean): List<ContentItem> {
+        val resource = mediaRepository.getTrendingShows(page).last()
+        return when (resource) {
+            is Resource.Success -> resource.data
+            is Resource.Loading -> resource.cachedData ?: emptyList()
+            is Resource.Error -> resource.cachedData ?: emptyList()
+        }
+    }
+
+    private suspend fun loadPopularPage(page: Int, forceRefresh: Boolean): List<ContentItem> {
+        val resource = mediaRepository.getPopularShows(page).last()
+        return when (resource) {
+            is Resource.Success -> resource.data
+            is Resource.Loading -> resource.cachedData ?: emptyList()
+            is Resource.Error -> resource.cachedData ?: emptyList()
+        }
+    }
+
+    private fun appendToRow(rowIndex: Int, newItems: List<ContentItem>) {
+        val row = rows.getOrNull(rowIndex) ?: return
+        row.items.addAll(newItems)
+        _contentRows.value = rows.toList()
     }
 
     fun updateHeroContent(item: ContentItem) {

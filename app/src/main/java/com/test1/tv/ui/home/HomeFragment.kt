@@ -84,12 +84,14 @@ class HomeFragment : Fragment() {
     private lateinit var rowsDelegate: RowsScreenDelegate
     private var heroEnrichmentJob: Job? = null
     private lateinit var heroSyncManager: HeroSyncManager
+    private lateinit var heroLogoLoader: HeroLogoLoader
     @Inject lateinit var rowPrefetchManager: RowPrefetchManager
     @Inject lateinit var accentColorCache: AccentColorCache
     @Inject lateinit var traktAuthRepository: TraktAuthRepository
     @Inject lateinit var traktAccountRepository: TraktAccountRepository
     private var resumedOnce = false
     private var authDialog: androidx.appcompat.app.AlertDialog? = null
+    private var awaitingPostAuthRestart = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -101,6 +103,13 @@ class HomeFragment : Fragment() {
             defaultAmbientColor = DEFAULT_AMBIENT_COLOR
         )
         heroBackgroundController.updateBackdrop(null, ContextCompat.getDrawable(requireContext(), R.drawable.default_background))
+        heroLogoLoader = HeroLogoLoader(
+            fragment = this,
+            logoView = binding.heroLogo,
+            titleView = binding.heroTitle,
+            maxWidthRes = R.dimen.hero_logo_max_width,
+            maxHeightRes = R.dimen.hero_logo_max_height
+        )
         heroSyncManager = HeroSyncManager(viewLifecycleOwner) { content ->
             updateHeroSection(content)
         }
@@ -146,6 +155,13 @@ class HomeFragment : Fragment() {
             error = viewModel.error,
             heroContent = viewModel.heroContent
         )
+
+        viewModel.refreshComplete.observe(viewLifecycleOwner) { done ->
+            if (done && awaitingPostAuthRestart) {
+                awaitingPostAuthRestart = false
+                restartAppClean()
+            }
+        }
     }
 
     override fun onResume() {
@@ -193,14 +209,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        HeroLogoLoader.load(
-            fragment = this,
-            logoUrl = logoUrl,
-            logoView = binding.heroLogo,
-            titleView = binding.heroTitle,
-            maxWidthRes = R.dimen.hero_logo_max_width,
-            maxHeightRes = R.dimen.hero_logo_max_height
-        )
+        heroLogoLoader.load(logoUrl)
     }
 
     private fun ensureHeroExtras(item: ContentItem) {
@@ -295,6 +304,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun promptTraktAuth() {
+        // Avoid launching work when the view is already gone (e.g., fast navigation away).
+        if (!isAdded || view == null) return
+
         viewLifecycleOwner.lifecycleScope.launch {
             val dialog = MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.trakt_authorize_title))
@@ -311,14 +323,17 @@ class HomeFragment : Fragment() {
             dialog.dismiss()
 
             result.onSuccess { code ->
+                if (!isAdded || view == null) return@onSuccess
                 showTraktActivationDialog(code.userCode, code.verificationUrl, code.expiresIn)
                 pollForDeviceToken(code.deviceCode, code.interval, code.expiresIn)
             }.onFailure {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.trakt_authorize_error),
-                    Toast.LENGTH_LONG
-                ).show()
+                if (isAdded) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.trakt_authorize_error),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }
@@ -365,9 +380,7 @@ class HomeFragment : Fragment() {
                 if (token != null) {
                     saveTraktAccount(token)
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Trakt authorized!", Toast.LENGTH_SHORT).show()
-                        viewModel.refreshAfterAuth()
-                        authDialog?.dismiss()
+                        handlePostAuthRefresh()
                     }
                     return@launch
                 }
@@ -378,6 +391,29 @@ class HomeFragment : Fragment() {
                 Toast.makeText(requireContext(), "Trakt code expired. Please try again.", Toast.LENGTH_LONG).show()
                 authDialog?.dismiss()
             }
+        }
+    }
+
+    private fun handlePostAuthRefresh() {
+        if (!isAdded || view == null) return
+        Toast.makeText(requireContext(), "Trakt authorized!", Toast.LENGTH_SHORT).show()
+        // Show blocking indicator to avoid partial UI state while data refreshes.
+        binding.loadingIndicator.visibility = View.VISIBLE
+        authDialog?.dismiss()
+        awaitingPostAuthRestart = true
+        viewModel.refreshAfterAuth()
+    }
+
+    private fun restartAppClean() {
+        val context = requireContext().applicationContext
+        val launcher = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        if (launcher != null) {
+            launcher.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(launcher)
+            requireActivity().finish()
+        } else {
+            // Fallback to activity recreate if launcher can't be resolved.
+            requireActivity().recreate()
         }
     }
 
@@ -432,5 +468,6 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
         viewModel.cleanupCache()
+        heroLogoLoader.cancel()
     }
 }

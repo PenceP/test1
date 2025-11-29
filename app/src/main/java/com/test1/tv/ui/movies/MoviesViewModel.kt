@@ -37,6 +37,16 @@ class MoviesViewModel @Inject constructor(
     private val _heroContent = MutableLiveData<ContentItem?>()
     val heroContent: LiveData<ContentItem?> = _heroContent
 
+    private var trendingPage = 1
+    private var popularPage = 1
+    private var trendingHasMore = true
+    private var popularHasMore = true
+    private var trendingLoading = false
+    private var popularLoading = false
+    private val pageSize = 20
+
+    private val rows = mutableListOf<ContentRow>()
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             watchStatusRepository.preload()
@@ -51,45 +61,37 @@ class MoviesViewModel @Inject constructor(
             _error.value = null
 
             try {
-                val rows = mutableListOf<ContentRow>()
+                rows.clear()
+                trendingPage = 1
+                popularPage = 1
+                trendingHasMore = true
+                popularHasMore = true
 
-                // Fetch trending movies via new MediaRepository (offline-first)
-                val trendingResource = mediaRepository.getTrendingMovies().last()
-                val trendingMovies = when (trendingResource) {
-                    is Resource.Success -> trendingResource.data
-                    is Resource.Loading -> trendingResource.cachedData ?: emptyList()
-                    is Resource.Error -> trendingResource.cachedData ?: emptyList()
-                }
-
-                if (trendingMovies.isNotEmpty()) {
+                val trending = loadTrendingPage(trendingPage, forceRefresh)
+                if (trending.isNotEmpty()) {
                     rows.add(
                         ContentRow(
                             title = "Trending Movies",
-                            items = trendingMovies.toMutableList(),
+                            items = trending.toMutableList(),
                             presentation = RowPresentation.PORTRAIT
                         )
                     )
                     if (_heroContent.value == null) {
-                        _heroContent.value = trendingMovies.first()
+                        _heroContent.value = trending.first()
                     }
-                } else if (trendingResource is Resource.Error) {
-                    _error.value = "Failed to load trending movies: ${trendingResource.exception.message}"
+                    trendingHasMore = trending.size >= pageSize
                 }
 
-                // Fetch trending movies
-                // Fetch popular movies (legacy repository)
-                contentRepository.getPopularMovies(forceRefresh).onSuccess { movies ->
-                    if (movies.isNotEmpty()) {
-                        rows.add(
-                            ContentRow(
-                                title = "Popular Movies",
-                                items = movies.toMutableList(),
-                                presentation = RowPresentation.PORTRAIT
-                            )
+                val popular = contentRepository.getPopularMovies(forceRefresh).getOrDefault(emptyList())
+                if (popular.isNotEmpty()) {
+                    rows.add(
+                        ContentRow(
+                            title = "Popular Movies",
+                            items = popular.toMutableList(),
+                            presentation = RowPresentation.PORTRAIT
                         )
-                    }
-                }.onFailure { e ->
-                    _error.value = "Failed to load popular movies: ${e.message}"
+                    )
+                    popularHasMore = popular.size >= pageSize
                 }
 
                 contentRepository.getLatest4KMovies(forceRefresh).onSuccess { movies ->
@@ -106,13 +108,69 @@ class MoviesViewModel @Inject constructor(
                     _error.value = "Failed to load 4K releases: ${e.message}"
                 }
 
-                _contentRows.value = rows
+                _contentRows.value = rows.toList()
             } catch (e: Exception) {
                 _error.value = "Failed to load content: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun requestNextPage(rowIndex: Int) {
+        when (rowIndex) {
+            0 -> loadMoreTrending()
+            1 -> loadMorePopular()
+        }
+    }
+
+    private fun loadMoreTrending() {
+        if (!trendingHasMore || trendingLoading) return
+        trendingLoading = true
+        viewModelScope.launch {
+            val nextPage = trendingPage + 1
+            val newItems = loadTrendingPage(nextPage, forceRefresh = false)
+            if (newItems.isNotEmpty()) {
+                trendingPage = nextPage
+                trendingHasMore = newItems.size >= pageSize
+                appendToRow(0, newItems)
+            } else {
+                trendingHasMore = false
+            }
+            trendingLoading = false
+        }
+    }
+
+    private fun loadMorePopular() {
+        if (!popularHasMore || popularLoading) return
+        popularLoading = true
+        viewModelScope.launch {
+            val nextPage = popularPage + 1
+            val popularResult = contentRepository.getPopularMovies(forceRefresh = true).getOrDefault(emptyList())
+            if (popularResult.isNotEmpty()) {
+                popularPage = nextPage
+                popularHasMore = popularResult.size >= pageSize
+                appendToRow(1, popularResult)
+            } else {
+                popularHasMore = false
+            }
+            popularLoading = false
+        }
+    }
+
+    private suspend fun loadTrendingPage(page: Int, forceRefresh: Boolean): List<ContentItem> {
+        val resource = mediaRepository.getTrendingMovies(page).last()
+        return when (resource) {
+            is Resource.Success -> resource.data
+            is Resource.Loading -> resource.cachedData ?: emptyList()
+            is Resource.Error -> resource.cachedData ?: emptyList()
+        }
+    }
+
+    private fun appendToRow(rowIndex: Int, newItems: List<ContentItem>) {
+        val mutable = rows.getOrNull(rowIndex) ?: return
+        mutable.items.addAll(newItems)
+        _contentRows.value = rows.toList()
     }
 
     fun updateHeroContent(item: ContentItem) {

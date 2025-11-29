@@ -24,6 +24,18 @@
           "slug": "popular",
           "url": "https://trakt.tv/movies/popular"
         }
+      },
+      {
+        "id": "new_movies",
+        "type": "trakt_list",
+        "title": "New Movies",
+        "poster_orientation": "portrait",
+        "trakt_list": {
+          "kind": "movies",
+          "list_type": "user",
+          "slug": "latest-4k-releases",
+          "url": "https://trakt.tv/users/giladg/lists/latest-4k-releases"
+        }
       }
     ]
   }

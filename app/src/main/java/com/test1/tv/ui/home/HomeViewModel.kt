@@ -68,6 +68,8 @@ class HomeViewModel @Inject constructor(
 
     private val _heroContent = MutableLiveData<ContentItem?>()
     val heroContent: LiveData<ContentItem?> = _heroContent
+    private val _refreshComplete = MutableLiveData<Boolean>()
+    val refreshComplete: LiveData<Boolean> = _refreshComplete
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -77,6 +79,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             buildRows()
             loadInitialRows()
+            _refreshComplete.postValue(true)
         }
     }
 
@@ -145,8 +148,10 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             rowStates.clear()
             _contentRows.value = emptyList()
+            _refreshComplete.value = false
             buildRows()
             loadInitialRows(forceRefresh = true)
+            _refreshComplete.postValue(true)
         }
     }
 
