@@ -9,6 +9,12 @@ import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
+import com.test1.tv.data.repository.ContinueWatchingRepository
+import com.test1.tv.data.repository.HomeConfigRepository
+import com.test1.tv.data.repository.TraktAccountRepository
+import com.test1.tv.data.repository.WatchStatusRepository
+import com.test1.tv.ui.AccentColorCache
+import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -66,6 +72,50 @@ object AppModule {
 
     @Provides
     fun provideWatchStatusDao(database: AppDatabase) = database.watchStatusDao()
+
+    @Provides
+    fun provideMediaDao(database: AppDatabase) = database.mediaDao()
+
+    // Repository helpers
+    @Provides
+    @Singleton
+    fun provideCacheRepository(cachedContentDao: com.test1.tv.data.local.dao.CachedContentDao) =
+        com.test1.tv.data.repository.CacheRepository(cachedContentDao)
+
+    @Provides
+    @Singleton
+    fun provideWatchStatusRepository(watchStatusDao: com.test1.tv.data.local.dao.WatchStatusDao) =
+        com.test1.tv.data.repository.WatchStatusRepository(watchStatusDao)
+
+    @Provides
+    @Singleton
+    fun provideAccentColorCache(): AccentColorCache = AccentColorCache()
+
+    @Provides
+    @Singleton
+    fun provideTraktAccountRepository(
+        traktApiService: TraktApiService,
+        accountDao: com.test1.tv.data.local.dao.TraktAccountDao
+    ) = TraktAccountRepository(traktApiService, accountDao)
+
+    @Provides
+    @Singleton
+    fun provideContinueWatchingRepository(
+        traktApiService: TraktApiService,
+        tmdbApiService: TMDBApiService,
+        accountRepository: TraktAccountRepository,
+        continueWatchingDao: com.test1.tv.data.local.dao.ContinueWatchingDao,
+        watchStatusRepository: WatchStatusRepository
+    ) = ContinueWatchingRepository(traktApiService, tmdbApiService, accountRepository, continueWatchingDao, watchStatusRepository)
+
+    @Provides
+    @Singleton
+    fun provideHomeConfigRepository(@ApplicationContext context: Context, gson: Gson): HomeConfigRepository =
+        HomeConfigRepository(context, gson)
+
+    @Provides
+    @Singleton
+    fun provideGson(): Gson = Gson()
 
     // ==================== Network ====================
 
@@ -136,6 +186,12 @@ object AppModule {
     fun provideOmdbApiService(@OmdbRetrofit retrofit: Retrofit): OMDbApiService {
         return retrofit.create(OMDbApiService::class.java)
     }
+
+    // ==================== Utilities ====================
+
+    @Provides
+    @Singleton
+    fun provideRateLimiter(): com.test1.tv.data.remote.RateLimiter = com.test1.tv.data.remote.RateLimiter()
 
     // ==================== UI Performance ====================
 

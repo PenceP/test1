@@ -6,9 +6,12 @@ import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.data.model.trakt.TraktTokenResponse
 import com.test1.tv.data.model.trakt.TraktUser
 import com.test1.tv.data.remote.api.TraktApiService
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.math.max
 
-class TraktAccountRepository(
+@Singleton
+class TraktAccountRepository @Inject constructor(
     private val traktApiService: TraktApiService,
     private val accountDao: TraktAccountDao
 )

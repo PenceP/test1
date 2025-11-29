@@ -40,10 +40,14 @@ class HeroBackgroundController(
             return
         }
 
+        val thumbnailRequest = Glide.with(fragment)
+            .load(backdropUrl)
+            .override(320, 180)
+
         // Main backdrop
         Glide.with(fragment)
             .load(backdropUrl)
-            .thumbnail(0.2f)
+            .thumbnail(thumbnailRequest)
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
                     if (version != requestVersion) return

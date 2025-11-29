@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.test1.tv.data.Resource
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.model.home.HomeConfig
 import com.test1.tv.data.model.home.HomeRowType
@@ -11,11 +12,19 @@ import com.test1.tv.data.model.home.PosterOrientation
 import com.test1.tv.data.model.home.TraktListConfig
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
+import com.test1.tv.data.repository.HomeConfigRepository
+import com.test1.tv.data.repository.MediaRepository
+import com.test1.tv.data.repository.WatchStatusProvider
+import com.test1.tv.data.repository.WatchStatusRepository
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.RowPresentation
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
+import javax.inject.Inject
 
 private data class ContentRowState(
     val category: String,
@@ -34,10 +43,13 @@ data class RowAppendEvent(
     val newItems: List<ContentItem>
 )
 
-class HomeViewModel(
+@HiltViewModel
+class HomeViewModel @Inject constructor(
     private val contentRepository: ContentRepository,
-    private val homeConfig: HomeConfig?,
-    private val continueWatchingRepository: ContinueWatchingRepository?
+    private val mediaRepository: MediaRepository,
+    private val homeConfigRepository: HomeConfigRepository,
+    private val continueWatchingRepository: ContinueWatchingRepository,
+    private val watchStatusRepository: WatchStatusRepository
 ) : ViewModel() {
 
     private val rowStates = mutableListOf<ContentRowState>()
@@ -58,6 +70,10 @@ class HomeViewModel(
     val heroContent: LiveData<ContentItem?> = _heroContent
 
     init {
+        viewModelScope.launch(Dispatchers.IO) {
+            watchStatusRepository.preload()
+            WatchStatusProvider.set(watchStatusRepository)
+        }
         viewModelScope.launch {
             buildRows()
             loadInitialRows()
@@ -144,17 +160,12 @@ class HomeViewModel(
         if (!forceRefresh && page > 1 && !state.hasMore) return
 
         state.isLoading = true
-        val result = when (state.category) {
-            ContentRepository.CATEGORY_TRENDING_MOVIES ->
-                contentRepository.getTrendingMoviesPage(page, state.pageSize, forceRefresh)
-            ContentRepository.CATEGORY_POPULAR_MOVIES ->
-                contentRepository.getPopularMoviesPage(page, state.pageSize, forceRefresh)
-            ContentRepository.CATEGORY_TRENDING_SHOWS ->
-                contentRepository.getTrendingShowsPage(page, state.pageSize, forceRefresh)
-            ContentRepository.CATEGORY_POPULAR_SHOWS ->
-                contentRepository.getPopularShowsPage(page, state.pageSize, forceRefresh)
-            ContentRepository.CATEGORY_CONTINUE_WATCHING ->
-                Result.success(emptyList())
+        val result: Result<List<ContentItem>> = when (state.category) {
+            ContentRepository.CATEGORY_TRENDING_MOVIES -> mapResource(mediaRepository.getTrendingMovies(page).last())
+            ContentRepository.CATEGORY_POPULAR_MOVIES -> mapResource(mediaRepository.getPopularMovies(page).last())
+            ContentRepository.CATEGORY_TRENDING_SHOWS -> mapResource(mediaRepository.getTrendingShows(page).last())
+            ContentRepository.CATEGORY_POPULAR_SHOWS -> mapResource(mediaRepository.getPopularShows(page).last())
+            ContentRepository.CATEGORY_CONTINUE_WATCHING -> Result.success(emptyList())
             else -> Result.success(emptyList())
         }
 
@@ -168,7 +179,7 @@ class HomeViewModel(
     }
 
     private suspend fun loadContinueWatching(rowIndex: Int, forceRefresh: Boolean = false) {
-        val repo = continueWatchingRepository ?: return
+        val repo = continueWatchingRepository
         val state = rowStates.getOrNull(rowIndex) ?: return
         if (state.isLoading) return
         if (!repo.hasAccount()) {
@@ -322,6 +333,19 @@ class HomeViewModel(
         }
     }
 
+    private fun mapResource(resource: Resource<List<ContentItem>>): Result<List<ContentItem>> {
+        return when (resource) {
+            is Resource.Success -> Result.success(resource.data)
+            is Resource.Loading -> Result.success(resource.cachedData ?: emptyList())
+            is Resource.Error -> {
+                resource.cachedData?.let { cached ->
+                    if (cached.isNotEmpty()) return Result.success(cached)
+                }
+                Result.failure(resource.exception)
+            }
+        }
+    }
+
     fun updateHeroContent(item: ContentItem) {
         _heroContent.value = item
     }
@@ -338,11 +362,12 @@ class HomeViewModel(
 
     private suspend fun buildRows() {
         rowStates.clear()
-        val isAuthenticated = continueWatchingRepository?.hasAccount() == true
+        val isAuthenticated = continueWatchingRepository.hasAccount()
         buildRowsFromConfig(isAuthenticated)
     }
 
     private fun buildRowsFromConfig(isAuthenticated: Boolean) {
+        val homeConfig = homeConfigRepository.loadConfig()
         val configRows = homeConfig?.home?.rows.orEmpty()
         if (configRows.isEmpty()) {
             val defaults = mutableListOf<ContentRowState>()

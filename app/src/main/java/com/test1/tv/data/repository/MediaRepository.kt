@@ -1,5 +1,6 @@
 package com.test1.tv.data.repository
 
+import com.test1.tv.BuildConfig
 import com.test1.tv.data.Resource
 import com.test1.tv.data.local.MediaContentEntity
 import com.test1.tv.data.local.MediaImageEntity
@@ -9,9 +10,11 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.RateLimiter
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,98 +38,153 @@ class MediaRepository @Inject constructor(
 
     companion object {
         private const val CACHE_VALIDITY_MS = 24 * 60 * 60 * 1000L // 24 hours
+        private const val DEFAULT_PAGE_SIZE = 20
     }
 
     /**
-     * Get trending movies with offline-first strategy.
-     * Emits cached data immediately, then fresh data from network.
+     * Get trending movies with offline-first strategy and infinite scrolling support.
+     *
+     * - Page 1: Checks cache validity, returns cached data if fresh
+     * - Page > 1: Always fetches from network, appends to existing data
+     * - Page size: 20 items (trigger next page when <10 items remaining)
+     *
+     * @param page Page number (defaults to 1)
+     * @param pageSize Items per page (defaults to 20)
      */
-    fun getTrendingMovies(page: Int = 1): Flow<Resource<List<ContentItem>>> = flow {
+    fun getTrendingMovies(page: Int = 1, pageSize: Int = DEFAULT_PAGE_SIZE): Flow<Resource<List<ContentItem>>> = flow {
         val category = "trending_movies"
 
-        // 1. Emit cached data immediately (if available)
-        val cached = getCachedMedia(category)
-        if (cached.isNotEmpty()) {
-            emit(Resource.Loading(cached.map { it.toContentItem() }))
+        // 1. Emit cached data immediately (if available and page 1)
+        if (page == 1) {
+            val cached = getCachedMedia(category)
+            if (cached.isNotEmpty()) {
+                emit(Resource.Loading(cached.map { it.toContentItem() }))
+            } else {
+                emit(Resource.Loading())
+            }
+
+            // 2. Check if cache is still valid for page 1 only
+            val cacheTime = System.currentTimeMillis() - CACHE_VALIDITY_MS
+            val cachedCount = mediaDao.getCachedCount(category, cacheTime)
+
+            if (cachedCount > 0) {
+                // Cache is valid, emit success with cached data
+                val freshCached = getCachedMedia(category)
+                emit(Resource.Success(freshCached.map { it.toContentItem() }))
+                return@flow
+            }
+        } else {
+            // For page > 1, always fetch from network (no cache)
+            emit(Resource.Loading())
+        }
+
+        // 3. Fetch from network
+        try {
+            val resource = fetchMovies(
+                category = category,
+                page = page,
+                pageSize = pageSize
+            )
+            emit(resource)
+
+        } catch (e: Exception) {
+            // Network error - emit error with cached data if available
+            val cachedData = if (page == 1) getCachedMedia(category).map { it.toContentItem() } else emptyList()
+            emit(Resource.Error(e, cachedData.takeIf { it.isNotEmpty() }))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun getPopularMovies(page: Int = 1, pageSize: Int = DEFAULT_PAGE_SIZE): Flow<Resource<List<ContentItem>>> = flow {
+        val category = "popular_movies"
+
+        if (page == 1) {
+            emit(Resource.Loading(getCachedMedia(category).map { it.toContentItem() }.ifEmpty { null }))
+
+            val cacheTime = System.currentTimeMillis() - CACHE_VALIDITY_MS
+            val cachedCount = mediaDao.getCachedCount(category, cacheTime)
+            if (cachedCount > 0) {
+                val cached = getCachedMedia(category).map { it.toContentItem() }
+                emit(Resource.Success(cached))
+                return@flow
+            }
         } else {
             emit(Resource.Loading())
         }
 
-        // 2. Check if cache is still valid
-        val cacheTime = System.currentTimeMillis() - CACHE_VALIDITY_MS
-        val cachedCount = mediaDao.getCachedCount(category, cacheTime)
-
-        if (cachedCount > 0) {
-            // Cache is valid, emit success with cached data
-            val freshCached = getCachedMedia(category)
-            emit(Resource.Success(freshCached.map { it.toContentItem() }))
-            return@flow
-        }
-
-        // 3. Fetch from network (cache is stale or missing)
         try {
-            val traktMovies = traktApi.getTrendingMovies(page = page, limit = 20)
-            val contentItems = mutableListOf<ContentItem>()
-            val mediaEntities = mutableListOf<MediaContentEntity>()
-            val imageEntities = mutableListOf<MediaImageEntity>()
-
-            traktMovies.forEachIndexed { index, traktMovie ->
-                val movie = traktMovie.movie ?: return@forEachIndexed
-                val tmdbId = movie.ids?.tmdb ?: return@forEachIndexed
-
-                // Rate limit before TMDB call
-                rateLimiter.acquire()
-
-                try {
-                    val tmdbDetails = tmdbApi.getMovieDetails(tmdbId)
-
-                    // Create entities
-                    val mediaEntity = MediaContentEntity(
-                        tmdbId = tmdbId,
-                        imdbId = movie.ids?.imdb,
-                        title = tmdbDetails.title ?: movie.title ?: "",
-                        overview = tmdbDetails.overview,
-                        year = tmdbDetails.releaseDate?.take(4),
-                        runtime = tmdbDetails.runtime,
-                        certification = tmdbDetails.releases?.countries
-                            ?.find { it.iso31661 == "US" }
-                            ?.certifications?.firstOrNull()?.certification,
-                        contentType = "movie",
-                        category = category,
-                        position = index
-                    )
-
-                    val imageEntity = MediaImageEntity(
-                        tmdbId = tmdbId,
-                        posterUrl = tmdbDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
-                        backdropUrl = tmdbDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
-                        logoUrl = null // Can add logo URL if available
-                    )
-
-                    mediaEntities.add(mediaEntity)
-                    imageEntities.add(imageEntity)
-
-                    // Also create ContentItem for immediate return
-                    contentItems.add(toContentItem(mediaEntity, imageEntity))
-
-                } catch (e: Exception) {
-                    // Log error but continue with other items
-                    e.printStackTrace()
-                }
-            }
-
-            // 4. Save to database
-            mediaDao.replaceCategory(category, mediaEntities, imageEntities)
-
-            // 5. Emit success
-            emit(Resource.Success(contentItems))
-
+            val resource = fetchMovies(
+                category = category,
+                page = page,
+                pageSize = pageSize,
+                popular = true
+            )
+            emit(resource)
         } catch (e: Exception) {
-            // Network error - emit error with cached data if available
-            val cachedData = getCachedMedia(category).map { it.toContentItem() }
+            val cachedData = if (page == 1) getCachedMedia(category).map { it.toContentItem() } else emptyList()
             emit(Resource.Error(e, cachedData.takeIf { it.isNotEmpty() }))
         }
-    }
+    }.flowOn(Dispatchers.IO)
+
+    fun getTrendingShows(page: Int = 1, pageSize: Int = DEFAULT_PAGE_SIZE): Flow<Resource<List<ContentItem>>> = flow {
+        val category = "trending_shows"
+
+        if (page == 1) {
+            emit(Resource.Loading(getCachedMedia(category).map { it.toContentItem() }.ifEmpty { null }))
+
+            val cacheTime = System.currentTimeMillis() - CACHE_VALIDITY_MS
+            val cachedCount = mediaDao.getCachedCount(category, cacheTime)
+            if (cachedCount > 0) {
+                val cached = getCachedMedia(category).map { it.toContentItem() }
+                emit(Resource.Success(cached))
+                return@flow
+            }
+        } else {
+            emit(Resource.Loading())
+        }
+
+        try {
+            val resource = fetchShows(
+                category = category,
+                page = page,
+                pageSize = pageSize
+            )
+            emit(resource)
+        } catch (e: Exception) {
+            val cachedData = if (page == 1) getCachedMedia(category).map { it.toContentItem() } else emptyList()
+            emit(Resource.Error(e, cachedData.takeIf { it.isNotEmpty() }))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun getPopularShows(page: Int = 1, pageSize: Int = DEFAULT_PAGE_SIZE): Flow<Resource<List<ContentItem>>> = flow {
+        val category = "popular_shows"
+
+        if (page == 1) {
+            emit(Resource.Loading(getCachedMedia(category).map { it.toContentItem() }.ifEmpty { null }))
+
+            val cacheTime = System.currentTimeMillis() - CACHE_VALIDITY_MS
+            val cachedCount = mediaDao.getCachedCount(category, cacheTime)
+            if (cachedCount > 0) {
+                val cached = getCachedMedia(category).map { it.toContentItem() }
+                emit(Resource.Success(cached))
+                return@flow
+            }
+        } else {
+            emit(Resource.Loading())
+        }
+
+        try {
+            val resource = fetchShows(
+                category = category,
+                page = page,
+                pageSize = pageSize,
+                popular = true
+            )
+            emit(resource)
+        } catch (e: Exception) {
+            val cachedData = if (page == 1) getCachedMedia(category).map { it.toContentItem() } else emptyList()
+            emit(Resource.Error(e, cachedData.takeIf { it.isNotEmpty() }))
+        }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * Get cached media by category.
@@ -134,12 +192,166 @@ class MediaRepository @Inject constructor(
      */
     private suspend fun getCachedMedia(category: String): List<MediaWithImages> {
         return try {
-            // mediaDao.getMediaByCategory returns Flow, but we need immediate value
-            // For now, return empty list - will fix Flow collection properly later
-            emptyList()
+            mediaDao.getMediaByCategory(category).first()
         } catch (e: Exception) {
             emptyList()
         }
+    }
+
+    private suspend fun fetchMovies(
+        category: String,
+        page: Int,
+        pageSize: Int = DEFAULT_PAGE_SIZE,
+        popular: Boolean = false
+    ): Resource.Success<List<ContentItem>> {
+        val traktMovies: List<com.test1.tv.data.model.trakt.TraktMovie> =
+            if (popular) {
+                traktApi.getPopularMovies(
+                    clientId = BuildConfig.TRAKT_CLIENT_ID,
+                    page = page,
+                    limit = pageSize
+                )
+            } else {
+                traktApi.getTrendingMovies(
+                    clientId = BuildConfig.TRAKT_CLIENT_ID,
+                    page = page,
+                    limit = pageSize
+                ).mapNotNull { it.movie }
+            }
+
+        // Calculate position offset for pagination (page > 1 appends to existing data)
+        val basePosition = if (page > 1) {
+            mediaDao.getMaxPosition(category) + 1
+        } else {
+            0
+        }
+
+        val contentItems = mutableListOf<ContentItem>()
+        val mediaEntities = mutableListOf<MediaContentEntity>()
+        val imageEntities = mutableListOf<MediaImageEntity>()
+
+        traktMovies.forEachIndexed { index, movie ->
+            val tmdbId = movie.ids?.tmdb ?: return@forEachIndexed
+
+            rateLimiter.acquire()
+            runCatching {
+                val tmdbDetails = tmdbApi.getMovieDetails(
+                    movieId = tmdbId,
+                    apiKey = BuildConfig.TMDB_API_KEY
+                )
+
+                val mediaEntity = MediaContentEntity(
+                    tmdbId = tmdbId,
+                    imdbId = movie.ids?.imdb,
+                    title = tmdbDetails.title ?: movie.title ?: "",
+                    overview = tmdbDetails.overview,
+                    year = tmdbDetails.releaseDate?.take(4),
+                    runtime = tmdbDetails.runtime,
+                    certification = tmdbDetails.getCertification(),
+                    contentType = "movie",
+                    category = category,
+                    position = basePosition + index
+                )
+
+                val imageEntity = MediaImageEntity(
+                    tmdbId = tmdbId,
+                    posterUrl = tmdbDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+                    backdropUrl = tmdbDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
+                    logoUrl = tmdbDetails.getLogoUrl()
+                )
+
+                mediaEntities.add(mediaEntity)
+                imageEntities.add(imageEntity)
+                contentItems.add(toContentItem(mediaEntity, imageEntity))
+            }
+        }
+
+        // Use replace for page 1 (clears old data), append for page > 1 (accumulates)
+        if (page == 1) {
+            mediaDao.replaceCategory(category, mediaEntities, imageEntities)
+        } else {
+            mediaDao.appendToCategory(mediaEntities, imageEntities)
+        }
+
+        return Resource.Success(contentItems)
+    }
+
+    private suspend fun fetchShows(
+        category: String,
+        page: Int,
+        pageSize: Int = DEFAULT_PAGE_SIZE,
+        popular: Boolean = false
+    ): Resource.Success<List<ContentItem>> {
+        val traktShows: List<com.test1.tv.data.model.trakt.TraktShow> =
+            if (popular) {
+                traktApi.getPopularShows(
+                    clientId = BuildConfig.TRAKT_CLIENT_ID,
+                    page = page,
+                    limit = pageSize
+                )
+            } else {
+                traktApi.getTrendingShows(
+                    clientId = BuildConfig.TRAKT_CLIENT_ID,
+                    page = page,
+                    limit = pageSize
+                ).mapNotNull { it.show }
+            }
+
+        // Calculate position offset for pagination
+        val basePosition = if (page > 1) {
+            mediaDao.getMaxPosition(category) + 1
+        } else {
+            0
+        }
+
+        val contentItems = mutableListOf<ContentItem>()
+        val mediaEntities = mutableListOf<MediaContentEntity>()
+        val imageEntities = mutableListOf<MediaImageEntity>()
+
+        traktShows.forEachIndexed { index, show ->
+            val tmdbId = show.ids?.tmdb ?: return@forEachIndexed
+
+            rateLimiter.acquire()
+            runCatching {
+                val tmdbDetails = tmdbApi.getShowDetails(
+                    showId = tmdbId,
+                    apiKey = BuildConfig.TMDB_API_KEY
+                )
+
+                val mediaEntity = MediaContentEntity(
+                    tmdbId = tmdbId,
+                    imdbId = show.ids?.imdb,
+                    title = tmdbDetails.name ?: show.title ?: "",
+                    overview = tmdbDetails.overview,
+                    year = tmdbDetails.firstAirDate?.take(4),
+                    runtime = tmdbDetails.episodeRunTime?.firstOrNull(),
+                    certification = tmdbDetails.getCertification(),
+                    contentType = "tv",
+                    category = category,
+                    position = basePosition + index
+                )
+
+                val imageEntity = MediaImageEntity(
+                    tmdbId = tmdbId,
+                    posterUrl = tmdbDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+                    backdropUrl = tmdbDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
+                    logoUrl = tmdbDetails.getLogoUrl()
+                )
+
+                mediaEntities.add(mediaEntity)
+                imageEntities.add(imageEntity)
+                contentItems.add(toContentItem(mediaEntity, imageEntity))
+            }
+        }
+
+        // Use replace for page 1 (clears old data), append for page > 1 (accumulates)
+        if (page == 1) {
+            mediaDao.replaceCategory(category, mediaEntities, imageEntities)
+        } else {
+            mediaDao.appendToCategory(mediaEntities, imageEntities)
+        }
+
+        return Resource.Success(contentItems)
     }
 
     /**

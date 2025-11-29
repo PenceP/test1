@@ -82,6 +82,7 @@ interface MediaDao {
 
     /**
      * Atomically replace all content for a category.
+     * Used for page 1 (fresh data).
      */
     @Transaction
     suspend fun replaceCategory(
@@ -93,4 +94,23 @@ interface MediaDao {
         insertContents(contents)
         insertImagesBatch(images)
     }
+
+    /**
+     * Append content to existing category (for pagination).
+     * Used for pages > 1 to accumulate data.
+     */
+    @Transaction
+    suspend fun appendToCategory(
+        contents: List<MediaContentEntity>,
+        images: List<MediaImageEntity>
+    ) {
+        insertContents(contents)
+        insertImagesBatch(images)
+    }
+
+    /**
+     * Get the maximum position for a category (for pagination offset calculation).
+     */
+    @Query("SELECT COALESCE(MAX(position), -1) FROM media_content WHERE category = :category")
+    suspend fun getMaxPosition(category: String): Int
 }

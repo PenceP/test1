@@ -8,7 +8,9 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -25,11 +27,10 @@ import androidx.leanback.widget.HorizontalGridView
 import androidx.palette.graphics.Palette
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import android.widget.ImageButton
 import com.google.android.material.button.MaterialButton
 import androidx.recyclerview.widget.RecyclerView
+import com.test1.tv.ui.HeroLogoLoader
 import java.text.SimpleDateFormat
 import kotlin.math.max
 import kotlin.math.min
@@ -47,8 +48,12 @@ import com.test1.tv.data.model.tmdb.TMDBEpisode
 import com.test1.tv.data.model.tmdb.TMDBSeason
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.ui.HeroSectionHelper
+import com.test1.tv.ui.HeroBackgroundController
 import com.test1.tv.ui.adapter.PersonAdapter
 import com.test1.tv.ui.adapter.PosterAdapter
+import com.test1.tv.ui.AccentColorCache
+import java.io.Serializable
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -62,8 +67,8 @@ import androidx.core.widget.NestedScrollView
 import java.util.Date
 import androidx.leanback.widget.OnChildViewHolderSelectedListener
 import androidx.leanback.widget.BaseGridView
-import com.test1.tv.ui.RowScrollPauser
-import com.test1.tv.ui.ScrollThrottler
+import com.test1.tv.ui.SmartRowScrollManager
+import com.test1.tv.ui.SmartScrollThrottler
 import android.transition.TransitionManager
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -116,10 +121,11 @@ class DetailsFragment : Fragment() {
     private lateinit var episodeInfoShelf: LinearLayout
     private lateinit var shelfEpisodeTitle: TextView
     private lateinit var shelfEpisodeOverview: TextView
-    private val scrollThrottler = ScrollThrottler(throttleMs = 120L)
+    private val scrollThrottler = SmartScrollThrottler(repeatDelayMs = 120L)
 
     private var seasonAdapter: SeasonAdapter? = null
     private var episodeAdapter: EpisodeAdapter? = null
+    @Inject lateinit var accentColorCache: AccentColorCache
 
     private var showTitleOriginal: String? = null
     private var showMetadataOriginal: CharSequence? = null
@@ -129,20 +135,16 @@ class DetailsFragment : Fragment() {
     private var isInCollection = false
     private var currentRating: Int = 0 // 0 = none, 1 = thumbs up, 2 = thumbs down
 
-    // Ambient gradient animation
-    private var ambientColorAnimator: ValueAnimator? = null
-    private val argbEvaluator = ArgbEvaluator()
-    private val ambientInterpolator = DecelerateInterpolator()
-    private var currentAmbientColor: Int = DEFAULT_AMBIENT_COLOR
+    private lateinit var heroBackgroundController: HeroBackgroundController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        contentItem = arguments?.getParcelable(ARG_CONTENT_ITEM)
-            ?: activity?.intent?.getParcelableExtra(DetailsActivity.CONTENT_ITEM)
+        contentItem = arguments.parcelableCompat(ARG_CONTENT_ITEM)
+            ?: activity?.intent.parcelableExtraCompat(DetailsActivity.CONTENT_ITEM)
 
         if (contentItem == null) {
-            val legacyMovie = arguments?.getSerializable(ARG_MOVIE) as? Movie
-                ?: activity?.intent?.getSerializableExtra(DetailsActivity.MOVIE) as? Movie
+            val legacyMovie = arguments.serializableCompat<Movie>(ARG_MOVIE)
+                ?: activity?.intent.serializableExtraCompat<Movie>(DetailsActivity.MOVIE)
             legacyMovie?.let { contentItem = it.toContentItem() }
         }
     }
@@ -177,6 +179,14 @@ class DetailsFragment : Fragment() {
         buttonPlay = view.findViewById(R.id.button_play)
         buttonTrailer = view.findViewById(R.id.button_trailer)
         buttonWatchlist = view.findViewById(R.id.button_watchlist)
+
+        heroBackgroundController = HeroBackgroundController(
+            fragment = this,
+            backdropView = backdrop,
+            ambientOverlay = ambientOverlay,
+            defaultAmbientColor = DEFAULT_AMBIENT_COLOR
+        )
+        heroBackgroundController.updateBackdrop(null, resources.getDrawable(R.drawable.default_background, null))
 
         castSection = view.findViewById(R.id.cast_section)
         similarSection = view.findViewById(R.id.similar_section)
@@ -338,38 +348,10 @@ class DetailsFragment : Fragment() {
     }
 
     private fun bindContent(item: ContentItem) {
-        // Load backdrop image
-        if (item.backdropUrl.isNullOrBlank()) {
-            backdrop.setImageResource(R.drawable.default_background)
-            animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
-        } else {
-            Glide.with(this)
-                .load(item.backdropUrl)
-                .transition(DrawableTransitionOptions.withCrossFade())
-                .placeholder(R.drawable.default_background)
-                .error(R.drawable.default_background)
-                .into(backdrop)
-
-            // Load a smaller version for palette extraction to improve performance
-            Glide.with(this)
-                .asBitmap()
-                .load(item.backdropUrl)
-                .override(150, 150)  // Small size is sufficient for color extraction
-                .into(object : CustomTarget<Bitmap>() {
-                    override fun onResourceReady(
-                        resource: Bitmap,
-                        transition: Transition<in Bitmap>?
-                    ) {
-                        extractPaletteFromBitmap(resource)
-                    }
-
-                    override fun onLoadCleared(placeholder: Drawable?) = Unit
-
-                    override fun onLoadFailed(errorDrawable: Drawable?) {
-                        animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
-                    }
-                })
-        }
+        heroBackgroundController.updateBackdrop(
+            backdropUrl = item.backdropUrl,
+            fallbackDrawable = resources.getDrawable(R.drawable.default_background, null)
+        )
 
         title.text = item.title
         showTitleOriginal = item.title
@@ -453,7 +435,7 @@ class DetailsFragment : Fragment() {
                 populateSimilarRowWithItems(relatedItems)
 
                 // Populate Collection row if exists
-                if (collectionMovies != null && movieDetails.belongsToCollection != null) {
+                if (collectionMovies != null) {
                     populateCollectionRow(
                         movieDetails.belongsToCollection.name,
                         collectionMovies.parts
@@ -651,7 +633,7 @@ class DetailsFragment : Fragment() {
         castRow.setHasFixedSize(true)
         castRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
         configureFixedFocusRow(castRow)
-        RowScrollPauser.attach(castRow)
+        SmartRowScrollManager.attach(castRow)
         castRow.setOnKeyInterceptListener(scrollThrottler)
 
         castEmpty.visibility = View.GONE
@@ -666,14 +648,15 @@ class DetailsFragment : Fragment() {
         }
 
         val adapter = PosterAdapter(
-            initialItems = similarItems.take(20),
             onItemClick = { item, _ ->
                 DetailsActivity.start(requireContext(), item)
             },
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },
-            onNearEnd = {}
+            onNearEnd = {},
+            accentColorCache = accentColorCache
         )
+        adapter.submitList(similarItems.take(20))
 
         similarRow.adapter = adapter
         similarRow.setNumRows(1)
@@ -681,7 +664,7 @@ class DetailsFragment : Fragment() {
         similarRow.setHasFixedSize(true)
         similarRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
         configureFixedFocusRow(similarRow)
-        RowScrollPauser.attach(similarRow)
+        SmartRowScrollManager.attach(similarRow)
         similarRow.setOnKeyInterceptListener(scrollThrottler)
 
         similarEmpty.visibility = View.GONE
@@ -721,14 +704,15 @@ class DetailsFragment : Fragment() {
         }
 
         val adapter = PosterAdapter(
-            initialItems = collectionItems,
             onItemClick = { item, _ ->
                 DetailsActivity.start(requireContext(), item)
             },
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },
-            onNearEnd = {}
+            onNearEnd = {},
+            accentColorCache = accentColorCache
         )
+        adapter.submitList(collectionItems)
 
         collectionRow.adapter = adapter
         collectionRow.setNumRows(1)
@@ -736,7 +720,7 @@ class DetailsFragment : Fragment() {
         collectionRow.setHasFixedSize(true)
         collectionRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
         configureFixedFocusRow(collectionRow)
-        RowScrollPauser.attach(collectionRow)
+        SmartRowScrollManager.attach(collectionRow)
         collectionRow.setOnKeyInterceptListener(scrollThrottler)
 
         collectionEmpty.visibility = View.GONE
@@ -809,7 +793,7 @@ class DetailsFragment : Fragment() {
                 episodeRow.setHasFixedSize(true)
                 episodeRow.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ALIGNED)
                 configureFixedFocusRow(episodeRow, itemAlignmentOffset = 6)
-                RowScrollPauser.attach(episodeRow)
+                SmartRowScrollManager.attach(episodeRow)
                 episodeRow.setOnKeyInterceptListener(scrollThrottler)
 
                 episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
@@ -1003,61 +987,14 @@ class DetailsFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        logo.visibility = View.GONE
-        logo.setImageDrawable(null)
-        if (logoUrl.isNullOrEmpty()) {
-            title.visibility = View.VISIBLE
-            return
-        } else {
-            title.visibility = View.GONE
-        }
-
-        Glide.with(this)
-            .load(logoUrl)
-            .transition(DrawableTransitionOptions.withCrossFade())
-            .into(object : CustomTarget<Drawable>() {
-                override fun onLoadCleared(placeholder: Drawable?) {
-                    logo.setImageDrawable(null)
-                    logo.visibility = View.GONE
-                    title.visibility = View.VISIBLE
-                }
-
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    super.onLoadFailed(errorDrawable)
-                    logo.setImageDrawable(null)
-                    logo.visibility = View.GONE
-                    title.visibility = View.VISIBLE
-                }
-
-                override fun onResourceReady(
-                    resource: Drawable,
-                    transition: Transition<in Drawable>?
-                ) {
-                    logo.setImageDrawable(resource)
-                    logo.visibility = View.VISIBLE
-                    title.visibility = View.GONE
-                    applyHeroLogoBounds(resource)
-                }
-            })
-    }
-
-    private fun applyHeroLogoBounds(resource: Drawable) {
-        val intrinsicWidth = if (resource.intrinsicWidth > 0) resource.intrinsicWidth else logo.width
-        val intrinsicHeight = if (resource.intrinsicHeight > 0) resource.intrinsicHeight else logo.height
-        if (intrinsicWidth <= 0 || intrinsicHeight <= 0) return
-
-        val maxWidth = resources.getDimensionPixelSize(R.dimen.hero_logo_max_width)
-        val maxHeight = resources.getDimensionPixelSize(R.dimen.hero_logo_max_height)
-        val widthRatio = maxWidth.toFloat() / intrinsicWidth
-        val heightRatio = maxHeight.toFloat() / intrinsicHeight
-        val scale = min(widthRatio, heightRatio)
-
-        val params = logo.layoutParams
-        params.width = (intrinsicWidth * scale).roundToInt()
-        params.height = (intrinsicHeight * scale).roundToInt()
-        logo.layoutParams = params
-        logo.scaleX = 1f
-        logo.scaleY = 1f
+        HeroLogoLoader.load(
+            fragment = this,
+            logoUrl = logoUrl,
+            logoView = logo,
+            titleView = title,
+            maxWidthRes = R.dimen.hero_logo_max_width,
+            maxHeightRes = R.dimen.hero_logo_max_height
+        )
     }
 
 
@@ -1278,78 +1215,47 @@ class DetailsFragment : Fragment() {
         startActivity(intent)
     }
 
-    private fun extractPaletteFromBitmap(bitmap: Bitmap) {
-        Palette.from(bitmap).generate { palette ->
-            if (palette == null) {
-                animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
+    private inline fun <reified T : Parcelable> Bundle?.parcelableCompat(key: String): T? {
+        return this?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                getParcelable(key, T::class.java)
             } else {
-                animateAmbientFromPalette(palette)
+                @Suppress("DEPRECATION")
+                getParcelable(key)
             }
         }
     }
 
-    private fun animateAmbientFromPalette(palette: Palette) {
-        val swatchColor = palette.vibrantSwatch?.rgb
-            ?: palette.darkVibrantSwatch?.rgb
-            ?: palette.dominantSwatch?.rgb
-            ?: palette.mutedSwatch?.rgb
-            ?: DEFAULT_AMBIENT_COLOR
-        val deepColor = ColorUtils.blendARGB(swatchColor, Color.BLACK, 0.55f)
-        animateAmbientToColor(deepColor)
-    }
-
-    private fun animateAmbientToColor(targetColor: Int) {
-        if (!isAdded || !::ambientOverlay.isInitialized) return
-        ambientColorAnimator?.cancel()
-        val startColor = currentAmbientColor
-        if (startColor == targetColor) {
-            updateAmbientGradient(targetColor)
-            return
-        }
-
-        ambientColorAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = AMBIENT_ANIMATION_DURATION
-            interpolator = ambientInterpolator
-            addUpdateListener { animator ->
-                val blended = argbEvaluator.evaluate(
-                    animator.animatedFraction,
-                    startColor,
-                    targetColor
-                ) as Int
-                updateAmbientGradient(blended)
+    private inline fun <reified T : Parcelable> Intent?.parcelableExtraCompat(key: String): T? {
+        return this?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                getParcelableExtra(key, T::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                getParcelableExtra(key)
             }
-            start()
         }
     }
 
-    private fun updateAmbientGradient(color: Int) {
-        currentAmbientColor = color
-        val widthCandidates = listOf(
-            backdrop.width,
-            ambientOverlay.width,
-            resources.displayMetrics.widthPixels
-        ).filter { it > 0 }
-        val heightCandidates = listOf(
-            backdrop.height,
-            ambientOverlay.height,
-            resources.displayMetrics.heightPixels
-        ).filter { it > 0 }
-
-        val width = widthCandidates.maxOrNull() ?: resources.displayMetrics.widthPixels
-        val height = heightCandidates.maxOrNull() ?: resources.displayMetrics.heightPixels
-        val radius = max(width, height).toFloat() * 0.95f
-
-        val gradient = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            gradientRadius = radius
-            setGradientCenter(0.32f, 0.28f)
-            colors = intArrayOf(
-                ColorUtils.setAlphaComponent(color, 220),
-                ColorUtils.setAlphaComponent(color, 120),
-                ColorUtils.setAlphaComponent(color, 10)
-            )
+    private inline fun <reified T : Serializable> Bundle?.serializableCompat(key: String): T? {
+        return this?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                getSerializable(key, T::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                getSerializable(key) as? T
+            }
         }
-        ambientOverlay.background = gradient
+    }
+
+    private inline fun <reified T : Serializable> Intent?.serializableExtraCompat(key: String): T? {
+        return this?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                getSerializableExtra(key, T::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                getSerializableExtra(key) as? T
+            }
+        }
     }
 }

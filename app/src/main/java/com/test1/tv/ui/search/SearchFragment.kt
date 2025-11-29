@@ -27,7 +27,9 @@ import com.test1.tv.data.repository.SearchRepository
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import com.test1.tv.ui.adapter.RowPresentation
+import com.test1.tv.ui.AccentColorCache
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SearchFragment : Fragment() {
@@ -42,6 +44,7 @@ class SearchFragment : Fragment() {
     private var currentBackdropUrl: String? = null
 
     private lateinit var viewModel: SearchViewModel
+    @Inject lateinit var accentColorCache: AccentColorCache
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -77,7 +80,9 @@ class SearchFragment : Fragment() {
             onItemFocused = { item, _, _ -> updateDynamicBackground(item) },
             onNavigateToNavBar = { },
             onItemLongPress = { },
-            onRequestMore = { }
+            onRequestMore = { },
+            viewPool = null,
+            accentColorCache = accentColorCache
         )
         rowsRecycler.layoutManager = LinearLayoutManager(requireContext())
         rowsRecycler.adapter = rowsAdapter

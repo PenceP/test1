@@ -3,13 +3,12 @@ package com.test1.tv.data.repository
 import android.util.Log
 import com.test1.tv.BuildConfig
 import com.test1.tv.data.model.ContentItem
-import com.test1.tv.data.remote.api.OMDbApiService
-import com.test1.tv.data.remote.api.TMDBApiService
-import com.test1.tv.data.remote.api.TraktApiService
 import com.test1.tv.data.model.tmdb.TMDBCast
 import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBShow
-import com.test1.tv.data.repository.WatchStatusRepository
+import com.test1.tv.data.remote.api.OMDbApiService
+import com.test1.tv.data.remote.api.TMDBApiService
+import com.test1.tv.data.remote.api.TraktApiService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,8 +17,11 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ContentRepository(
+@Singleton
+class ContentRepository @Inject constructor(
     private val traktApiService: TraktApiService,
     private val tmdbApiService: TMDBApiService,
     private val omdbApiService: com.test1.tv.data.remote.api.OMDbApiService,

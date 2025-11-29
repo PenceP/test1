@@ -6,8 +6,11 @@ import com.test1.tv.data.model.ContentItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class WatchStatusRepository(
+@Singleton
+class WatchStatusRepository @Inject constructor(
     private val watchStatusDao: WatchStatusDao
 ) {
     private val cache = ConcurrentHashMap<String, WatchStatusEntity>()

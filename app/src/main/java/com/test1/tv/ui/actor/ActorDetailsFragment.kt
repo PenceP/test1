@@ -1,30 +1,22 @@
 package com.test1.tv.ui.actor
 
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.ActivityOptionsCompat
-import androidx.core.graphics.ColorUtils
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.lifecycleScope
-import androidx.palette.graphics.Palette
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.test1.tv.ActorDetailsActivity
 import com.test1.tv.BuildConfig
 import com.test1.tv.DetailsActivity
@@ -33,6 +25,8 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.databinding.FragmentActorDetailsBinding
 import com.test1.tv.ui.HeroSectionHelper
+import com.test1.tv.ui.HeroBackgroundController
+import com.test1.tv.ui.HeroLogoLoader
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import com.test1.tv.ui.adapter.RowPresentation
@@ -41,9 +35,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.roundToInt
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -55,18 +46,14 @@ class ActorDetailsFragment : Fragment() {
     private var personId: Int = -1
     private var personName: String? = null
 
-    private var ambientColorAnimator: ValueAnimator? = null
-    private val argbEvaluator = ArgbEvaluator()
-    private val ambientInterpolator = DecelerateInterpolator()
-    private var currentAmbientColor: Int = DEFAULT_AMBIENT_COLOR
+    private lateinit var heroBackgroundController: HeroBackgroundController
 
     private var rowsAdapter: ContentRowAdapter? = null
     private var heroUpdateJob: Job? = null
 
     companion object {
         private const val TAG = "ActorDetailsFragment"
-        private const val AMBIENT_ANIMATION_DURATION = 150L
-        private val DEFAULT_AMBIENT_COLOR = Color.parseColor("#0A0F1F")
+        private val DEFAULT_AMBIENT_COLOR = android.graphics.Color.parseColor("#0A0F1F")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +76,13 @@ class ActorDetailsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        updateAmbientGradient(DEFAULT_AMBIENT_COLOR)
+        heroBackgroundController = HeroBackgroundController(
+            fragment = this,
+            backdropView = binding.heroBackdrop,
+            ambientOverlay = binding.ambientBackgroundOverlay,
+            defaultAmbientColor = DEFAULT_AMBIENT_COLOR
+        )
+        heroBackgroundController.updateBackdrop(null, ContextCompat.getDrawable(requireContext(), R.drawable.default_background))
         setupContentRows()
 
         if (personId != -1) {
@@ -215,7 +208,9 @@ class ActorDetailsFragment : Fragment() {
                     },
                     onRequestMore = { rowIndex ->
                         // No pagination for actor details
-                    }
+                    },
+                    viewPool = null,
+                    accentColorCache = com.test1.tv.ui.AccentColorCache()
                 )
                 binding.contentRows.adapter = rowsAdapter
 
@@ -258,39 +253,10 @@ class ActorDetailsFragment : Fragment() {
 
     private fun loadBackdropAndPalette(item: ContentItem) {
         val heroImageUrl = item.backdropUrl ?: item.posterUrl
-        if (heroImageUrl.isNullOrBlank()) {
-            binding.heroBackdrop.setImageResource(R.drawable.default_background)
-            animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
-            return
-        }
-
-        Glide.with(this)
-            .load(heroImageUrl)
-            .thumbnail(0.2f)
-            .transition(DrawableTransitionOptions.withCrossFade(200))
-            .placeholder(R.drawable.default_background)
-            .error(R.drawable.default_background)
-            .override(1920, 1080)
-            .into(binding.heroBackdrop)
-
-        Glide.with(this)
-            .asBitmap()
-            .load(heroImageUrl)
-            .override(150, 150)
-            .into(object : CustomTarget<Bitmap>() {
-                override fun onResourceReady(
-                    resource: Bitmap,
-                    transition: Transition<in Bitmap>?
-                ) {
-                    extractPaletteFromBitmap(resource)
-                }
-
-                override fun onLoadCleared(placeholder: Drawable?) = Unit
-
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
-                }
-            })
+        heroBackgroundController.updateBackdrop(
+            backdropUrl = heroImageUrl,
+            fallbackDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.default_background)
+        )
     }
 
     private suspend fun fetchDetailedHero(item: ContentItem): ContentItem? = withContext(Dispatchers.IO) {
@@ -347,140 +313,14 @@ class ActorDetailsFragment : Fragment() {
     }
 
     private fun updateHeroLogo(logoUrl: String?) {
-        binding.heroTitle.visibility = View.VISIBLE
-        binding.heroLogo.visibility = View.GONE
-        binding.heroLogo.setImageDrawable(null)
-        binding.heroLogo.scaleX = 1f
-        binding.heroLogo.scaleY = 1f
-
-        if (logoUrl.isNullOrBlank()) {
-            return
-        }
-
-        Glide.with(this)
-            .load(logoUrl)
-            .thumbnail(0.2f)
-            .transition(DrawableTransitionOptions.withCrossFade(150))
-            .override(600, 200)
-            .into(object : CustomTarget<Drawable>() {
-                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    binding.heroLogo.setImageDrawable(resource)
-                    applyHeroLogoBounds(resource)
-                    binding.heroLogo.visibility = View.VISIBLE
-                    binding.heroTitle.visibility = View.GONE
-                }
-
-                override fun onLoadCleared(placeholder: Drawable?) {
-                    _binding?.let {
-                        it.heroLogo.setImageDrawable(placeholder)
-                        it.heroLogo.scaleX = 1f
-                        it.heroLogo.scaleY = 1f
-                    }
-                }
-
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    _binding?.let {
-                        it.heroLogo.visibility = View.GONE
-                        it.heroTitle.visibility = View.VISIBLE
-                        it.heroLogo.scaleX = 1f
-                        it.heroLogo.scaleY = 1f
-                    }
-                }
-            })
-    }
-
-    private fun applyHeroLogoBounds(resource: Drawable) {
-        val intrinsicWidth = if (resource.intrinsicWidth > 0) resource.intrinsicWidth else binding.heroLogo.width
-        val intrinsicHeight = if (resource.intrinsicHeight > 0) resource.intrinsicHeight else binding.heroLogo.height
-        if (intrinsicWidth <= 0 || intrinsicHeight <= 0) return
-
-        val maxWidth = resources.getDimensionPixelSize(R.dimen.hero_logo_max_width)
-        val maxHeight = resources.getDimensionPixelSize(R.dimen.hero_logo_max_height)
-        val widthRatio = maxWidth.toFloat() / intrinsicWidth
-        val heightRatio = maxHeight.toFloat() / intrinsicHeight
-        val scale = min(widthRatio, heightRatio)
-
-        val params = binding.heroLogo.layoutParams
-        params.width = (intrinsicWidth * scale).roundToInt()
-        params.height = (intrinsicHeight * scale).roundToInt()
-        binding.heroLogo.layoutParams = params
-        binding.heroLogo.scaleX = 1f
-        binding.heroLogo.scaleY = 1f
-    }
-
-    private fun extractPaletteFromBitmap(bitmap: Bitmap) {
-        Palette.from(bitmap).generate { palette ->
-            if (palette == null) {
-                animateAmbientToColor(DEFAULT_AMBIENT_COLOR)
-            } else {
-                animateAmbientFromPalette(palette)
-            }
-        }
-    }
-
-    private fun animateAmbientFromPalette(palette: Palette) {
-        val swatchColor = palette.vibrantSwatch?.rgb
-            ?: palette.darkVibrantSwatch?.rgb
-            ?: palette.dominantSwatch?.rgb
-            ?: palette.mutedSwatch?.rgb
-            ?: DEFAULT_AMBIENT_COLOR
-        val deepColor = ColorUtils.blendARGB(swatchColor, Color.BLACK, 0.55f)
-        animateAmbientToColor(deepColor)
-    }
-
-    private fun animateAmbientToColor(targetColor: Int) {
-        if (!isAdded || _binding == null) return
-        ambientColorAnimator?.cancel()
-        val startColor = currentAmbientColor
-        if (startColor == targetColor) {
-            updateAmbientGradient(targetColor)
-            return
-        }
-
-        ambientColorAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = AMBIENT_ANIMATION_DURATION
-            interpolator = ambientInterpolator
-            addUpdateListener { animator ->
-                val blended = argbEvaluator.evaluate(
-                    animator.animatedFraction,
-                    startColor,
-                    targetColor
-                ) as Int
-                updateAmbientGradient(blended)
-            }
-            start()
-        }
-    }
-
-    private fun updateAmbientGradient(color: Int) {
-        currentAmbientColor = color
-        val widthCandidates = listOf(
-            binding.heroBackdrop.width,
-            binding.ambientBackgroundOverlay.width,
-            resources.displayMetrics.widthPixels
-        ).filter { it > 0 }
-        val heightCandidates = listOf(
-            binding.heroBackdrop.height,
-            binding.ambientBackgroundOverlay.height,
-            resources.displayMetrics.heightPixels
-        ).filter { it > 0 }
-
-        val width = widthCandidates.maxOrNull() ?: resources.displayMetrics.widthPixels
-        val height = heightCandidates.maxOrNull() ?: resources.displayMetrics.heightPixels
-        val radius = max(width, height).toFloat() * 0.95f
-
-        val gradient = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            gradientRadius = radius
-            setGradientCenter(0.32f, 0.28f)
-            colors = intArrayOf(
-                ColorUtils.setAlphaComponent(color, 220),
-                ColorUtils.setAlphaComponent(color, 120),
-                ColorUtils.setAlphaComponent(color, 10)
-            )
-        }
-        binding.ambientBackgroundOverlay.background = gradient
+        HeroLogoLoader.load(
+            fragment = this,
+            logoUrl = logoUrl,
+            logoView = binding.heroLogo,
+            titleView = binding.heroTitle,
+            maxWidthRes = R.dimen.hero_logo_max_width,
+            maxHeightRes = R.dimen.hero_logo_max_height
+        )
     }
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
@@ -515,8 +355,5 @@ class ActorDetailsFragment : Fragment() {
         _binding = null
         heroUpdateJob?.cancel()
         heroUpdateJob = null
-        ambientColorAnimator?.cancel()
-        ambientColorAnimator = null
-        currentAmbientColor = DEFAULT_AMBIENT_COLOR
     }
 }

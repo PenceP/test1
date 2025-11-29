@@ -91,11 +91,16 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.arch.core.testing)
 
     // Lifecycle & ViewModel
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.runtime)
+    implementation(libs.androidx.fragment.ktx)
 
     // WorkManager
     implementation(libs.work.runtime)

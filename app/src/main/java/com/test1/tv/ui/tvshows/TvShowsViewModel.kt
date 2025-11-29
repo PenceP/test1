@@ -4,14 +4,25 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.test1.tv.data.Resource
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.repository.ContentRepository
+import com.test1.tv.data.repository.MediaRepository
+import com.test1.tv.data.repository.WatchStatusProvider
+import com.test1.tv.data.repository.WatchStatusRepository
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.RowPresentation
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class TvShowsViewModel(
-    private val contentRepository: ContentRepository
+@HiltViewModel
+class TvShowsViewModel @Inject constructor(
+    private val contentRepository: ContentRepository,
+    private val mediaRepository: MediaRepository,
+    private val watchStatusRepository: WatchStatusRepository
 ) : ViewModel() {
 
     private val _contentRows = MutableLiveData<List<ContentRow>>()
@@ -27,6 +38,10 @@ class TvShowsViewModel(
     val heroContent: LiveData<ContentItem?> = _heroContent
 
     init {
+        viewModelScope.launch(Dispatchers.IO) {
+            watchStatusRepository.preload()
+            WatchStatusProvider.set(watchStatusRepository)
+        }
         loadTvShowContent()
     }
 
@@ -38,8 +53,9 @@ class TvShowsViewModel(
             try {
                 val rows = mutableListOf<ContentRow>()
 
-                // Fetch trending shows
-                contentRepository.getTrendingShows(forceRefresh).onSuccess { shows ->
+                val trendingResource = mediaRepository.getTrendingShows().last()
+                val trending = mapResource(trendingResource)
+                trending.onSuccess { shows ->
                     if (shows.isNotEmpty()) {
                         rows.add(
                             ContentRow(
@@ -48,7 +64,6 @@ class TvShowsViewModel(
                                 presentation = RowPresentation.PORTRAIT
                             )
                         )
-                        // Set first item as hero if not already set
                         if (_heroContent.value == null) {
                             _heroContent.value = shows.first()
                         }
@@ -57,8 +72,9 @@ class TvShowsViewModel(
                     _error.value = "Failed to load trending shows: ${e.message}"
                 }
 
-                // Fetch popular shows
-                contentRepository.getPopularShows(forceRefresh).onSuccess { shows ->
+                val popularResource = mediaRepository.getPopularShows().last()
+                val popular = mapResource(popularResource)
+                popular.onSuccess { shows ->
                     if (shows.isNotEmpty()) {
                         rows.add(
                             ContentRow(
@@ -91,6 +107,19 @@ class TvShowsViewModel(
                 contentRepository.cleanupCache()
             } catch (e: Exception) {
                 // Silently fail cache cleanup
+            }
+        }
+    }
+
+    private fun mapResource(resource: Resource<List<ContentItem>>): Result<List<ContentItem>> {
+        return when (resource) {
+            is Resource.Success -> Result.success(resource.data)
+            is Resource.Loading -> Result.success(resource.cachedData ?: emptyList())
+            is Resource.Error -> {
+                resource.cachedData?.let { cached ->
+                    if (cached.isNotEmpty()) return Result.success(cached)
+                }
+                Result.failure(resource.exception)
             }
         }
     }

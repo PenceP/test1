@@ -30,16 +30,18 @@ class RateLimiter @Inject constructor() {
      * Suspends if no tokens are available.
      */
     suspend fun acquire() {
-        mutex.withLock {
-            refillTokens()
-            while (availableTokens <= 0) {
-                // Release lock while waiting to allow other coroutines to proceed
-                mutex.unlock()
-                delay(WAIT_INTERVAL_MS)
-                mutex.lock()
+        while (true) {
+            val acquired = mutex.withLock {
                 refillTokens()
+                if (availableTokens > 0) {
+                    availableTokens--
+                    true
+                } else {
+                    false
+                }
             }
-            availableTokens--
+            if (acquired) return
+            delay(WAIT_INTERVAL_MS)
         }
     }
 

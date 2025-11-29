@@ -277,6 +277,6 @@ class AccountsFragment : Fragment() {
 
     private fun refreshItems() {
         val newItems = buildAccountItems()
-        adapter.updateItems(newItems)
+        adapter.submitList(newItems)
     }
 }

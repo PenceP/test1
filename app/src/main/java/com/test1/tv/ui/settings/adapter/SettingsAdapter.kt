@@ -12,6 +12,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.test1.tv.R
 import com.test1.tv.ui.settings.model.AccountAction
@@ -19,8 +21,8 @@ import com.test1.tv.ui.settings.model.SettingsItem
 import com.test1.tv.ui.utils.FocusUtils
 
 class SettingsAdapter(
-    private var items: List<SettingsItem>
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    items: List<SettingsItem>
+) : ListAdapter<SettingsItem, RecyclerView.ViewHolder>(SettingsDiffCallback()) {
 
     companion object {
         private const val TYPE_TOGGLE = 0
@@ -31,7 +33,7 @@ class SettingsAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        return when (items[position]) {
+        return when (getItem(position)) {
             is SettingsItem.Toggle -> TYPE_TOGGLE
             is SettingsItem.AccountCard -> TYPE_ACCOUNT_CARD
             is SettingsItem.Select -> TYPE_SELECT
@@ -57,18 +59,11 @@ class SettingsAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
+        when (val item = getItem(position)) {
             is SettingsItem.Toggle -> (holder as ToggleViewHolder).bind(item)
             is SettingsItem.AccountCard -> (holder as AccountCardViewHolder).bind(item)
             else -> {}
         }
-    }
-
-    override fun getItemCount(): Int = items.size
-
-    fun updateItems(newItems: List<SettingsItem>) {
-        items = newItems
-        notifyDataSetChanged()
     }
 
     // Toggle ViewHolder
@@ -82,7 +77,7 @@ class SettingsAdapter(
             view.setOnClickListener {
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
-                    val item = items[position] as SettingsItem.Toggle
+                    val item = getItem(position) as SettingsItem.Toggle
                     item.onToggle(!item.isEnabled)
                 }
             }

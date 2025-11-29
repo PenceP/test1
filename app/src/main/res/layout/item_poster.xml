@@ -14,6 +14,7 @@
         android:id="@+id/poster_card"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:stateListAnimator="@animator/scale_on_focus"
         app:cardBackgroundColor="@android:color/black"
         app:cardCornerRadius="@dimen/radius_poster"
         app:cardElevation="4dp"

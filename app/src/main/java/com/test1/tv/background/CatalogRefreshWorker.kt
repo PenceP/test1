@@ -10,7 +10,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.test1.tv.ContentRepositoryProvider
+import com.test1.tv.data.repository.ContentRepository
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import com.test1.tv.data.model.ContentItem
 import java.util.concurrent.TimeUnit
 
@@ -20,12 +24,15 @@ class CatalogRefreshWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val repository = ContentRepositoryProvider.provide(applicationContext)
+        val contentRepository = EntryPointAccessors.fromApplication(
+            applicationContext,
+            CatalogWorkerEntryPoint::class.java
+        ).contentRepository()
         return try {
-            refreshCategory(repository::getTrendingMovies)
-            refreshCategory(repository::getPopularMovies)
-            refreshCategory(repository::getTrendingShows)
-            refreshCategory(repository::getPopularShows)
+            refreshCategory(contentRepository::getTrendingMovies)
+            refreshCategory(contentRepository::getPopularMovies)
+            refreshCategory(contentRepository::getTrendingShows)
+            refreshCategory(contentRepository::getPopularShows)
             Result.success()
         } catch (e: Exception) {
             Result.retry()
@@ -76,5 +83,11 @@ class CatalogRefreshWorker(
                 request
             )
         }
+    }
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface CatalogWorkerEntryPoint {
+        fun contentRepository(): ContentRepository
     }
 }

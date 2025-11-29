@@ -19,8 +19,11 @@ import java.time.Instant
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import java.time.format.DateTimeParseException
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ContinueWatchingRepository(
+@Singleton
+class ContinueWatchingRepository @Inject constructor(
     private val traktApiService: TraktApiService,
     private val tmdbApiService: TMDBApiService,
     private val accountRepository: TraktAccountRepository,

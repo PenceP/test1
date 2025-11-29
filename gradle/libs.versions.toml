@@ -8,6 +8,10 @@ retrofit = "2.9.0"
 okhttp = "4.12.0"
 gson = "2.10.1"
 coroutines = "1.8.0"
+coroutinesTest = "1.8.0"
+mockitoKotlin = "5.2.1"
+mockitoCore = "5.12.0"
+archCore = "2.2.0"
 lifecycle = "2.7.0"
 room = "2.6.1"
 ksp = "2.0.21-1.0.25"
@@ -17,6 +21,7 @@ cardview = "1.0.0"
 work = "2.9.0"
 palette = "1.0.0" # Added for extracting colors from images
 hilt = "2.48"
+fragment = "1.8.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,11 +41,16 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 # Coroutines
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockitoCore" }
+mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
+arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 
 # Lifecycle & ViewModel
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle" }
 lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragment" }
 
 # Room
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

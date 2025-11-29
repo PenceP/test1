@@ -10,8 +10,8 @@ import androidx.leanback.widget.HorizontalGridView
 import androidx.recyclerview.widget.RecyclerView
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
-import com.test1.tv.ui.RowScrollPauser
-import com.test1.tv.ui.ScrollThrottler
+import com.test1.tv.ui.SmartRowScrollManager
+import com.test1.tv.ui.SmartScrollThrottler
 
 enum class RowPresentation {
     PORTRAIT,
@@ -30,12 +30,14 @@ class ContentRowAdapter(
     private val onItemFocused: (ContentItem, Int, Int) -> Unit, // item, rowIndex, itemIndex
     private val onNavigateToNavBar: () -> Unit,
     private val onItemLongPress: (ContentItem) -> Unit,
-    private val onRequestMore: (Int) -> Unit
+    private val onRequestMore: (Int) -> Unit,
+    private val viewPool: RecyclerView.RecycledViewPool? = null,
+    private val accentColorCache: com.test1.tv.ui.AccentColorCache
 ) : RecyclerView.Adapter<ContentRowAdapter.RowViewHolder>() {
 
     private val rows = initialRows.toMutableList()
     private val rowAdapters = SparseArray<PosterAdapter>()
-    private val scrollThrottler = ScrollThrottler()
+    private val scrollThrottler = SmartScrollThrottler()
 
     inner class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val rowTitle: TextView = itemView.findViewById(R.id.row_title)
@@ -45,9 +47,13 @@ class ContentRowAdapter(
             rowTitle.text = row.title
 
             var adapter = rowAdapters.get(rowIndex)
-            if (adapter == null) {
+
+            // FIX #1: Check if presentation changed - if so, need new adapter
+            val needsNewAdapter = adapter == null ||
+                !adapter.hasPresentation(row.presentation)
+
+            if (needsNewAdapter) {
                 adapter = PosterAdapter(
-                    initialItems = row.items,
                     onItemClick = onItemClick,
                     onItemFocused = { item, itemIndex ->
                         onItemFocused(item, rowIndex, itemIndex)
@@ -57,13 +63,18 @@ class ContentRowAdapter(
                     presentation = row.presentation,
                     onNearEnd = {
                         onRequestMore(rowIndex)
-                    }
+                    },
+                    accentColorCache = accentColorCache
                 )
                 rowAdapters.put(rowIndex, adapter)
+
+                // Force re-attach since adapter changed
+                rowContent.adapter = null
             }
 
             if (rowContent.adapter !== adapter) {
                 rowContent.adapter = adapter
+                viewPool?.let { rowContent.setRecycledViewPool(it) }
                 rowContent.setNumRows(1)
                 rowContent.setItemSpacing(
                     if (row.presentation == RowPresentation.LANDSCAPE_16_9) 16 else 8
@@ -75,7 +86,7 @@ class ContentRowAdapter(
                 rowContent.setWindowAlignmentOffsetPercent(HorizontalGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED)
                 rowContent.setItemAlignmentOffset(60)
                 rowContent.setItemAlignmentOffsetPercent(HorizontalGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED)
-                RowScrollPauser.attach(rowContent)
+                SmartRowScrollManager.attach(rowContent)
                 rowContent.setOnKeyInterceptListener(scrollThrottler)
             }
 
@@ -88,7 +99,7 @@ class ContentRowAdapter(
             layoutParams.height = rowContent.resources.getDimensionPixelSize(heightRes)
             rowContent.layoutParams = layoutParams
 
-            adapter.replaceAll(row.items)
+            adapter.submitList(row.items.toList())
         }
     }
 
@@ -113,6 +124,9 @@ class ContentRowAdapter(
 
     fun appendItems(rowIndex: Int, newItems: List<ContentItem>) {
         val stateRow = rows.getOrNull(rowIndex) ?: return
-        rowAdapters.get(rowIndex)?.appendItems(newItems)
+        stateRow.items.addAll(newItems)
+        rowAdapters.get(rowIndex)?.submitList(stateRow.items.toList())
     }
+
+    fun currentRows(): List<ContentRow> = rows.toList()
 }

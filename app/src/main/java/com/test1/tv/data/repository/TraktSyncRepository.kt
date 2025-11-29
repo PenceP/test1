@@ -13,8 +13,11 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class TraktSyncRepository(
+@Singleton
+class TraktSyncRepository @Inject constructor(
     private val traktApiService: TraktApiService,
     private val accountRepository: TraktAccountRepository,
     private val userItemDao: TraktUserItemDao

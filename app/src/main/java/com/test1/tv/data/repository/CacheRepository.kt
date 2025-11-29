@@ -6,8 +6,13 @@ import com.test1.tv.data.model.ContentItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CacheRepository(private val cachedContentDao: CachedContentDao) {
+@Singleton
+class CacheRepository @Inject constructor(
+    private val cachedContentDao: CachedContentDao
+) {
 
     companion object {
         private val LIST_TTL = TimeUnit.HOURS.toMillis(24)

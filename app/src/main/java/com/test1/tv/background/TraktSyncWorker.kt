@@ -8,11 +8,12 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.test1.tv.ContentRepositoryProvider
-import com.test1.tv.data.local.AppDatabase
-import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.data.repository.TraktAccountRepository
 import com.test1.tv.data.repository.TraktSyncRepository
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 
 class TraktSyncWorker(
     appContext: Context,
@@ -20,21 +21,14 @@ class TraktSyncWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val db = AppDatabase.getDatabase(applicationContext)
-        val accountRepository = TraktAccountRepository(
-            traktApiService = ApiClient.traktApiService,
-            accountDao = db.traktAccountDao()
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            TraktWorkerEntryPoint::class.java
         )
-        val account = accountRepository.getAccount() ?: return Result.success()
-
-        val syncRepository = TraktSyncRepository(
-            traktApiService = ApiClient.traktApiService,
-            accountRepository = accountRepository,
-            userItemDao = db.traktUserItemDao()
-        )
+        val account = entryPoint.traktAccountRepository().getAccount() ?: return Result.success()
 
         return try {
-            val success = syncRepository.syncAll()
+            val success = entryPoint.traktSyncRepository().syncAll()
             if (success) Result.success() else Result.retry()
         } catch (e: Exception) {
             Result.retry()
@@ -59,5 +53,12 @@ class TraktSyncWorker(
                 request
             )
         }
+    }
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface TraktWorkerEntryPoint {
+        fun traktAccountRepository(): TraktAccountRepository
+        fun traktSyncRepository(): TraktSyncRepository
     }
 }

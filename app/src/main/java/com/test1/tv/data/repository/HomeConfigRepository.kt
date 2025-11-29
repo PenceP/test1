@@ -5,12 +5,14 @@ import com.google.gson.Gson
 import com.test1.tv.data.model.home.HomeConfig
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class HomeConfigRepository(
+@Singleton
+class HomeConfigRepository @Inject constructor(
     private val context: Context,
     private val gson: Gson = Gson()
-)
-{
+) {
     fun loadConfig(): HomeConfig? {
         return runCatching {
             context.assets.open(HOME_CONFIG_FILE).use { input ->

@@ -17,6 +17,8 @@ import androidx.cardview.widget.CardView
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.ViewCompat
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -24,19 +26,20 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
+import com.test1.tv.ui.AccentColorCache
 import androidx.palette.graphics.Palette
 import kotlin.math.max
 import kotlin.math.roundToInt
 
 class PosterAdapter(
-    initialItems: List<ContentItem>,
     private val onItemClick: (ContentItem, ImageView) -> Unit,
     private val onItemFocused: (ContentItem, Int) -> Unit,
     private val onNavigateToNavBar: () -> Unit,
     private val onNearEnd: () -> Unit,
     private val onItemLongPressed: ((ContentItem) -> Unit)? = null,
-    private val presentation: RowPresentation = RowPresentation.PORTRAIT
-) : RecyclerView.Adapter<PosterAdapter.PosterViewHolder>() {
+    private val presentation: RowPresentation = RowPresentation.PORTRAIT,
+    private val accentColorCache: AccentColorCache
+) : ListAdapter<ContentItem, PosterAdapter.PosterViewHolder>(ContentDiffCallback()) {
 
     companion object {
         private const val NEAR_END_THRESHOLD = 14
@@ -46,7 +49,17 @@ class PosterAdapter(
         private const val DEFAULT_BORDER_COLOR = Color.WHITE
     }
 
-    private val posterAccentColors = mutableMapOf<Int, Int>()
+    init {
+        setHasStableIds(true) // FIX #6: Stable IDs for better animations
+    }
+
+    override fun getItemId(position: Int): Long {
+        return getItem(position).tmdbId.toLong()
+    }
+
+    fun hasPresentation(expected: RowPresentation): Boolean {
+        return presentation == expected
+    }
 
     inner class PosterViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val posterImage: ImageView = itemView.findViewById(R.id.poster_image)
@@ -76,13 +89,15 @@ class PosterAdapter(
             titleOverlay.visibility = View.VISIBLE
             cardContainer?.let { ViewCompat.setElevation(it, 6f) }
 
+            val cachedAccent = accentColorCache.get(item)
+
             if (isPlaceholder) {
                 if (item.title.contains("Trakt", ignoreCase = true)) {
                     posterImage.setImageResource(R.drawable.ic_trakt_logo)
                 } else {
                     posterImage.setImageResource(R.drawable.default_background)
                 }
-                posterAccentColors[getColorKey(item)] = DEFAULT_BORDER_COLOR
+                accentColorCache.put(item, DEFAULT_BORDER_COLOR)
             } else {
                 Glide.with(itemView.context)
                     .load(artworkUrl)
@@ -118,11 +133,9 @@ class PosterAdapter(
                                     ) {
                                         posterImage.setImageDrawable(resource)
                                         titleOverlay.visibility = View.GONE  // Hide title when network load succeeds
-                                        val accentColor = extractAccentColor(resource)
-                                        posterAccentColors[getColorKey(item)] = accentColor
-                                        if (itemView.isFocused) {
-                                            applyFocusOverlay(true, accentColor)
-                                        }
+                                        val accentColor = cachedAccent ?: extractAccentColor(resource)
+                                        accentColorCache.put(item, accentColor)
+                                        if (itemView.isFocused) applyFocusOverlay(true, accentColor)
                                     }
                                 })
                         }
@@ -133,8 +146,8 @@ class PosterAdapter(
                         ) {
                             posterImage.setImageDrawable(resource)
                             titleOverlay.visibility = View.GONE
-                            val accentColor = extractAccentColor(resource)
-                            posterAccentColors[getColorKey(item)] = accentColor
+                            val accentColor = cachedAccent ?: extractAccentColor(resource)
+                            accentColorCache.put(item, accentColor)
                             if (itemView.isFocused) {
                                 applyFocusOverlay(true, accentColor)
                             }
@@ -143,30 +156,15 @@ class PosterAdapter(
             }
 
             itemView.setOnFocusChangeListener { _, hasFocus ->
-                val accentColor = posterAccentColors[getColorKey(item)] ?: DEFAULT_BORDER_COLOR
+                val accentColor = accentColorCache.get(item) ?: DEFAULT_BORDER_COLOR
                 applyFocusOverlay(hasFocus, accentColor)
-                val targetScale = if (hasFocus) 1.1f else 1.0f
                 if (hasFocus) {
-                    itemView.animate()
-                        .scaleX(targetScale)
-                        .scaleY(targetScale)
-                        .setDuration(110)
-                        .start()
-
-                    cardContainer?.let { ViewCompat.setElevation(it, 18f) }
                     itemView.playSoundEffect(SoundEffectConstants.CLICK)
                     onItemFocused(item, position)
                     val nearEndIndex = max(itemCount - NEAR_END_THRESHOLD, 0)
                     if (bindingAdapterPosition >= nearEndIndex) {
                         onNearEnd()
                     }
-                } else {
-                    itemView.animate()
-                        .scaleX(1.0f)
-                        .scaleY(1.0f)
-                        .setDuration(90)
-                        .start()
-                    cardContainer?.let { ViewCompat.setElevation(it, 6f) }
                 }
             }
 
@@ -286,23 +284,7 @@ class PosterAdapter(
         return PosterViewHolder(view)
     }
 
-    private val items = initialItems.toMutableList()
-
     override fun onBindViewHolder(holder: PosterViewHolder, position: Int) {
-        holder.bind(items[position], position)
-    }
-
-    override fun getItemCount(): Int = items.size
-
-    fun replaceAll(newItems: List<ContentItem>) {
-        items.clear()
-        items.addAll(newItems)
-        notifyDataSetChanged()
-    }
-
-    fun appendItems(newItems: List<ContentItem>) {
-        val start = items.size
-        items.addAll(newItems)
-        notifyItemRangeInserted(start, newItems.size)
+        holder.bind(getItem(position), position)
     }
 }
