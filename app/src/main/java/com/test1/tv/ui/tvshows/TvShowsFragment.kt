@@ -43,6 +43,7 @@ class TvShowsFragment : Fragment() {
     @Inject lateinit var sharedViewPool: RecyclerView.RecycledViewPool
     @Inject lateinit var rowPrefetchManager: RowPrefetchManager
     @Inject lateinit var accentColorCache: AccentColorCache
+    @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
     private lateinit var contentRowsView: VerticalGridView
     private lateinit var loadingIndicator: ProgressBar
 
@@ -210,7 +211,8 @@ class TvShowsFragment : Fragment() {
         heroEnrichmentJob = HeroExtrasLoader.load(
             scope = viewLifecycleOwner.lifecycleScope,
             existingJob = heroEnrichmentJob,
-            item = item
+            item = item,
+            tmdbApiService = tmdbApiService
         ) { enrichedItem ->
             HeroSectionHelper.updateGenres(heroGenreText, enrichedItem.genres)
             HeroSectionHelper.updateCast(heroCast, enrichedItem.cast)

@@ -89,6 +89,8 @@ class HomeFragment : Fragment() {
     @Inject lateinit var accentColorCache: AccentColorCache
     @Inject lateinit var traktAuthRepository: TraktAuthRepository
     @Inject lateinit var traktAccountRepository: TraktAccountRepository
+    @Inject lateinit var traktApiService: com.test1.tv.data.remote.api.TraktApiService
+    @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
     private var resumedOnce = false
     private var authDialog: androidx.appcompat.app.AlertDialog? = null
     private var awaitingPostAuthRestart = false
@@ -218,7 +220,8 @@ class HomeFragment : Fragment() {
         heroEnrichmentJob = HeroExtrasLoader.load(
             scope = viewLifecycleOwner.lifecycleScope,
             existingJob = heroEnrichmentJob,
-            item = item
+            item = item,
+            tmdbApiService = tmdbApiService
         ) { enrichedItem ->
             HeroSectionHelper.updateGenres(binding.heroGenreText, enrichedItem.genres)
             HeroSectionHelper.updateCast(binding.heroCast, enrichedItem.cast)
@@ -370,7 +373,7 @@ class HomeFragment : Fragment() {
 
             while (isActive && System.currentTimeMillis() < expiresAt) {
                 val tokenResult = runCatching {
-                    ApiClient.traktApiService.pollDeviceToken(
+                    traktApiService.pollDeviceToken(
                         clientId = BuildConfig.TRAKT_CLIENT_ID,
                         clientSecret = BuildConfig.TRAKT_CLIENT_SECRET,
                         deviceCode = deviceCode
@@ -421,7 +424,7 @@ class HomeFragment : Fragment() {
     private suspend fun saveTraktAccount(token: com.test1.tv.data.model.trakt.TraktTokenResponse) {
         val authHeader = "Bearer ${token.accessToken}"
         val profile = runCatching {
-            ApiClient.traktApiService.getUserProfile(
+            traktApiService.getUserProfile(
                 authHeader = authHeader,
                 clientId = BuildConfig.TRAKT_CLIENT_ID
             )

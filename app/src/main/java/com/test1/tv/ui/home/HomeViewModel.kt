@@ -20,8 +20,10 @@ import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.RowPresentation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.TimeoutException
 import kotlin.math.max
 import kotlin.math.min
 import javax.inject.Inject
@@ -146,11 +148,17 @@ class HomeViewModel @Inject constructor(
 
     fun refreshAfterAuth() {
         viewModelScope.launch {
+            _refreshComplete.value = false
+            _heroContent.value = null  // CRITICAL: Clear hero first to prevent desync
+
             rowStates.clear()
             _contentRows.value = emptyList()
-            _refreshComplete.value = false
+            kotlinx.coroutines.delay(100)  // Let UI clear
+
             buildRows()
             loadInitialRows(forceRefresh = true)
+
+            // Set refresh complete AFTER loading finishes (not before)
             _refreshComplete.postValue(true)
         }
     }
@@ -166,10 +174,30 @@ class HomeViewModel @Inject constructor(
 
         state.isLoading = true
         val result: Result<List<ContentItem>> = when (state.category) {
-            ContentRepository.CATEGORY_TRENDING_MOVIES -> mapResource(mediaRepository.getTrendingMovies(page).last())
-            ContentRepository.CATEGORY_POPULAR_MOVIES -> mapResource(mediaRepository.getPopularMovies(page).last())
-            ContentRepository.CATEGORY_TRENDING_SHOWS -> mapResource(mediaRepository.getTrendingShows(page).last())
-            ContentRepository.CATEGORY_POPULAR_SHOWS -> mapResource(mediaRepository.getPopularShows(page).last())
+            ContentRepository.CATEGORY_TRENDING_MOVIES -> {
+                val resource = withTimeoutOrNull(15_000L) {
+                    mediaRepository.getTrendingMovies(page).first { it !is Resource.Loading }
+                } ?: Resource.Error(TimeoutException("Request timed out"), null)
+                mapResource(resource)
+            }
+            ContentRepository.CATEGORY_POPULAR_MOVIES -> {
+                val resource = withTimeoutOrNull(15_000L) {
+                    mediaRepository.getPopularMovies(page).first { it !is Resource.Loading }
+                } ?: Resource.Error(TimeoutException("Request timed out"), null)
+                mapResource(resource)
+            }
+            ContentRepository.CATEGORY_TRENDING_SHOWS -> {
+                val resource = withTimeoutOrNull(15_000L) {
+                    mediaRepository.getTrendingShows(page).first { it !is Resource.Loading }
+                } ?: Resource.Error(TimeoutException("Request timed out"), null)
+                mapResource(resource)
+            }
+            ContentRepository.CATEGORY_POPULAR_SHOWS -> {
+                val resource = withTimeoutOrNull(15_000L) {
+                    mediaRepository.getPopularShows(page).first { it !is Resource.Loading }
+                } ?: Resource.Error(TimeoutException("Request timed out"), null)
+                mapResource(resource)
+            }
             ContentRepository.CATEGORY_CONTINUE_WATCHING -> Result.success(emptyList())
             else -> Result.success(emptyList())
         }

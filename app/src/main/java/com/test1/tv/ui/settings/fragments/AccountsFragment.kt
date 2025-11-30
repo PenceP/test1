@@ -13,11 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.test1.tv.R
 import com.test1.tv.background.TraktSyncWorker
-import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.local.entity.TraktAccount
-import com.test1.tv.data.remote.ApiClient
-import com.test1.tv.data.repository.TraktAccountRepository
-import com.test1.tv.data.repository.TraktAuthRepository
 import com.test1.tv.ui.settings.adapter.SettingsAdapter
 import com.test1.tv.ui.settings.model.AccountAction
 import com.test1.tv.ui.settings.model.SettingsItem
@@ -28,20 +24,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class AccountsFragment : Fragment() {
 
     private lateinit var accountsList: VerticalGridView
     private lateinit var adapter: SettingsAdapter
-    private val traktAuthRepository = TraktAuthRepository(ApiClient.traktApiService)
-    private val accountRepository by lazy {
-        val db = AppDatabase.getDatabase(requireContext())
-        TraktAccountRepository(ApiClient.traktApiService, db.traktAccountDao())
-    }
-    private val traktUserItemDao by lazy {
-        AppDatabase.getDatabase(requireContext()).traktUserItemDao()
-    }
+
+    @Inject lateinit var traktAuthRepository: com.test1.tv.data.repository.TraktAuthRepository
+    @Inject lateinit var accountRepository: com.test1.tv.data.repository.TraktAccountRepository
+    @Inject lateinit var traktUserItemDao: com.test1.tv.data.local.dao.TraktUserItemDao
+    @Inject lateinit var traktApiService: com.test1.tv.data.remote.api.TraktApiService
+
     private var traktAccount: TraktAccount? = null
 
     // Example state (in real app, use ViewModel)
@@ -210,7 +205,7 @@ class AccountsFragment : Fragment() {
 
             while (isActive && System.currentTimeMillis() < expiresAt) {
                 val tokenResult = runCatching {
-                    ApiClient.traktApiService.pollDeviceToken(
+                    traktApiService.pollDeviceToken(
                         clientId = com.test1.tv.BuildConfig.TRAKT_CLIENT_ID,
                         clientSecret = com.test1.tv.BuildConfig.TRAKT_CLIENT_SECRET,
                         deviceCode = deviceCode
@@ -234,7 +229,7 @@ class AccountsFragment : Fragment() {
     private suspend fun onDeviceTokenReceived(token: com.test1.tv.data.model.trakt.TraktTokenResponse) {
         val authHeader = "Bearer ${token.accessToken}"
         val profile = runCatching {
-            ApiClient.traktApiService.getUserProfile(
+            traktApiService.getUserProfile(
                 authHeader = authHeader,
                 clientId = com.test1.tv.BuildConfig.TRAKT_CLIENT_ID
             )

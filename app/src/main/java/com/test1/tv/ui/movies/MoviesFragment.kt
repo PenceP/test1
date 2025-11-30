@@ -72,6 +72,7 @@ class MoviesFragment : Fragment() {
         private const val TAG = "MoviesFragment"
     }
     @Inject lateinit var accentColorCache: AccentColorCache
+    @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -211,7 +212,8 @@ class MoviesFragment : Fragment() {
         heroEnrichmentJob = HeroExtrasLoader.load(
             scope = viewLifecycleOwner.lifecycleScope,
             existingJob = heroEnrichmentJob,
-            item = item
+            item = item,
+            tmdbApiService = tmdbApiService
         ) { enrichedItem ->
             HeroSectionHelper.updateGenres(heroGenreText, enrichedItem.genres)
             HeroSectionHelper.updateCast(heroCast, enrichedItem.cast)

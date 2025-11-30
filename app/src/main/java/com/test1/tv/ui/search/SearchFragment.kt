@@ -45,6 +45,7 @@ class SearchFragment : Fragment() {
 
     private lateinit var viewModel: SearchViewModel
     @Inject lateinit var accentColorCache: AccentColorCache
+    @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -93,7 +94,7 @@ class SearchFragment : Fragment() {
     }
 
     private fun setupViewModel() {
-        val repo = SearchRepository(ApiClient.tmdbApiService)
+        val repo = SearchRepository(tmdbApiService)
         val factory = SearchViewModelFactory(repo)
         viewModel = ViewModelProvider(this, factory)[SearchViewModel::class.java]
     }

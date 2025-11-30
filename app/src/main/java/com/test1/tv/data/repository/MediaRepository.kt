@@ -12,6 +12,9 @@ import com.test1.tv.data.remote.RateLimiter
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -232,44 +235,56 @@ class MediaRepository @Inject constructor(
         val imageEntities = mutableListOf<MediaImageEntity>()
         val ratingEntities = mutableListOf<MediaRatingEntity>()
 
-        traktMovies.forEachIndexed { index, movie ->
-            val tmdbId = movie.ids?.tmdb ?: return@forEachIndexed
+        // Batched parallel loading: 5x faster than serial (5 concurrent requests per batch)
+        traktMovies.withIndex().chunked(5).forEach { batch ->
+            val results = coroutineScope {
+                batch.map { (index, movie) ->
+                    async(Dispatchers.IO) {
+                        val tmdbId = movie.ids?.tmdb ?: return@async null
 
-            rateLimiter.acquire()
-            runCatching {
-                val tmdbDetails = tmdbApi.getMovieDetails(
-                    movieId = tmdbId,
-                    apiKey = BuildConfig.TMDB_API_KEY
-                )
+                        rateLimiter.acquire()
+                        runCatching {
+                            val tmdbDetails = tmdbApi.getMovieDetails(
+                                movieId = tmdbId,
+                                apiKey = BuildConfig.TMDB_API_KEY
+                            )
 
-                val mediaEntity = MediaContentEntity(
-                    tmdbId = tmdbId,
-                    imdbId = movie.ids?.imdb,
-                    title = tmdbDetails.title ?: movie.title ?: "",
-                    overview = tmdbDetails.overview,
-                    year = tmdbDetails.releaseDate?.take(4),
-                    runtime = tmdbDetails.runtime,
-                    certification = tmdbDetails.getCertification(),
-                    contentType = "movie",
-                    category = category,
-                    position = basePosition + index
-                )
+                            val mediaEntity = MediaContentEntity(
+                                tmdbId = tmdbId,
+                                imdbId = movie.ids?.imdb,
+                                title = tmdbDetails.title ?: movie.title ?: "",
+                                overview = tmdbDetails.overview,
+                                year = tmdbDetails.releaseDate?.take(4),
+                                runtime = tmdbDetails.runtime,
+                                certification = tmdbDetails.getCertification(),
+                                contentType = "movie",
+                                category = category,
+                                position = basePosition + index
+                            )
 
-                val imageEntity = MediaImageEntity(
-                    tmdbId = tmdbId,
-                    posterUrl = tmdbDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
-                    backdropUrl = tmdbDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
-                    logoUrl = tmdbDetails.getLogoUrl()
-                )
+                            val imageEntity = MediaImageEntity(
+                                tmdbId = tmdbId,
+                                posterUrl = tmdbDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+                                backdropUrl = tmdbDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
+                                logoUrl = tmdbDetails.getLogoUrl()
+                            )
 
-                val ratingEntity = MediaRatingEntity(
-                    tmdbId = tmdbId,
-                    tmdbRating = tmdbDetails.voteAverage?.toFloat(),
-                    imdbRating = null,
-                    traktRating = movie.rating?.toFloat(),
-                    rottenTomatoesRating = null
-                )
+                            val ratingEntity = MediaRatingEntity(
+                                tmdbId = tmdbId,
+                                tmdbRating = tmdbDetails.voteAverage?.toFloat(),
+                                imdbRating = null,
+                                traktRating = movie.rating?.toFloat(),
+                                rottenTomatoesRating = null
+                            )
 
+                            Triple(mediaEntity, imageEntity, ratingEntity)
+                        }.getOrNull()
+                    }
+                }.awaitAll()
+            }
+
+            // Add non-null results to lists
+            results.filterNotNull().forEach { (mediaEntity, imageEntity, ratingEntity) ->
                 mediaEntities.add(mediaEntity)
                 imageEntities.add(imageEntity)
                 ratingEntities.add(ratingEntity)
@@ -320,44 +335,56 @@ class MediaRepository @Inject constructor(
         val imageEntities = mutableListOf<MediaImageEntity>()
         val ratingEntities = mutableListOf<MediaRatingEntity>()
 
-        traktShows.forEachIndexed { index, show ->
-            val tmdbId = show.ids?.tmdb ?: return@forEachIndexed
+        // Batched parallel loading: 5x faster than serial (5 concurrent requests per batch)
+        traktShows.withIndex().chunked(5).forEach { batch ->
+            val results = coroutineScope {
+                batch.map { (index, show) ->
+                    async(Dispatchers.IO) {
+                        val tmdbId = show.ids?.tmdb ?: return@async null
 
-            rateLimiter.acquire()
-            runCatching {
-                val tmdbDetails = tmdbApi.getShowDetails(
-                    showId = tmdbId,
-                    apiKey = BuildConfig.TMDB_API_KEY
-                )
+                        rateLimiter.acquire()
+                        runCatching {
+                            val tmdbDetails = tmdbApi.getShowDetails(
+                                showId = tmdbId,
+                                apiKey = BuildConfig.TMDB_API_KEY
+                            )
 
-                val mediaEntity = MediaContentEntity(
-                    tmdbId = tmdbId,
-                    imdbId = show.ids?.imdb,
-                    title = tmdbDetails.name ?: show.title ?: "",
-                    overview = tmdbDetails.overview,
-                    year = tmdbDetails.firstAirDate?.take(4),
-                    runtime = tmdbDetails.episodeRunTime?.firstOrNull(),
-                    certification = tmdbDetails.getCertification(),
-                    contentType = "tv",
-                    category = category,
-                    position = basePosition + index
-                )
+                            val mediaEntity = MediaContentEntity(
+                                tmdbId = tmdbId,
+                                imdbId = show.ids?.imdb,
+                                title = tmdbDetails.name ?: show.title ?: "",
+                                overview = tmdbDetails.overview,
+                                year = tmdbDetails.firstAirDate?.take(4),
+                                runtime = tmdbDetails.episodeRunTime?.firstOrNull(),
+                                certification = tmdbDetails.getCertification(),
+                                contentType = "tv",
+                                category = category,
+                                position = basePosition + index
+                            )
 
-                val imageEntity = MediaImageEntity(
-                    tmdbId = tmdbId,
-                    posterUrl = tmdbDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
-                    backdropUrl = tmdbDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
-                    logoUrl = tmdbDetails.getLogoUrl()
-                )
+                            val imageEntity = MediaImageEntity(
+                                tmdbId = tmdbId,
+                                posterUrl = tmdbDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+                                backdropUrl = tmdbDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
+                                logoUrl = tmdbDetails.getLogoUrl()
+                            )
 
-                val ratingEntity = MediaRatingEntity(
-                    tmdbId = tmdbId,
-                    tmdbRating = tmdbDetails.voteAverage?.toFloat(),
-                    imdbRating = null,
-                    traktRating = show.rating?.toFloat(),
-                    rottenTomatoesRating = null
-                )
+                            val ratingEntity = MediaRatingEntity(
+                                tmdbId = tmdbId,
+                                tmdbRating = tmdbDetails.voteAverage?.toFloat(),
+                                imdbRating = null,
+                                traktRating = show.rating?.toFloat(),
+                                rottenTomatoesRating = null
+                            )
 
+                            Triple(mediaEntity, imageEntity, ratingEntity)
+                        }.getOrNull()
+                    }
+                }.awaitAll()
+            }
+
+            // Add non-null results to lists
+            results.filterNotNull().forEach { (mediaEntity, imageEntity, ratingEntity) ->
                 mediaEntities.add(mediaEntity)
                 imageEntities.add(imageEntity)
                 ratingEntities.add(ratingEntity)

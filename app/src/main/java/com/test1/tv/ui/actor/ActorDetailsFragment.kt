@@ -22,7 +22,6 @@ import com.test1.tv.BuildConfig
 import com.test1.tv.DetailsActivity
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
-import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.databinding.FragmentActorDetailsBinding
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.HeroBackgroundController
@@ -36,6 +35,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ActorDetailsFragment : Fragment() {
@@ -51,6 +51,8 @@ class ActorDetailsFragment : Fragment() {
 
     private var rowsAdapter: ContentRowAdapter? = null
     private var heroUpdateJob: Job? = null
+
+    @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
 
     companion object {
         private const val TAG = "ActorDetailsFragment"
@@ -126,7 +128,7 @@ class ActorDetailsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val personDetails = withContext(Dispatchers.IO) {
-                    ApiClient.tmdbApiService.getPersonDetails(
+                    tmdbApiService.getPersonDetails(
                         personId = personId,
                         apiKey = BuildConfig.TMDB_API_KEY
                     )
@@ -271,7 +273,7 @@ class ActorDetailsFragment : Fragment() {
         runCatching {
             when (item.type) {
                 ContentItem.ContentType.MOVIE -> {
-                    val details = ApiClient.tmdbApiService.getMovieDetails(
+                    val details = tmdbApiService.getMovieDetails(
                         movieId = item.tmdbId,
                         apiKey = BuildConfig.TMDB_API_KEY,
                         appendToResponse = "credits,images"
@@ -288,7 +290,7 @@ class ActorDetailsFragment : Fragment() {
                     )
                 }
                 ContentItem.ContentType.TV_SHOW -> {
-                    val details = ApiClient.tmdbApiService.getShowDetails(
+                    val details = tmdbApiService.getShowDetails(
                         showId = item.tmdbId,
                         apiKey = BuildConfig.TMDB_API_KEY,
                         appendToResponse = "credits,images,content_ratings"

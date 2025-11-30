@@ -39,23 +39,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun continueWatchingDao(): ContinueWatchingDao
     abstract fun watchStatusDao(): WatchStatusDao
     abstract fun mediaDao(): MediaDao
-
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
-
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "test1_tv_database"
-                )
-                    .fallbackToDestructiveMigration()
-                    .build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
 }

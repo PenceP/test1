@@ -3,7 +3,7 @@ package com.test1.tv.ui
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.test1.tv.BuildConfig
 import com.test1.tv.data.model.ContentItem
-import com.test1.tv.data.remote.ApiClient
+import com.test1.tv.data.remote.api.TMDBApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -17,6 +17,7 @@ object HeroExtrasLoader {
         scope: LifecycleCoroutineScope,
         existingJob: Job?,
         item: ContentItem,
+        tmdbApiService: TMDBApiService,
         onUpdated: (ContentItem) -> Unit
     ): Job {
         existingJob?.cancel()
@@ -24,7 +25,7 @@ object HeroExtrasLoader {
             val enriched = runCatching {
                 when (item.type) {
                     ContentItem.ContentType.MOVIE -> {
-                        val details = ApiClient.tmdbApiService.getMovieDetails(
+                        val details = tmdbApiService.getMovieDetails(
                             movieId = item.tmdbId,
                             apiKey = BuildConfig.TMDB_API_KEY,
                             appendToResponse = "credits,images"
@@ -35,7 +36,7 @@ object HeroExtrasLoader {
                         )
                     }
                     ContentItem.ContentType.TV_SHOW -> {
-                        val details = ApiClient.tmdbApiService.getShowDetails(
+                        val details = tmdbApiService.getShowDetails(
                             showId = item.tmdbId,
                             apiKey = BuildConfig.TMDB_API_KEY,
                             appendToResponse = "credits,images,content_ratings"

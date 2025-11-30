@@ -119,6 +119,9 @@ class DetailsFragment : Fragment() {
     private var seasonAdapter: SeasonAdapter? = null
     private var episodeAdapter: EpisodeAdapter? = null
     @Inject lateinit var accentColorCache: AccentColorCache
+    @Inject lateinit var rateLimiter: com.test1.tv.data.remote.RateLimiter
+    @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
+    @Inject lateinit var traktApiService: com.test1.tv.data.remote.api.TraktApiService
 
     private var showTitleOriginal: String? = null
     private var showMetadataOriginal: CharSequence? = null
@@ -407,7 +410,8 @@ class DetailsFragment : Fragment() {
     private suspend fun fetchMovieDetails(tmdbId: Int) = withContext(Dispatchers.IO) {
         try {
             // Fetch movie details with credits
-            val movieDetails = ApiClient.tmdbApiService.getMovieDetails(
+            rateLimiter.acquire()
+            val movieDetails = tmdbApiService.getMovieDetails(
                 movieId = tmdbId,
                 apiKey = BuildConfig.TMDB_API_KEY
             )
@@ -422,7 +426,8 @@ class DetailsFragment : Fragment() {
 
             // Fetch collection if exists
             val collectionMovies = movieDetails.belongsToCollection?.let { collection ->
-                ApiClient.tmdbApiService.getCollectionDetails(
+                rateLimiter.acquire()
+                tmdbApiService.getCollectionDetails(
                     collectionId = collection.id,
                     apiKey = BuildConfig.TMDB_API_KEY
                 )
@@ -454,7 +459,8 @@ class DetailsFragment : Fragment() {
     private suspend fun fetchShowDetails(tmdbId: Int) = withContext(Dispatchers.IO) {
         try {
             // Fetch show details with credits
-            val showDetails = ApiClient.tmdbApiService.getShowDetails(
+            rateLimiter.acquire()
+            val showDetails = tmdbApiService.getShowDetails(
                 showId = tmdbId,
                 apiKey = BuildConfig.TMDB_API_KEY
             )
@@ -491,7 +497,7 @@ class DetailsFragment : Fragment() {
         }
 
         val relatedMovies = runCatching {
-            ApiClient.traktApiService.getRelatedMovies(
+            traktApiService.getRelatedMovies(
                 movieId = imdbId,
                 clientId = BuildConfig.TRAKT_CLIENT_ID
             )
@@ -511,7 +517,8 @@ class DetailsFragment : Fragment() {
 
                 async(Dispatchers.IO) {
                     runCatching {
-                        ApiClient.tmdbApiService.getMovieDetails(
+                        rateLimiter.acquire()  // Wait for rate limit token
+                        tmdbApiService.getMovieDetails(
                             movieId = relatedTmdbId,
                             apiKey = BuildConfig.TMDB_API_KEY
                         )
@@ -557,7 +564,7 @@ class DetailsFragment : Fragment() {
         }
 
         val relatedShows = runCatching {
-            ApiClient.traktApiService.getRelatedShows(
+            traktApiService.getRelatedShows(
                 showId = imdbId,
                 clientId = BuildConfig.TRAKT_CLIENT_ID
             )
@@ -577,7 +584,8 @@ class DetailsFragment : Fragment() {
 
                 async(Dispatchers.IO) {
                     runCatching {
-                        ApiClient.tmdbApiService.getShowDetails(
+                        rateLimiter.acquire()  // Wait for rate limit token
+                        tmdbApiService.getShowDetails(
                             showId = relatedTmdbId,
                             apiKey = BuildConfig.TMDB_API_KEY
                         )
@@ -773,7 +781,8 @@ class DetailsFragment : Fragment() {
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val seasonDetails = withContext(Dispatchers.IO) {
-                    ApiClient.tmdbApiService.getSeasonDetails(
+                    rateLimiter.acquire()
+                    tmdbApiService.getSeasonDetails(
                         showId = showId,
                         seasonNumber = seasonNumber,
                         apiKey = BuildConfig.TMDB_API_KEY

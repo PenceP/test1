@@ -58,6 +58,7 @@ class PosterAdapter(
 
     init {
         setHasStableIds(true) // FIX #6: Stable IDs for better animations
+        stateRestorationPolicy = StateRestorationPolicy.PREVENT_WHEN_EMPTY
     }
 
     override fun getItemId(position: Int): Long {
