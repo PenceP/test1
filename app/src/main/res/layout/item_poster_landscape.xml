@@ -44,6 +44,14 @@
             android:textSize="@dimen/text_hero_metadata"
             android:visibility="visible"
             tools:text="Continue Watching" />
+
+        <View
+            android:id="@+id/progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="7dp"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            android:background="@drawable/progress_bar_round_red" />
     </androidx.cardview.widget.CardView>
 
     <View

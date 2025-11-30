@@ -182,7 +182,8 @@ class TvShowsFragment : Fragment() {
 
         // Update text content
         heroTitle.text = item.title
-        heroOverview.text = item.overview ?: ""
+        val overview = HeroSectionHelper.buildOverviewText(item)
+        heroOverview.text = overview ?: ""
         updateHeroLogo(item.logoUrl)
         HeroSectionHelper.updateGenres(heroGenreText, item.genres)
         HeroSectionHelper.updateHeroMetadata(heroMetadata, item)

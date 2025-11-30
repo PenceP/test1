@@ -200,7 +200,8 @@ class HomeFragment : Fragment() {
 
         // Update text content
         binding.heroTitle.text = item.title
-        binding.heroOverview.text = item.overview ?: ""
+        val overview = HeroSectionHelper.buildOverviewText(item)
+        binding.heroOverview.text = overview ?: ""
         HeroSectionHelper.updateHeroMetadata(binding.heroMetadata, item)
         updateHeroLogo(item.logoUrl)
         HeroSectionHelper.updateGenres(binding.heroGenreText, item.genres)

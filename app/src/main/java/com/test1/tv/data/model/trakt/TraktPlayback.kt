@@ -12,3 +12,7 @@ data class TraktPlaybackItem(
     @SerializedName("show") val show: TraktShow?,
     @SerializedName("episode") val episode: TraktEpisode?
 )
+
+data class RemovePlaybackRequest(
+    val id: Long
+)

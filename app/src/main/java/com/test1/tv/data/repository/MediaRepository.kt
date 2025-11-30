@@ -4,6 +4,7 @@ import com.test1.tv.BuildConfig
 import com.test1.tv.data.Resource
 import com.test1.tv.data.local.MediaContentEntity
 import com.test1.tv.data.local.MediaImageEntity
+import com.test1.tv.data.local.MediaRatingEntity
 import com.test1.tv.data.local.MediaWithImages
 import com.test1.tv.data.local.dao.MediaDao
 import com.test1.tv.data.model.ContentItem
@@ -229,6 +230,7 @@ class MediaRepository @Inject constructor(
         val contentItems = mutableListOf<ContentItem>()
         val mediaEntities = mutableListOf<MediaContentEntity>()
         val imageEntities = mutableListOf<MediaImageEntity>()
+        val ratingEntities = mutableListOf<MediaRatingEntity>()
 
         traktMovies.forEachIndexed { index, movie ->
             val tmdbId = movie.ids?.tmdb ?: return@forEachIndexed
@@ -260,17 +262,26 @@ class MediaRepository @Inject constructor(
                     logoUrl = tmdbDetails.getLogoUrl()
                 )
 
+                val ratingEntity = MediaRatingEntity(
+                    tmdbId = tmdbId,
+                    tmdbRating = tmdbDetails.voteAverage?.toFloat(),
+                    imdbRating = null,
+                    traktRating = movie.rating?.toFloat(),
+                    rottenTomatoesRating = null
+                )
+
                 mediaEntities.add(mediaEntity)
                 imageEntities.add(imageEntity)
-                contentItems.add(toContentItem(mediaEntity, imageEntity))
+                ratingEntities.add(ratingEntity)
+                contentItems.add(toContentItem(mediaEntity, imageEntity, ratingEntity))
             }
         }
 
         // Use replace for page 1 (clears old data), append for page > 1 (accumulates)
         if (page == 1) {
-            mediaDao.replaceCategory(category, mediaEntities, imageEntities)
+            mediaDao.replaceCategory(category, mediaEntities, imageEntities, ratingEntities)
         } else {
-            mediaDao.appendToCategory(mediaEntities, imageEntities)
+            mediaDao.appendToCategory(mediaEntities, imageEntities, ratingEntities)
         }
 
         return Resource.Success(contentItems)
@@ -307,6 +318,7 @@ class MediaRepository @Inject constructor(
         val contentItems = mutableListOf<ContentItem>()
         val mediaEntities = mutableListOf<MediaContentEntity>()
         val imageEntities = mutableListOf<MediaImageEntity>()
+        val ratingEntities = mutableListOf<MediaRatingEntity>()
 
         traktShows.forEachIndexed { index, show ->
             val tmdbId = show.ids?.tmdb ?: return@forEachIndexed
@@ -338,17 +350,26 @@ class MediaRepository @Inject constructor(
                     logoUrl = tmdbDetails.getLogoUrl()
                 )
 
+                val ratingEntity = MediaRatingEntity(
+                    tmdbId = tmdbId,
+                    tmdbRating = tmdbDetails.voteAverage?.toFloat(),
+                    imdbRating = null,
+                    traktRating = show.rating?.toFloat(),
+                    rottenTomatoesRating = null
+                )
+
                 mediaEntities.add(mediaEntity)
                 imageEntities.add(imageEntity)
-                contentItems.add(toContentItem(mediaEntity, imageEntity))
+                ratingEntities.add(ratingEntity)
+                contentItems.add(toContentItem(mediaEntity, imageEntity, ratingEntity))
             }
         }
 
         // Use replace for page 1 (clears old data), append for page > 1 (accumulates)
         if (page == 1) {
-            mediaDao.replaceCategory(category, mediaEntities, imageEntities)
+            mediaDao.replaceCategory(category, mediaEntities, imageEntities, ratingEntities)
         } else {
-            mediaDao.appendToCategory(mediaEntities, imageEntities)
+            mediaDao.appendToCategory(mediaEntities, imageEntities, ratingEntities)
         }
 
         return Resource.Success(contentItems)
@@ -371,13 +392,13 @@ class MediaRepository @Inject constructor(
             logoUrl = images?.logoUrl,
             genres = null, // TODO: Add genres table
             cast = null, // TODO: Add cast table
-            rating = null, // TODO: Get from ratings table
-            ratingPercentage = null,
+            rating = ratings?.tmdbRating?.toDouble(),
+            ratingPercentage = ratings?.tmdbRating?.times(10)?.toInt(),
             type = if (content.contentType == "movie") ContentItem.ContentType.MOVIE else ContentItem.ContentType.TV_SHOW,
             certification = content.certification,
-            imdbRating = null,
-            rottenTomatoesRating = null,
-            traktRating = null,
+            imdbRating = ratings?.imdbRating?.toString(),
+            rottenTomatoesRating = ratings?.rottenTomatoesRating?.toString(),
+            traktRating = ratings?.traktRating?.toDouble(),
             watchProgress = progress?.progress?.toDouble()
         )
     }
@@ -385,7 +406,11 @@ class MediaRepository @Inject constructor(
     /**
      * Helper to create ContentItem from separate entities.
      */
-    private fun toContentItem(content: MediaContentEntity, images: MediaImageEntity): ContentItem {
+    private fun toContentItem(
+        content: MediaContentEntity,
+        images: MediaImageEntity,
+        ratings: MediaRatingEntity
+    ): ContentItem {
         return ContentItem(
             id = content.tmdbId,
             tmdbId = content.tmdbId,
@@ -399,13 +424,13 @@ class MediaRepository @Inject constructor(
             logoUrl = images.logoUrl,
             genres = null,
             cast = null,
-            rating = null,
-            ratingPercentage = null,
+            rating = ratings.tmdbRating?.toDouble(),
+            ratingPercentage = ratings.tmdbRating?.times(10)?.toInt(),
             type = if (content.contentType == "movie") ContentItem.ContentType.MOVIE else ContentItem.ContentType.TV_SHOW,
             certification = content.certification,
-            imdbRating = null,
-            rottenTomatoesRating = null,
-            traktRating = null
+            imdbRating = ratings.imdbRating?.toString(),
+            rottenTomatoesRating = ratings.rottenTomatoesRating?.toString(),
+            traktRating = ratings.traktRating?.toDouble()
         )
     }
 }

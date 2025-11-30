@@ -63,6 +63,9 @@ interface MediaDao {
     suspend fun insertRatings(ratings: MediaRatingEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRatingsBatch(ratings: List<MediaRatingEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProgress(progress: WatchProgressEntity)
 
     // ==================== Updates ====================
@@ -88,11 +91,13 @@ interface MediaDao {
     suspend fun replaceCategory(
         category: String,
         contents: List<MediaContentEntity>,
-        images: List<MediaImageEntity>
+        images: List<MediaImageEntity>,
+        ratings: List<MediaRatingEntity>
     ) {
         clearCategory(category)
         insertContents(contents)
         insertImagesBatch(images)
+        insertRatingsBatch(ratings)
     }
 
     /**
@@ -102,10 +107,12 @@ interface MediaDao {
     @Transaction
     suspend fun appendToCategory(
         contents: List<MediaContentEntity>,
-        images: List<MediaImageEntity>
+        images: List<MediaImageEntity>,
+        ratings: List<MediaRatingEntity>
     ) {
         insertContents(contents)
         insertImagesBatch(images)
+        insertRatingsBatch(ratings)
     }
 
     /**

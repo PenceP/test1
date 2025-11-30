@@ -57,6 +57,16 @@ interface TMDBApiService {
         @Query("api_key") apiKey: String
     ): TMDBSeasonDetails
 
+    @GET("tv/{tv_id}/season/{season_number}/episode/{episode_number}")
+    suspend fun getEpisodeDetails(
+        @Path("tv_id") showId: Int,
+        @Path("season_number") seasonNumber: Int,
+        @Path("episode_number") episodeNumber: Int,
+        @Query("api_key") apiKey: String,
+        @Query("append_to_response") appendToResponse: String = "images,external_ids",
+        @Query("include_image_language") includeImageLanguage: String = "en,null"
+    ): com.test1.tv.data.model.tmdb.TMDBEpisode
+
     @GET("person/{person_id}")
     suspend fun getPersonDetails(
         @Path("person_id") personId: Int,

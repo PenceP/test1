@@ -103,10 +103,8 @@ object AppModule {
     fun provideContinueWatchingRepository(
         traktApiService: TraktApiService,
         tmdbApiService: TMDBApiService,
-        accountRepository: TraktAccountRepository,
-        continueWatchingDao: com.test1.tv.data.local.dao.ContinueWatchingDao,
-        watchStatusRepository: WatchStatusRepository
-    ) = ContinueWatchingRepository(traktApiService, tmdbApiService, accountRepository, continueWatchingDao, watchStatusRepository)
+        accountRepository: TraktAccountRepository
+    ) = ContinueWatchingRepository(traktApiService, tmdbApiService, accountRepository)
 
     @Provides
     @Singleton

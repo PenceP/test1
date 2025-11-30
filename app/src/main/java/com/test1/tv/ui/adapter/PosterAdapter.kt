@@ -48,10 +48,12 @@ class PosterAdapter(
 
     companion object {
         private const val NEAR_END_THRESHOLD = 14
-        private const val BORDER_WIDTH_DP = 20f
+        private const val BORDER_WIDTH_DP = 2f
         private const val PORTRAIT_RADIUS_DP = 18f
         private const val LANDSCAPE_RADIUS_DP = 16f
         private const val DEFAULT_BORDER_COLOR = Color.WHITE
+        private const val SCALE_FOCUSED = 1.1f
+        private const val SCALE_UNFOCUSED = 1.0f
     }
 
     init {
@@ -76,6 +78,7 @@ class PosterAdapter(
         val titleOverlay: TextView = itemView.findViewById(R.id.poster_title_overlay)
         val cardContainer: CardView? = itemView.findViewById(R.id.poster_card)
         val watchedBadge: ImageView? = itemView.findViewById(R.id.watched_badge)
+        val progressBar: View? = itemView.findViewById(R.id.progress_bar)
         private var paletteJob: Job? = null
 
         fun bind(item: ContentItem, position: Int) {
@@ -83,13 +86,22 @@ class PosterAdapter(
             posterImage.setImageDrawable(null)
             titleOverlay.text = ""
             titleOverlay.visibility = View.VISIBLE
+            itemView.scaleX = SCALE_UNFOCUSED
+            itemView.scaleY = SCALE_UNFOCUSED
             watchedBadge?.setImageResource(R.drawable.ic_check_badge)
             watchedBadge?.visibility = View.GONE
             watchedBadge?.alpha = 1f
             watchedBadge?.elevation = 24f
+            progressBar?.visibility = View.GONE
+            progressBar?.alpha = 1f
 
             val artworkUrl = if (presentation == RowPresentation.LANDSCAPE_16_9) {
-                item.backdropUrl ?: item.posterUrl
+                // For continue-watching (has watchProgress), prefer poster/still so hero can keep show backdrop.
+                if (item.watchProgress != null) {
+                    item.posterUrl ?: item.backdropUrl
+                } else {
+                    item.backdropUrl ?: item.posterUrl
+                }
             } else {
                 item.posterUrl
             }
@@ -227,6 +239,18 @@ class PosterAdapter(
                     watchedBadge?.bringToFront()
                 }
             }
+
+            // Show red progress bar for continue watching (landscape) items
+            if (presentation == RowPresentation.LANDSCAPE_16_9 && progress != null && progressBar != null) {
+                val clamped = progress.coerceIn(0.0, 1.0)
+                progressBar.visibility = View.VISIBLE
+                progressBar.post {
+                    val params = progressBar.layoutParams
+                    params.width = (itemView.width * clamped).toInt().coerceAtLeast(1)
+                    progressBar.layoutParams = params
+                }
+                progressBar.alpha = if (clamped >= 0.99) 0.25f else 1f // faint bar when essentially complete
+            }
         }
 
         fun recycle() {
@@ -235,6 +259,13 @@ class PosterAdapter(
         }
 
         private fun applyFocusOverlay(hasFocus: Boolean, accentColor: Int) {
+            val targetScale = if (hasFocus) SCALE_FOCUSED else SCALE_UNFOCUSED
+            itemView.animate()
+                .scaleX(targetScale)
+                .scaleY(targetScale)
+                .setDuration(120L)
+                .start()
+
             if (hasFocus) {
                 val radius = if (presentation == RowPresentation.LANDSCAPE_16_9) {
                     LANDSCAPE_RADIUS_DP
@@ -258,7 +289,7 @@ class PosterAdapter(
             color: Int,
             radiusDp: Float
         ): Drawable {
-            val strokeColor = ColorUtils.blendARGB(color, Color.WHITE, 0.65f)
+            val strokeColor = Color.WHITE
             val borderWidth = dpToPx(context, BORDER_WIDTH_DP).roundToInt()
             val cornerRadius = dpToPx(context, radiusDp)
 
@@ -272,8 +303,8 @@ class PosterAdapter(
             val glowLayer = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 this.cornerRadius = cornerRadius + dpToPx(context, 4f)
-                setColor(ColorUtils.setAlphaComponent(color, 60))
-                setStroke(borderWidth * 2, ColorUtils.setAlphaComponent(color, 40))
+                setColor(ColorUtils.setAlphaComponent(color, 40))
+                setStroke(borderWidth * 2, ColorUtils.setAlphaComponent(color, 30))
             }
 
             return LayerDrawable(arrayOf(glowLayer, borderLayer))

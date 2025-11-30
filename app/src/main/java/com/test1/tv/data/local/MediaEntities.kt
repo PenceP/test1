@@ -143,5 +143,11 @@ data class MediaWithImages(
         parentColumn = "tmdbId",
         entityColumn = "tmdbId"
     )
+    val ratings: MediaRatingEntity?,
+
+    @Relation(
+        parentColumn = "tmdbId",
+        entityColumn = "tmdbId"
+    )
     val progress: WatchProgressEntity?
 )

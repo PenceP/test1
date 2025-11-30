@@ -355,9 +355,10 @@ class DetailsFragment : Fragment() {
 
         title.text = item.title
         showTitleOriginal = item.title
-        showOverviewOriginal = item.overview ?: getString(R.string.details_section_similar_empty)
+        val overviewText = HeroSectionHelper.buildOverviewText(item)
+        showOverviewOriginal = overviewText?.toString() ?: getString(R.string.details_section_similar_empty)
         showMetadataOriginal = HeroSectionHelper.buildMetadataLine(item)
-        overview.text = item.overview ?: getString(R.string.details_section_similar_empty)
+        overview.text = overviewText ?: getString(R.string.details_section_similar_empty)
         overview.visibility = View.VISIBLE
 
         updateHeroLogo(item.logoUrl)

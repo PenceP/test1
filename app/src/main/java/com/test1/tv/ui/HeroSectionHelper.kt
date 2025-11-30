@@ -39,6 +39,13 @@ object HeroSectionHelper {
     }
 
     /**
+     * Builds overview text; returns raw overview without prefixing S#E#.
+     */
+    fun buildOverviewText(item: ContentItem): CharSequence? {
+        return item.overview?.takeIf { it.isNotBlank() }
+    }
+
+    /**
      * Formats match score from rating percentage, vote average, or trakt rating
      */
     fun formatMatchScore(item: ContentItem): String? {
@@ -55,7 +62,22 @@ object HeroSectionHelper {
 
         val trakt = item.traktRating?.takeIf { it > 0 }
             ?.let { (it * 10).toInt().coerceAtMost(100) }
-        return trakt?.let { String.format(Locale.US, "%d%% Match", it) }
+        if (trakt != null) {
+            return String.format(Locale.US, "%d%% Match", trakt)
+        }
+
+        val imdb = item.imdbRating?.toDoubleOrNull()
+            ?.takeIf { it > 0 }
+            ?.let { (it * 10).toInt().coerceAtMost(100) }
+        if (imdb != null) {
+            return String.format(Locale.US, "%d%% Match", imdb)
+        }
+
+        val rtPercent = item.rottenTomatoesRating
+            ?.filter { it.isDigit() }
+            ?.toIntOrNull()
+            ?.takeIf { it in 1..100 }
+        return rtPercent?.let { String.format(Locale.US, "%d%% Match", it) }
     }
 
     /**

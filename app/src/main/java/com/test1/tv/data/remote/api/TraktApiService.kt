@@ -17,6 +17,8 @@ import com.test1.tv.data.model.trakt.TraktWatchedShow
 import com.test1.tv.data.model.trakt.TraktListItem
 import com.test1.tv.data.model.trakt.TraktShowProgress
 import com.test1.tv.data.model.trakt.TraktPlaybackItem
+import com.test1.tv.data.model.trakt.RemovePlaybackRequest
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -176,6 +178,22 @@ interface TraktApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): List<TraktPlaybackItem>
+
+    @GET("sync/playback")
+    suspend fun getPlayback(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("limit") limit: Int? = null
+    ): List<TraktPlaybackItem>
+
+    @POST("sync/playback/remove")
+    suspend fun removePlayback(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: com.test1.tv.data.model.trakt.RemovePlaybackRequest
+    )
 
     @GET("users/{user}/lists/{list}/items/movies")
     suspend fun getListMovies(
