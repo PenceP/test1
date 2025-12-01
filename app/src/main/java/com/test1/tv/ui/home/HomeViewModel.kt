@@ -148,6 +148,7 @@ class HomeViewModel @Inject constructor(
 
     fun refreshAfterAuth() {
         viewModelScope.launch {
+            _isLoading.value = true
             _refreshComplete.value = false
             _heroContent.value = null  // CRITICAL: Clear hero first to prevent desync
 
@@ -156,9 +157,37 @@ class HomeViewModel @Inject constructor(
             kotlinx.coroutines.delay(100)  // Let UI clear
 
             buildRows()
-            loadInitialRows(forceRefresh = true)
+
+            if (rowStates.isNotEmpty()) {
+                // Load first row synchronously to anchor hero + UI state
+                val firstState = rowStates[0]
+                if (firstState.category == ContentRepository.CATEGORY_CONTINUE_WATCHING) {
+                    loadContinueWatching(0, forceRefresh = true)
+                } else {
+                    loadRowPage(0, page = 1, forceRefresh = true)
+                }
+
+                // Prime hero from the first row once data is available
+                firstState.items.firstOrNull { it.tmdbId != -1 }?.let {
+                    _heroContent.value = it
+                }
+
+                // Load remaining rows with a light stagger to avoid thrash
+                rowStates.drop(1).forEachIndexed { idx, state ->
+                    launch {
+                        kotlinx.coroutines.delay(50L * (idx + 1))
+                        val rowIndex = idx + 1
+                        if (state.category == ContentRepository.CATEGORY_CONTINUE_WATCHING) {
+                            loadContinueWatching(rowIndex, forceRefresh = true)
+                        } else {
+                            loadRowPage(rowIndex, page = 1, forceRefresh = true)
+                        }
+                    }
+                }
+            }
 
             // Set refresh complete AFTER loading finishes (not before)
+            _isLoading.value = false
             _refreshComplete.postValue(true)
         }
     }

@@ -26,6 +26,7 @@ import com.test1.tv.databinding.FragmentActorDetailsBinding
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.HeroBackgroundController
 import com.test1.tv.ui.HeroLogoLoader
+import com.test1.tv.ui.AccentColorCache
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import com.test1.tv.ui.adapter.RowPresentation
@@ -53,6 +54,7 @@ class ActorDetailsFragment : Fragment() {
     private var heroUpdateJob: Job? = null
 
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
+    @Inject lateinit var accentColorCache: AccentColorCache
 
     companion object {
         private const val TAG = "ActorDetailsFragment"
@@ -220,7 +222,7 @@ class ActorDetailsFragment : Fragment() {
                         // No pagination for actor details
                     },
                     viewPool = null,
-                    accentColorCache = com.test1.tv.ui.AccentColorCache(),
+                    accentColorCache = accentColorCache,
                     coroutineScope = viewLifecycleOwner.lifecycleScope
                 )
                 binding.contentRows.adapter = rowsAdapter

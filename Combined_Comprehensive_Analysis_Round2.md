@@ -673,15 +673,15 @@ class TraktSyncManager @Inject constructor(
 | [x] | 🔴 P0 | Serial → Batched Loading | 30m | 5x faster | All |
 | [x] | 🔴 P0 | Flow.last() fix | 10m | Prevents hangs | Claude + Gemini R2 |
 | [x] | 🔴 P0 | Pagination Jump | 30m | Fixes UX bug | All |
-| [ ] | 🔴 P0 | Post-Auth Race | 30m | Fixes jank | Claude |
-| [ ] | 🔴 P0 | Remove ApiClient | 45m | Clean arch | Claude |
+| [x] | 🔴 P0 | Post-Auth Race | 30m | Fixes jank | Claude |
+| [x] | 🔴 P0 | Remove ApiClient | 45m | Clean arch | Claude |
 | [x] | 🔴 P0 | Remove DB duplicate | 15m | Data integrity | Claude |
 | [x] | 🟠 P1 | Glide Low-RAM Fix | 15m | Prevents OOM | Gemini R2 |
 | [x] | 🟠 P1 | Hero Glide cancel | 15m | Fixes desync | Gemini R1 |
 | [x] | 🟠 P1 | Token Mutex | 10m | Prevents race | Claude |
 | [x] | 🟠 P1 | RowsDelegate clear | 15m | Fixes missing items | Claude |
-| [ ] | 🟠 P1 | Orphan scopes | 30m | Memory leaks | Claude |
-| [ ] | 🟠 P1 | AccentColorCache inject | 5m | Memory | Claude |
+| [x] | 🟠 P1 | Orphan scopes | 30m | Memory leaks | Claude |
+| [x] | 🟠 P1 | AccentColorCache inject | 5m | Memory | Claude |
 | [ ] | 🟡 P2 | Splash Screen | 45m | Better UX | All |
 | [ ] | 🟡 P2 | Full Watch Sync | 45m | Fixes checkmarks | All |
 | [ ] | 🟡 P2 | Persist genre/cast | 15m | Offline mode | Claude |

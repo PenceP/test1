@@ -40,7 +40,6 @@ import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBMovie
 import com.test1.tv.data.model.tmdb.TMDBEpisode
 import com.test1.tv.data.model.tmdb.TMDBSeason
-import com.test1.tv.data.remote.ApiClient
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.HeroBackgroundController
 import com.test1.tv.ui.adapter.PersonAdapter
@@ -390,7 +389,7 @@ class DetailsFragment : Fragment() {
     }
 
     private fun fetchDetailsData(item: ContentItem) {
-        CoroutineScope(Dispatchers.Main).launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 when (item.type) {
                     ContentItem.ContentType.MOVIE -> {
@@ -781,7 +780,7 @@ class DetailsFragment : Fragment() {
     }
 
     private fun loadEpisodesForSeason(showId: Int, seasonNumber: Int, selectedPosition: Int) {
-        CoroutineScope(Dispatchers.Main).launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val seasonDetails = withContext(Dispatchers.IO) {
                     rateLimiter.acquire()

@@ -31,7 +31,6 @@ import com.test1.tv.DetailsActivity
 import com.test1.tv.R
 import com.test1.tv.BuildConfig
 import com.test1.tv.data.model.ContentItem
-import com.test1.tv.data.remote.ApiClient
 import dagger.hilt.android.AndroidEntryPoint
 import com.test1.tv.data.repository.TraktAuthRepository
 import com.test1.tv.data.repository.TraktAccountRepository
