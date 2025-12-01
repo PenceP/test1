@@ -9,5 +9,10 @@ data class WatchStatusEntity(
     val tmdbId: Int,
     val type: String,
     val progress: Double?,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val lastWatched: Long? = null,
+    val nextEpisodeTitle: String? = null,
+    val nextEpisodeSeason: Int? = null,
+    val nextEpisodeNumber: Int? = null,
+    val nextEpisodeTmdbId: Int? = null
 )

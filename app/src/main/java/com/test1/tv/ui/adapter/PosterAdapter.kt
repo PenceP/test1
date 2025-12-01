@@ -2,6 +2,7 @@ package com.test1.tv.ui.adapter
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.BitmapDrawable
@@ -333,8 +334,12 @@ class PosterAdapter(
                 val color = runCatching {
                     val bitmap = when (drawable) {
                         is BitmapDrawable -> drawable.bitmap
+                            ?.takeIf { !it.isRecycled }
+                            ?.copy(Bitmap.Config.ARGB_8888, false)
+                            ?: return@runCatching DEFAULT_BORDER_COLOR
                         else -> drawable.toBitmap(50, 75)
                     }
+                    if (bitmap.isRecycled) return@runCatching DEFAULT_BORDER_COLOR
                     val palette = Palette.from(bitmap).generate()
                     palette.vibrantSwatch?.rgb
                         ?: palette.darkVibrantSwatch?.rgb

@@ -55,6 +55,7 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val rowStates = mutableListOf<ContentRowState>()
+    private var placeholderIdSeed = -1
 
     private val _contentRows = MutableLiveData<List<ContentRow>>()
     val contentRows: LiveData<List<ContentRow>> = _contentRows
@@ -317,8 +318,8 @@ class HomeViewModel @Inject constructor(
 
     private fun createPlaceholderItem(message: String): ContentItem =
         ContentItem(
-            id = -1,
-            tmdbId = -1,
+            id = placeholderIdSeed,
+            tmdbId = placeholderIdSeed--,
             imdbId = null,
             title = message,
             overview = null,
