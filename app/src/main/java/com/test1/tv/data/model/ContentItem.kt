@@ -27,7 +27,8 @@ data class ContentItem(
     val imdbRating: String?,
     val rottenTomatoesRating: String?,
     val traktRating: Double?,
-    val watchProgress: Double? = null
+    val watchProgress: Double? = null,
+    val isPlaceholder: Boolean = false
 ) : Parcelable {
     enum class ContentType {
         MOVIE, TV_SHOW

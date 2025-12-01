@@ -6,6 +6,8 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.model.tmdb.TMDBCast
 import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBShow
+import com.test1.tv.data.model.trakt.TraktMovie
+import com.test1.tv.data.model.trakt.TraktShow
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
@@ -129,6 +131,38 @@ class ContentRepository @Inject constructor(
             CATEGORY_POPULAR_SHOWS -> getPopularShowsPage(page, pageSize, forceRefresh = false)
             CATEGORY_LATEST_4K_MOVIES -> getLatest4KMoviesPage(page, pageSize, forceRefresh = false)
         }
+    }
+
+    suspend fun getPlaceholderPage(
+        category: String,
+        page: Int,
+        pageSize: Int
+    ): List<ContentItem> = withContext(Dispatchers.IO) {
+        val placeholders = when (category) {
+            CATEGORY_TRENDING_MOVIES -> traktApiService.getTrendingMovies(
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                limit = pageSize,
+                page = page
+            ).mapNotNull { it.movie.toPlaceholderContentItem(ContentItem.ContentType.MOVIE) }
+            CATEGORY_POPULAR_MOVIES -> traktApiService.getPopularMovies(
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                limit = pageSize,
+                page = page
+            ).mapNotNull { it.toPlaceholderContentItem(ContentItem.ContentType.MOVIE) }
+            CATEGORY_TRENDING_SHOWS -> traktApiService.getTrendingShows(
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                limit = pageSize,
+                page = page
+            ).mapNotNull { it.show.toPlaceholderContentItem(ContentItem.ContentType.TV_SHOW) }
+            CATEGORY_POPULAR_SHOWS -> traktApiService.getPopularShows(
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                limit = pageSize,
+                page = page
+            ).mapNotNull { it.toPlaceholderContentItem(ContentItem.ContentType.TV_SHOW) }
+            else -> emptyList()
+        }
+
+        placeholders.distinctBy { it.tmdbId }
     }
 
     private suspend fun getPagedContent(
@@ -514,6 +548,60 @@ class ContentRepository @Inject constructor(
                 }
             }
         }.awaitAll().filterNotNull()
+    }
+
+    private fun TraktMovie.toPlaceholderContentItem(type: ContentItem.ContentType): ContentItem? {
+        val tmdbId = ids.tmdb ?: return null
+        return ContentItem(
+            id = tmdbId,
+            tmdbId = tmdbId,
+            imdbId = ids.imdb,
+            title = title,
+            overview = null,
+            posterUrl = null,
+            backdropUrl = null,
+            logoUrl = null,
+            year = year?.toString(),
+            rating = rating,
+            ratingPercentage = rating?.times(10)?.toInt(),
+            genres = null,
+            type = type,
+            runtime = null,
+            cast = null,
+            certification = null,
+            imdbRating = null,
+            rottenTomatoesRating = null,
+            traktRating = rating,
+            watchProgress = null,
+            isPlaceholder = true
+        )
+    }
+
+    private fun TraktShow.toPlaceholderContentItem(type: ContentItem.ContentType): ContentItem? {
+        val tmdbId = ids.tmdb ?: return null
+        return ContentItem(
+            id = tmdbId,
+            tmdbId = tmdbId,
+            imdbId = ids.imdb,
+            title = title,
+            overview = null,
+            posterUrl = null,
+            backdropUrl = null,
+            logoUrl = null,
+            year = year?.toString(),
+            rating = rating,
+            ratingPercentage = rating?.times(10)?.toInt(),
+            genres = null,
+            type = type,
+            runtime = null,
+            cast = null,
+            certification = null,
+            imdbRating = null,
+            rottenTomatoesRating = null,
+            traktRating = rating,
+            watchProgress = null,
+            isPlaceholder = true
+        )
     }
 
     suspend fun cleanupCache() {

@@ -111,7 +111,7 @@ class PosterAdapter(
             } else {
                 item.posterUrl
             }
-            val isPlaceholder = item.tmdbId == -1 || artworkUrl.isNullOrBlank()
+            val isPlaceholder = item.isPlaceholder || item.tmdbId == -1 || artworkUrl.isNullOrBlank()
             val (overrideWidth, overrideHeight) = if (presentation == RowPresentation.LANDSCAPE_16_9) {
                 600 to 338
             } else {
@@ -226,12 +226,15 @@ class PosterAdapter(
             }
 
             itemView.setOnClickListener {
-                onItemClick(item, posterImage)
+                if (!isPlaceholder) {
+                    onItemClick(item, posterImage)
+                }
             }
 
             if (onItemLongPressed != null) {
-                itemView.isLongClickable = true
+                itemView.isLongClickable = !isPlaceholder
                 itemView.setOnLongClickListener {
+                    if (isPlaceholder) return@setOnLongClickListener false
                     onItemLongPressed.invoke(item)
                     true
                 }

@@ -202,6 +202,19 @@ class HomeViewModel @Inject constructor(
         if (!forceRefresh && page > 1 && !state.hasMore) return
 
         state.isLoading = true
+
+        val placeholders = runCatching {
+            contentRepository.getPlaceholderPage(
+                category = state.category,
+                page = page,
+                pageSize = state.pageSize
+            )
+        }.getOrDefault(emptyList())
+
+        if (placeholders.isNotEmpty() && page > state.currentPage) {
+            applyRowItems(rowIndex, state, page, placeholders, isPlaceholder = true)
+        }
+
         val result: Result<List<ContentItem>> = when (state.category) {
             ContentRepository.CATEGORY_TRENDING_MOVIES -> {
                 val resource = withTimeoutOrNull(15_000L) {
@@ -322,14 +335,16 @@ class HomeViewModel @Inject constructor(
             certification = null,
             imdbRating = null,
             rottenTomatoesRating = null,
-            traktRating = null
+            traktRating = null,
+            isPlaceholder = true
         )
 
     private fun applyRowItems(
         rowIndex: Int,
         state: ContentRowState,
         page: Int,
-        items: List<ContentItem>
+        items: List<ContentItem>,
+        isPlaceholder: Boolean = false
     ) {
         if (page == 1) {
             state.items.clear()
@@ -340,13 +355,28 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        state.items.addAll(items)
+        items.forEach { incoming ->
+            val existingIndex = state.items.indexOfFirst { it.tmdbId == incoming.tmdbId }
+            if (existingIndex >= 0) {
+                val existing = state.items[existingIndex]
+                when {
+                    // Skip if we already have a real item and incoming is another real item
+                    !existing.isPlaceholder && !incoming.isPlaceholder -> Unit
+                    // Skip placeholder if real already present
+                    !existing.isPlaceholder && incoming.isPlaceholder -> Unit
+                    // Replace placeholder with real, or refresh placeholder
+                    else -> state.items[existingIndex] = incoming
+                }
+            } else {
+                state.items.add(incoming)
+            }
+        }
         state.currentPage = page
         state.hasMore = items.size >= state.pageSize
 
         if (page == 1) {
             publishRows()
-            if (_heroContent.value == null) {
+            if (!isPlaceholder && _heroContent.value == null) {
                 state.items.firstOrNull { it.tmdbId != -1 }?.let {
                     _heroContent.value = it
                 }
@@ -355,7 +385,9 @@ class HomeViewModel @Inject constructor(
             _rowAppendEvents.value = RowAppendEvent(rowIndex, items.toList())
         }
 
-        prefetchNextForState(state)
+        if (!isPlaceholder) {
+            prefetchNextForState(state)
+        }
     }
 
     private fun publishRows() {
