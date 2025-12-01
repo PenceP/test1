@@ -17,6 +17,13 @@ interface TraktUserItemDao {
     @Query("SELECT COUNT(*) FROM trakt_user_items WHERE listType = :listType")
     suspend fun countByList(listType: String): Int
 
+    @Query("""
+        SELECT * FROM trakt_user_items
+        WHERE listType = :listType AND itemType = :itemType
+        ORDER BY updatedAt DESC
+    """)
+    suspend fun getItems(listType: String, itemType: String): List<TraktUserItem>
+
     @Query("DELETE FROM trakt_user_items")
     suspend fun clearAll()
 }

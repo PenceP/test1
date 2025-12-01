@@ -2,10 +2,11 @@ package com.test1.tv.ui.adapter
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
@@ -20,6 +21,8 @@ import androidx.cardview.widget.CardView
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.ViewCompat
+import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.palette.graphics.Palette
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -30,13 +33,11 @@ import com.bumptech.glide.request.transition.Transition
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.AccentColorCache
-import androidx.palette.graphics.Palette
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.lifecycle.LifecycleCoroutineScope
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -125,8 +126,8 @@ class PosterAdapter(
 
             val cachedAccent = accentColorCache.get(item)
             val glideContext = itemView.context
-            if (glideContext is Activity && (glideContext.isDestroyed || glideContext.isFinishing)) {
-                // Activity is going away; skip binding to avoid Glide crash.
+            if (!glideContext.isValidForGlide()) {
+                // Activity is going away or context wrapped around a destroyed activity; skip Glide work.
                 return
             }
 
@@ -186,8 +187,8 @@ class PosterAdapter(
                             resource: Drawable,
                             transition: Transition<in Drawable>?
                         ) {
-                            posterImage.setImageDrawable(resource)
-                            titleOverlay.visibility = View.GONE
+                    posterImage.setImageDrawable(resource)
+                    titleOverlay.visibility = View.GONE
                             if (cachedAccent != null) {
                                 accentColorCache.put(item, cachedAccent)
                                 if (itemView.isFocused) {
@@ -379,5 +380,17 @@ class PosterAdapter(
         super.onViewRecycled(holder)
         holder.recycle()
         Glide.with(holder.itemView).clear(holder.posterImage)
+    }
+
+    private fun Context?.isValidForGlide(): Boolean {
+        if (this == null) return false
+        if (this is android.app.Activity) {
+            if (this.isDestroyed || this.isFinishing) return false
+        }
+        return if (this is ContextWrapper) {
+            this.baseContext.isValidForGlide()
+        } else {
+            true
+        }
     }
 }

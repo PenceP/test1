@@ -32,6 +32,8 @@ import com.test1.tv.R
 import com.test1.tv.BuildConfig
 import com.test1.tv.data.model.ContentItem
 import dagger.hilt.android.AndroidEntryPoint
+import com.test1.tv.TraktMediaActivity
+import com.test1.tv.data.model.trakt.TraktMediaList
 import com.test1.tv.data.repository.TraktAuthRepository
 import com.test1.tv.data.repository.TraktAccountRepository
 import com.test1.tv.databinding.FragmentHomeBinding
@@ -297,6 +299,11 @@ class HomeFragment : Fragment() {
 
         if (item.tmdbId == -1 && item.title.contains("trakt", ignoreCase = true)) {
             promptTraktAuth()
+            return
+        }
+
+        TraktMediaList.fromId(item.imdbId)?.let { category ->
+            startActivity(TraktMediaActivity.newIntent(requireContext(), category))
             return
         }
 

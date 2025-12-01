@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.test1.tv.BuildConfig
+import com.test1.tv.R
 import com.test1.tv.data.Resource
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.model.home.HomeConfig
@@ -15,6 +17,7 @@ import com.test1.tv.data.repository.ContinueWatchingRepository
 import com.test1.tv.data.repository.HomeConfigRepository
 import com.test1.tv.data.repository.MediaRepository
 import com.test1.tv.data.repository.WatchStatusProvider
+import com.test1.tv.data.model.trakt.TraktMediaList
 import com.test1.tv.data.repository.WatchStatusRepository
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.RowPresentation
@@ -43,6 +46,45 @@ private data class ContentRowState(
 data class RowAppendEvent(
     val rowIndex: Int,
     val newItems: List<ContentItem>
+)
+
+private data class TraktMediaRowEntry(
+    val category: TraktMediaList,
+    val title: String,
+    val subtitle: String,
+    val iconRes: Int,
+    val type: ContentItem.ContentType
+)
+
+private val TRAKT_MEDIA_ROW_ENTRIES = listOf(
+    TraktMediaRowEntry(
+        category = TraktMediaList.MOVIE_COLLECTION,
+        title = "Movie Collection",
+        subtitle = "Browse your movie library",
+        iconRes = R.drawable.ic_collection,
+        type = ContentItem.ContentType.MOVIE
+    ),
+    TraktMediaRowEntry(
+        category = TraktMediaList.MOVIE_WATCHLIST,
+        title = "Movie Watchlist",
+        subtitle = "Movies you saved for later",
+        iconRes = R.drawable.ic_watchlist,
+        type = ContentItem.ContentType.MOVIE
+    ),
+    TraktMediaRowEntry(
+        category = TraktMediaList.TV_COLLECTION,
+        title = "TV Collection",
+        subtitle = "Shows you already own",
+        iconRes = R.drawable.ic_tv,
+        type = ContentItem.ContentType.TV_SHOW
+    ),
+    TraktMediaRowEntry(
+        category = TraktMediaList.TV_WATCHLIST,
+        title = "TV Watchlist",
+        subtitle = "Shows you're tracking",
+        iconRes = R.drawable.ic_watchlist,
+        type = ContentItem.ContentType.TV_SHOW
+    )
 )
 
 @HiltViewModel
@@ -199,6 +241,10 @@ class HomeViewModel @Inject constructor(
         forceRefresh: Boolean
     ) {
         val state = rowStates.getOrNull(rowIndex) ?: return
+        if (state.category == CATEGORY_MY_TRAKT_MEDIA) {
+            state.isLoading = false
+            return
+        }
         if (state.isLoading) return
         if (!forceRefresh && page > 1 && !state.hasMore) return
 
@@ -339,6 +385,44 @@ class HomeViewModel @Inject constructor(
             traktRating = null,
             isPlaceholder = true
         )
+
+    private fun createTraktMediaRowState(): ContentRowState {
+        val items = TRAKT_MEDIA_ROW_ENTRIES.mapIndexed { index, entry ->
+            val posterUrl = "android.resource://${BuildConfig.APPLICATION_ID}/${entry.iconRes}"
+            ContentItem(
+                id = -1000 - index,
+                tmdbId = -1000 - index,
+                imdbId = entry.category.name,
+                title = entry.title,
+                overview = entry.subtitle,
+                posterUrl = posterUrl,
+                backdropUrl = null,
+                logoUrl = null,
+                year = null,
+                rating = null,
+                ratingPercentage = null,
+                genres = null,
+                type = entry.type,
+                runtime = null,
+                cast = null,
+                certification = null,
+                imdbRating = null,
+                rottenTomatoesRating = null,
+                traktRating = null,
+                isPlaceholder = false
+            )
+        }.toMutableList()
+
+        return ContentRowState(
+            category = CATEGORY_MY_TRAKT_MEDIA,
+            title = "My Trakt Media",
+            presentation = RowPresentation.LANDSCAPE_16_9,
+            pageSize = items.size,
+            items = items,
+            currentPage = 1,
+            hasMore = false
+        )
+    }
 
     private fun applyRowItems(
         rowIndex: Int,
@@ -497,6 +581,7 @@ class HomeViewModel @Inject constructor(
                 )
             )
             rowStates.addAll(defaults)
+            insertTraktMediaRowIfNeeded(isAuthenticated, rowStates)
             return
         }
 
@@ -565,6 +650,18 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+        insertTraktMediaRowIfNeeded(isAuthenticated, rowStates)
+    }
+
+    private fun insertTraktMediaRowIfNeeded(
+        isAuthenticated: Boolean,
+        target: MutableList<ContentRowState>
+    ) {
+        if (!isAuthenticated) return
+        if (target.any { it.category == CATEGORY_MY_TRAKT_MEDIA }) return
+        val continueIndex = target.indexOfFirst { it.category == ContentRepository.CATEGORY_CONTINUE_WATCHING }
+        val insertIndex = if (continueIndex >= 0) continueIndex + 1 else target.size
+        target.add(insertIndex, createTraktMediaRowState())
     }
 
     private fun createTraktListState(
@@ -604,5 +701,9 @@ class HomeViewModel @Inject constructor(
             PosterOrientation.SQUARE -> RowPresentation.PORTRAIT
             else -> RowPresentation.PORTRAIT
         }
+    }
+
+    companion object {
+        private const val CATEGORY_MY_TRAKT_MEDIA = "MY_TRAKT_MEDIA"
     }
 }

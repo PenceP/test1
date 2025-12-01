@@ -47,6 +47,10 @@
             android:name=".ActorDetailsActivity"
             android:exported="false" />
         <activity
+            android:name=".TraktMediaActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
             android:screenOrientation="landscape" />

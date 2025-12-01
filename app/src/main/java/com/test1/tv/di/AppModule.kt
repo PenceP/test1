@@ -9,9 +9,11 @@ import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
+import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
 import com.test1.tv.data.repository.HomeConfigRepository
 import com.test1.tv.data.repository.TraktAccountRepository
+import com.test1.tv.data.repository.TraktMediaRepository
 import com.test1.tv.data.repository.WatchStatusRepository
 import com.test1.tv.ui.AccentColorCache
 import com.google.gson.Gson
@@ -105,6 +107,15 @@ object AppModule {
         tmdbApiService: TMDBApiService,
         accountRepository: TraktAccountRepository
     ) = ContinueWatchingRepository(traktApiService, tmdbApiService, accountRepository)
+
+    @Provides
+    @Singleton
+    fun provideTraktMediaRepository(
+        traktUserItemDao: com.test1.tv.data.local.dao.TraktUserItemDao,
+        tmdbApiService: TMDBApiService,
+        cacheRepository: CacheRepository,
+        watchStatusRepository: WatchStatusRepository
+    ) = TraktMediaRepository(traktUserItemDao, tmdbApiService, cacheRepository, watchStatusRepository)
 
     @Provides
     @Singleton
