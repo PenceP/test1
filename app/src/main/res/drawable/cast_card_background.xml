@@ -2,5 +2,6 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@android:color/darker_gray" />
-    <corners android:radius="12dp" />
+    <!-- Match poster radius for consistent rounded corners across actor cards -->
+    <corners android:radius="18dp" />
 </shape>

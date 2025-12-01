@@ -682,11 +682,11 @@ class TraktSyncManager @Inject constructor(
 | [x] | 🟠 P1 | RowsDelegate clear | 15m | Fixes missing items | Claude |
 | [x] | 🟠 P1 | Orphan scopes | 30m | Memory leaks | Claude |
 | [x] | 🟠 P1 | AccentColorCache inject | 5m | Memory | Claude |
-| [ ] | 🟡 P2 | Splash Screen | 45m | Better UX | All |
-| [ ] | 🟡 P2 | Full Watch Sync | 45m | Fixes checkmarks | All |
-| [ ] | 🟡 P2 | Persist genre/cast | 15m | Offline mode | Claude |
-| [ ] | 🟡 P2 | Retry logic | 20m | Reliability | Claude |
-| [ ] | 🟡 P2 | Placeholder cache | 10m | Minor perf | Gemini |
+| [x] | 🟡 P2 | Splash Screen | 45m | Better UX | All |
+| [x] | 🟡 P2 | Full Watch Sync | 45m | Fixes checkmarks | All |
+| [x] | 🟡 P2 | Persist genre/cast | 15m | Offline mode | Claude |
+| [x] | 🟡 P2 | Retry logic | 20m | Reliability | Claude |
+| [x] | 🟡 P2 | Placeholder cache | 10m | Minor perf | Gemini |
 | [x] | 🟡 P2 | StateRestoration | 5m | Better RecyclerView | Gemini |
 
 **Total P0:** ~3 hours

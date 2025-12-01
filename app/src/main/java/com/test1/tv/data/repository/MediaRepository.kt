@@ -15,10 +15,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -244,10 +246,12 @@ class MediaRepository @Inject constructor(
 
                         rateLimiter.acquire()
                         runCatching {
-                            val tmdbDetails = tmdbApi.getMovieDetails(
-                                movieId = tmdbId,
-                                apiKey = BuildConfig.TMDB_API_KEY
-                            )
+                            val tmdbDetails = retryWithBackoff {
+                                tmdbApi.getMovieDetails(
+                                    movieId = tmdbId,
+                                    apiKey = BuildConfig.TMDB_API_KEY
+                                )
+                            }
 
                             val mediaEntity = MediaContentEntity(
                                 tmdbId = tmdbId,
@@ -259,7 +263,9 @@ class MediaRepository @Inject constructor(
                                 certification = tmdbDetails.getCertification(),
                                 contentType = "movie",
                                 category = category,
-                                position = basePosition + index
+                                position = basePosition + index,
+                                genres = tmdbDetails.genres?.joinToString(",") { it.name },
+                                cast = tmdbDetails.getCastNames(limit = 5)
                             )
 
                             val imageEntity = MediaImageEntity(
@@ -344,10 +350,12 @@ class MediaRepository @Inject constructor(
 
                         rateLimiter.acquire()
                         runCatching {
-                            val tmdbDetails = tmdbApi.getShowDetails(
-                                showId = tmdbId,
-                                apiKey = BuildConfig.TMDB_API_KEY
-                            )
+                            val tmdbDetails = retryWithBackoff {
+                                tmdbApi.getShowDetails(
+                                    showId = tmdbId,
+                                    apiKey = BuildConfig.TMDB_API_KEY
+                                )
+                            }
 
                             val mediaEntity = MediaContentEntity(
                                 tmdbId = tmdbId,
@@ -359,7 +367,9 @@ class MediaRepository @Inject constructor(
                                 certification = tmdbDetails.getCertification(),
                                 contentType = "tv",
                                 category = category,
-                                position = basePosition + index
+                                position = basePosition + index,
+                                genres = tmdbDetails.genres?.joinToString(",") { it.name },
+                                cast = tmdbDetails.getCastNames(limit = 5)
                             )
 
                             val imageEntity = MediaImageEntity(
@@ -449,8 +459,8 @@ class MediaRepository @Inject constructor(
             posterUrl = images.posterUrl,
             backdropUrl = images.backdropUrl,
             logoUrl = images.logoUrl,
-            genres = null,
-            cast = null,
+            genres = content.genres,
+            cast = content.cast,
             rating = ratings.tmdbRating?.toDouble(),
             ratingPercentage = ratings.tmdbRating?.times(10)?.toInt(),
             type = if (content.contentType == "movie") ContentItem.ContentType.MOVIE else ContentItem.ContentType.TV_SHOW,
@@ -459,5 +469,25 @@ class MediaRepository @Inject constructor(
             rottenTomatoesRating = ratings.rottenTomatoesRating?.toString(),
             traktRating = ratings.traktRating?.toDouble()
         )
+    }
+
+    private suspend fun <T> retryWithBackoff(
+        times: Int = 3,
+        initialDelayMs: Long = 1000,
+        block: suspend () -> T
+    ): T {
+        var currentDelay = initialDelayMs
+        repeat(times - 1) {
+            runCatching { return block() }.onFailure { throwable ->
+                val statusCode = (throwable as? HttpException)?.code()
+                if (statusCode != null && statusCode in 500..599) {
+                    delay(currentDelay)
+                    currentDelay *= 2
+                } else {
+                    throw throwable
+                }
+            }
+        }
+        return block()
     }
 }

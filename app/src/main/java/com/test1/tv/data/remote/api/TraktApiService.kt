@@ -140,7 +140,9 @@ interface TraktApiService {
         @Header("Authorization") authHeader: String,
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String,
-        @Query("extended") extended: String = "full"
+        @Query("extended") extended: String = "full",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 1000
     ): List<TraktWatchedMovie>
 
     @GET("sync/watched/shows")
@@ -148,7 +150,9 @@ interface TraktApiService {
         @Header("Authorization") authHeader: String,
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String,
-        @Query("extended") extended: String = "full"
+        @Query("extended") extended: String = "full",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 1000
     ): List<TraktWatchedShow>
 
     @GET("shows/{id}/progress/watched")

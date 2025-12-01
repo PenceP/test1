@@ -1,7 +1,9 @@
 package com.test1.tv.ui.adapter
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -56,6 +58,7 @@ class PosterAdapter(
         private const val DEFAULT_BORDER_COLOR = Color.WHITE
         private const val SCALE_FOCUSED = 1.1f
         private const val SCALE_UNFOCUSED = 1.0f
+        private val PLACEHOLDER_DRAWABLE = ColorDrawable(Color.DKGRAY)
     }
 
     init {
@@ -120,21 +123,26 @@ class PosterAdapter(
             cardContainer?.let { ViewCompat.setElevation(it, 6f) }
 
             val cachedAccent = accentColorCache.get(item)
+            val glideContext = itemView.context
+            if (glideContext is Activity && (glideContext.isDestroyed || glideContext.isFinishing)) {
+                // Activity is going away; skip binding to avoid Glide crash.
+                return
+            }
 
             if (isPlaceholder) {
                 if (item.title.contains("Trakt", ignoreCase = true)) {
                     posterImage.setImageResource(R.drawable.ic_trakt_logo)
                 } else {
-                    posterImage.setImageResource(R.drawable.default_background)
+                    posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
                 }
                 accentColorCache.put(item, DEFAULT_BORDER_COLOR)
             } else {
-                Glide.with(itemView.context)
+                Glide.with(glideContext)
                     .load(artworkUrl)
                     .onlyRetrieveFromCache(true)  // Force cache-only for instant loading
                     .transition(DrawableTransitionOptions.withCrossFade(150))
-                    .placeholder(R.drawable.default_background)
-                    .error(R.drawable.default_background)
+                    .placeholder(PLACEHOLDER_DRAWABLE)
+                    .error(PLACEHOLDER_DRAWABLE)
                     .override(overrideWidth, overrideHeight)
                     .into(object : CustomTarget<Drawable>() {
                         override fun onLoadCleared(placeholder: Drawable?) {
@@ -148,7 +156,7 @@ class PosterAdapter(
                             titleOverlay.visibility = View.VISIBLE
 
                             // If cache fails, load from network in background
-                            Glide.with(itemView.context)
+                            Glide.with(glideContext)
                                 .load(artworkUrl)
                                 .onlyRetrieveFromCache(false)
                                 .override(overrideWidth, overrideHeight)

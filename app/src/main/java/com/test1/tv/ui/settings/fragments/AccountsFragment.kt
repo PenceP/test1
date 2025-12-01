@@ -1,5 +1,6 @@
 package com.test1.tv.ui.settings.fragments
 
+import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -12,11 +13,11 @@ import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.test1.tv.R
-import com.test1.tv.background.TraktSyncWorker
 import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.ui.settings.adapter.SettingsAdapter
 import com.test1.tv.ui.settings.model.AccountAction
 import com.test1.tv.ui.settings.model.SettingsItem
+import com.test1.tv.ui.splash.SyncSplashActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -126,8 +127,11 @@ class AccountsFragment : Fragment() {
                 requestTraktDeviceCode()
             }
             AccountAction.SYNC -> {
-                TraktSyncWorker.enqueue(requireContext())
-                Toast.makeText(context, "Syncing Trakt data...", Toast.LENGTH_SHORT).show()
+                startActivity(
+                    Intent(requireContext(), SyncSplashActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                )
             }
             AccountAction.LOGOUT -> {
                 traktConnected = false
@@ -249,7 +253,11 @@ class AccountsFragment : Fragment() {
         withContext(Dispatchers.Main) {
             refreshItems()
             Toast.makeText(requireContext(), "Trakt authorized!", Toast.LENGTH_SHORT).show()
-            TraktSyncWorker.enqueue(requireContext())
+            startActivity(
+                Intent(requireContext(), SyncSplashActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
         }
     }
 

@@ -1,0 +1,5 @@
+<resources>
+    <string name="sync_status_default">Syncing your library...</string>
+    <string name="sync_fun_message_default">Hacking the mainframe...</string>
+    <string name="sync_skip_no_trakt">Skipping sync (Trakt not connected)</string>
+</resources>

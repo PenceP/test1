@@ -43,6 +43,8 @@ import com.test1.tv.ui.HeroExtrasLoader
 import com.test1.tv.ui.HeroBackgroundController
 import com.test1.tv.ui.HeroLogoLoader
 import com.test1.tv.ui.RowPrefetchManager
+import com.test1.tv.ui.splash.LaunchGate
+import com.test1.tv.ui.splash.SyncSplashActivity
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Locale
 import kotlin.math.min
@@ -162,6 +164,9 @@ class HomeFragment : Fragment() {
             if (done && awaitingPostAuthRestart) {
                 awaitingPostAuthRestart = false
                 restartAppClean()
+            }
+            if (done) {
+                LaunchGate.markHomeReady()
             }
         }
     }
@@ -401,11 +406,14 @@ class HomeFragment : Fragment() {
     private fun handlePostAuthRefresh() {
         if (!isAdded || view == null) return
         Toast.makeText(requireContext(), "Trakt authorized!", Toast.LENGTH_SHORT).show()
-        // Show blocking indicator to avoid partial UI state while data refreshes.
-        binding.loadingIndicator.visibility = View.VISIBLE
         authDialog?.dismiss()
-        awaitingPostAuthRestart = true
-        viewModel.refreshAfterAuth()
+        awaitingPostAuthRestart = false
+        // Launch sync splash in a fresh task; existing activity will be cleared by flags.
+        startActivity(
+            Intent(requireContext(), SyncSplashActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
     }
 
     private fun restartAppClean() {
