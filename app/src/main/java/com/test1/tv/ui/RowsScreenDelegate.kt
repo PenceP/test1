@@ -13,6 +13,7 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * Coordinates repeated nav/rows wiring used by home/movies/tv fragments so behavior stays identical.
@@ -32,7 +33,8 @@ class RowsScreenDelegate(
     private val onItemLongPress: (ContentItem) -> Unit,
     private val onRequestMore: (Int) -> Unit = {},
     private val onNavigate: (NavTarget) -> Unit,
-    private val navFocusEffect: ((View, Boolean) -> Unit)? = null
+    private val navFocusEffect: ((View, Boolean) -> Unit)? = null,
+    private val coroutineScope: CoroutineScope
 ) {
 
     enum class NavTarget {
@@ -70,6 +72,14 @@ class RowsScreenDelegate(
         heroContent: LiveData<ContentItem?>
     ) {
         contentRows.observe(lifecycleOwner) { rows ->
+            // Clear adapter and prefetch state when rows are empty
+            if (rows.isEmpty()) {
+                rowsAdapter = null
+                contentRowsView.adapter = null
+                rowPrefetchManager.clearPrefetchState()
+                return@observe
+            }
+
             if (rowsAdapter == null) {
                 rowsAdapter = ContentRowAdapter(
                     initialRows = rows,
@@ -82,7 +92,8 @@ class RowsScreenDelegate(
                     onItemLongPress = onItemLongPress,
                     onRequestMore = onRequestMore,
                     viewPool = sharedViewPool,
-                    accentColorCache = accentColorCache
+                    accentColorCache = accentColorCache,
+                    coroutineScope = coroutineScope
                 )
             } else {
                 rowsAdapter?.updateRows(rows)

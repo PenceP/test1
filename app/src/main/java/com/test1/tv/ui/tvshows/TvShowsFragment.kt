@@ -134,7 +134,8 @@ class TvShowsFragment : Fragment() {
                         startActivity(intent)
                     }
                 }
-            }
+            },
+            coroutineScope = viewLifecycleOwner.lifecycleScope
         )
         rowsDelegate.bind(
             contentRows = viewModel.contentRows,

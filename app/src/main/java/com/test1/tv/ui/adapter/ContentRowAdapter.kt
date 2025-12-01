@@ -12,6 +12,7 @@ import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.SmartRowScrollManager
 import com.test1.tv.ui.SmartScrollThrottler
+import kotlinx.coroutines.CoroutineScope
 
 enum class RowPresentation {
     PORTRAIT,
@@ -32,7 +33,8 @@ class ContentRowAdapter(
     private val onItemLongPress: (ContentItem) -> Unit,
     private val onRequestMore: (Int) -> Unit,
     private val viewPool: RecyclerView.RecycledViewPool? = null,
-    private val accentColorCache: com.test1.tv.ui.AccentColorCache
+    private val accentColorCache: com.test1.tv.ui.AccentColorCache,
+    private val coroutineScope: CoroutineScope
 ) : RecyclerView.Adapter<ContentRowAdapter.RowViewHolder>() {
 
     private val rows = initialRows.toMutableList()
@@ -64,7 +66,8 @@ class ContentRowAdapter(
                     onNearEnd = {
                         onRequestMore(rowIndex)
                     },
-                    accentColorCache = accentColorCache
+                    accentColorCache = accentColorCache,
+                    coroutineScope = coroutineScope
                 )
                 rowAdapters.put(rowIndex, adapter)
 

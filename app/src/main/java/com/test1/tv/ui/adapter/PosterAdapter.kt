@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.LifecycleCoroutineScope
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -43,7 +44,8 @@ class PosterAdapter(
     private val onNearEnd: () -> Unit,
     private val onItemLongPressed: ((ContentItem) -> Unit)? = null,
     private val presentation: RowPresentation = RowPresentation.PORTRAIT,
-    private val accentColorCache: AccentColorCache
+    private val accentColorCache: AccentColorCache,
+    private val coroutineScope: CoroutineScope
 ) : ListAdapter<ContentItem, PosterAdapter.PosterViewHolder>(ContentDiffCallback()) {
 
     companion object {
@@ -316,7 +318,7 @@ class PosterAdapter(
 
         private fun extractAccentColorAsync(item: ContentItem, drawable: Drawable) {
             paletteJob?.cancel()
-            paletteJob = CoroutineScope(Dispatchers.Default).launch {
+            paletteJob = coroutineScope.launch(Dispatchers.Default) {
                 val color = runCatching {
                     val bitmap = when (drawable) {
                         is BitmapDrawable -> drawable.bitmap

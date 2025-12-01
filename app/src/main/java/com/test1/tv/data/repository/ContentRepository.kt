@@ -9,14 +9,10 @@ import com.test1.tv.data.model.tmdb.TMDBShow
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,8 +36,9 @@ class ContentRepository @Inject constructor(
         private const val DEFAULT_PAGE_SIZE = 20
     }
 
-    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val inFlightRefresh = ConcurrentHashMap<String, Boolean>()
+    // Removed orphan refreshScope - background refresh disabled for lifecycle safety
+    // private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // private val inFlightRefresh = ConcurrentHashMap<String, Boolean>()
 
     suspend fun getTrendingMovies(forceRefresh: Boolean = false): Result<List<ContentItem>> {
         return getTrendingMoviesPage(1, DEFAULT_PAGE_SIZE, forceRefresh)
@@ -156,10 +153,10 @@ class ContentRepository @Inject constructor(
                     "Serving cached page $page for $category (${cachedPage.size} items), fresh=$cacheFresh"
                 )
 
-                // Trigger background refresh if cache is stale
-                if (!cacheFresh && page == 1) {
-                    triggerBackgroundRefresh(category, page, pageSize, fetcher)
-                }
+                // Background refresh disabled for lifecycle safety (removed orphan scope)
+                // if (!cacheFresh && page == 1) {
+                //     triggerBackgroundRefresh(category, page, pageSize, fetcher)
+                // }
 
                 return@withContext Result.success(cachedPage)
             }
@@ -191,29 +188,30 @@ class ContentRepository @Inject constructor(
         }
     }
 
-    private fun triggerBackgroundRefresh(
-        category: String,
-        page: Int,
-        pageSize: Int,
-        fetcher: suspend () -> List<ContentItem>
-    ) {
-        if (inFlightRefresh.putIfAbsent(category, true) == true) return
-
-        refreshScope.launch {
-            try {
-                Log.d(TAG, "Background refresh for stale $category page $page")
-                val freshData = fetcher()
-                if (freshData.isNotEmpty()) {
-                    cacheRepository.cacheContentPage(category, freshData, page, pageSize)
-                    Log.d(TAG, "Background refreshed cache for $category (${freshData.size} items)")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Background refresh failed for $category", e)
-            } finally {
-                inFlightRefresh.remove(category)
-            }
-        }
-    }
+    // Disabled background refresh to remove orphan CoroutineScope
+    // private fun triggerBackgroundRefresh(
+    //     category: String,
+    //     page: Int,
+    //     pageSize: Int,
+    //     fetcher: suspend () -> List<ContentItem>
+    // ) {
+    //     if (inFlightRefresh.putIfAbsent(category, true) == true) return
+    //
+    //     refreshScope.launch {
+    //         try {
+    //             Log.d(TAG, "Background refresh for stale $category page $page")
+    //             val freshData = fetcher()
+    //             if (freshData.isNotEmpty()) {
+    //                 cacheRepository.cacheContentPage(category, freshData, page, pageSize)
+    //                 Log.d(TAG, "Background refreshed cache for $category (${freshData.size} items)")
+    //             }
+    //         } catch (e: Exception) {
+    //             Log.w(TAG, "Background refresh failed for $category", e)
+    //         } finally {
+    //             inFlightRefresh.remove(category)
+    //         }
+    //     }
+    // }
 
     private suspend fun fetchTrendingMoviesFromApis(
         page: Int,

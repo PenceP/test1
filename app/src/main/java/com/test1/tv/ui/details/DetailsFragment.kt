@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.leanback.widget.HorizontalGridView
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import android.widget.ImageButton
@@ -663,7 +664,8 @@ class DetailsFragment : Fragment() {
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },
             onNearEnd = {},
-            accentColorCache = accentColorCache
+            accentColorCache = accentColorCache,
+            coroutineScope = viewLifecycleOwner.lifecycleScope
         )
         adapter.submitList(similarItems.take(20))
 
@@ -719,7 +721,8 @@ class DetailsFragment : Fragment() {
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },
             onNearEnd = {},
-            accentColorCache = accentColorCache
+            accentColorCache = accentColorCache,
+            coroutineScope = viewLifecycleOwner.lifecycleScope
         )
         adapter.submitList(collectionItems)
 

@@ -148,7 +148,8 @@ class HomeFragment : Fragment() {
                     }
                 }
             },
-            navFocusEffect = { view, hasFocus -> view.animateNavFocusState(hasFocus) }
+            navFocusEffect = { view, hasFocus -> view.animateNavFocusState(hasFocus) },
+            coroutineScope = viewLifecycleOwner.lifecycleScope
         )
         rowsDelegate.bind(
             contentRows = viewModel.contentRows,

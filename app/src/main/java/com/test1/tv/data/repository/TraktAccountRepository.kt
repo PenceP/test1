@@ -6,6 +6,8 @@ import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.data.model.trakt.TraktTokenResponse
 import com.test1.tv.data.model.trakt.TraktUser
 import com.test1.tv.data.remote.api.TraktApiService
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
@@ -16,6 +18,8 @@ class TraktAccountRepository @Inject constructor(
     private val accountDao: TraktAccountDao
 )
 {
+    private val refreshMutex = Mutex()
+
     companion object {
         private const val PROVIDER_ID = "trakt"
         private const val REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob"
@@ -52,15 +56,15 @@ class TraktAccountRepository @Inject constructor(
         return account
     }
 
-    suspend fun refreshTokenIfNeeded(): TraktAccount? {
-        val account = accountDao.getAccount(PROVIDER_ID) ?: return null
+    suspend fun refreshTokenIfNeeded(): TraktAccount? = refreshMutex.withLock {
+        val account = accountDao.getAccount(PROVIDER_ID) ?: return@withLock null
         val now = System.currentTimeMillis()
-        if (account.expiresAt - EXPIRY_LEEWAY_MS > now) return account
+        if (account.expiresAt - EXPIRY_LEEWAY_MS > now) return@withLock account
 
         val refreshed = traktApiService.refreshToken(
             clientId = BuildConfig.TRAKT_CLIENT_ID,
             clientSecret = BuildConfig.TRAKT_CLIENT_SECRET,
-            refreshToken = account.refreshToken ?: return account,
+            refreshToken = account.refreshToken ?: return@withLock account,
             redirectUri = REDIRECT_URI
         )
         val expiresAt = computeExpiry(refreshed)
@@ -71,7 +75,7 @@ class TraktAccountRepository @Inject constructor(
             tokenType = refreshed.tokenType,
             scope = refreshed.scope
         )
-        return accountDao.getAccount(PROVIDER_ID)
+        return@withLock accountDao.getAccount(PROVIDER_ID)
     }
 
     suspend fun updateStats(

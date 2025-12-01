@@ -14,6 +14,7 @@ import android.widget.ProgressBar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -83,7 +84,8 @@ class SearchFragment : Fragment() {
             onItemLongPress = { },
             onRequestMore = { },
             viewPool = null,
-            accentColorCache = accentColorCache
+            accentColorCache = accentColorCache,
+            coroutineScope = viewLifecycleOwner.lifecycleScope
         )
         rowsRecycler.layoutManager = LinearLayoutManager(requireContext())
         rowsRecycler.adapter = rowsAdapter

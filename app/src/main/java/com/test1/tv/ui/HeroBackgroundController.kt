@@ -30,9 +30,16 @@ class HeroBackgroundController(
     private var ambientAnimator: ValueAnimator? = null
     private var currentAmbientColor: Int = defaultAmbientColor
     private var requestVersion: Long = 0
+    private var currentBackdropTarget: CustomTarget<Drawable>? = null
+    private var currentPaletteTarget: CustomTarget<Bitmap>? = null
 
     fun updateBackdrop(backdropUrl: String?, fallbackDrawable: Drawable?) {
         val version = ++requestVersion
+
+        // Cancel previous Glide requests to save resources
+        currentBackdropTarget?.let { Glide.with(fragment).clear(it) }
+        currentPaletteTarget?.let { Glide.with(fragment).clear(it) }
+
         crossfadeBackdrop(fallbackDrawable)
 
         if (backdropUrl.isNullOrBlank()) {
@@ -44,45 +51,49 @@ class HeroBackgroundController(
             .load(backdropUrl)
             .override(320, 180)
 
-        // Main backdrop
+        // Main backdrop - track target for cancellation
+        currentBackdropTarget = object : CustomTarget<Drawable>() {
+            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                if (version != requestVersion) return
+                crossfadeBackdrop(resource)
+            }
+
+            override fun onLoadCleared(placeholder: Drawable?) {
+                if (version != requestVersion) return
+                crossfadeBackdrop(placeholder ?: fallbackDrawable)
+            }
+
+            override fun onLoadFailed(errorDrawable: Drawable?) {
+                if (version != requestVersion) return
+                crossfadeBackdrop(errorDrawable ?: fallbackDrawable)
+                animateAmbientToColor(defaultAmbientColor)
+            }
+        }
+
         Glide.with(fragment)
             .load(backdropUrl)
             .thumbnail(thumbnailRequest)
-            .into(object : CustomTarget<Drawable>() {
-                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    if (version != requestVersion) return
-                    crossfadeBackdrop(resource)
-                }
+            .into(currentBackdropTarget!!)
 
-                override fun onLoadCleared(placeholder: Drawable?) {
-                    if (version != requestVersion) return
-                    crossfadeBackdrop(placeholder ?: fallbackDrawable)
-                }
+        // Palette for ambient - track target for cancellation
+        currentPaletteTarget = object : CustomTarget<Bitmap>() {
+            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                if (version != requestVersion) return
+                extractPalette(resource)
+            }
 
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    if (version != requestVersion) return
-                    crossfadeBackdrop(errorDrawable ?: fallbackDrawable)
-                    animateAmbientToColor(defaultAmbientColor)
-                }
-            })
+            override fun onLoadCleared(placeholder: Drawable?) = Unit
+            override fun onLoadFailed(errorDrawable: Drawable?) {
+                if (version != requestVersion) return
+                animateAmbientToColor(defaultAmbientColor)
+            }
+        }
 
-        // Palette for ambient
         Glide.with(fragment)
             .asBitmap()
             .load(backdropUrl)
             .override(150, 150)
-            .into(object : CustomTarget<Bitmap>() {
-                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                    if (version != requestVersion) return
-                    extractPalette(resource)
-                }
-
-                override fun onLoadCleared(placeholder: Drawable?) = Unit
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    if (version != requestVersion) return
-                    animateAmbientToColor(defaultAmbientColor)
-                }
-            })
+            .into(currentPaletteTarget!!)
     }
 
     private fun extractPalette(bitmap: Bitmap) {

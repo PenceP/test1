@@ -220,7 +220,8 @@ class ActorDetailsFragment : Fragment() {
                         // No pagination for actor details
                     },
                     viewPool = null,
-                    accentColorCache = com.test1.tv.ui.AccentColorCache()
+                    accentColorCache = com.test1.tv.ui.AccentColorCache(),
+                    coroutineScope = viewLifecycleOwner.lifecycleScope
                 )
                 binding.contentRows.adapter = rowsAdapter
 
