@@ -3,6 +3,7 @@ package com.test1.tv.ui.adapter
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.animation.ValueAnimator
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
@@ -90,6 +91,8 @@ class PosterAdapter(
         val progressBar: View? = itemView.findViewById(R.id.progress_bar)
         private var paletteJob: Job? = null
 
+        private var placeholderAnimator: ValueAnimator? = null
+
         fun bind(item: ContentItem, position: Int) {
             // Reset recycled state
             posterImage.setImageDrawable(null)
@@ -141,7 +144,9 @@ class PosterAdapter(
                     posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
                 }
                 accentColorCache.put(item, DEFAULT_BORDER_COLOR)
+                startPlaceholderAnimation()
             } else {
+                stopPlaceholderAnimation()
                 Glide.with(glideContext)
                     .load(artworkUrl)
                     .onlyRetrieveFromCache(true)  // Force cache-only for instant loading
@@ -182,6 +187,7 @@ class PosterAdapter(
                                         } else {
                                             extractAccentColorAsync(item, resource)
                                         }
+                                        stopPlaceholderAnimation()
                                     }
                                 })
                         }
@@ -200,6 +206,7 @@ class PosterAdapter(
                             } else {
                                 extractAccentColorAsync(item, resource)
                             }
+                            stopPlaceholderAnimation()
                         }
                     })
             }
@@ -275,6 +282,7 @@ class PosterAdapter(
         fun recycle() {
             paletteJob?.cancel()
             paletteJob = null
+            stopPlaceholderAnimation()
         }
 
         private fun applyFocusOverlay(hasFocus: Boolean, accentColor: Int) {
@@ -365,6 +373,25 @@ class PosterAdapter(
 
         private fun shouldKeepTitleOverlay(item: ContentItem): Boolean =
             item.tmdbId < 0
+
+        private fun startPlaceholderAnimation() {
+            placeholderAnimator?.cancel()
+            placeholderAnimator = ValueAnimator.ofFloat(0.6f, 1f).apply {
+                duration = 750L
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                addUpdateListener {
+                    posterImage.alpha = it.animatedValue as Float
+                }
+                start()
+            }
+        }
+
+        private fun stopPlaceholderAnimation() {
+            placeholderAnimator?.cancel()
+            placeholderAnimator = null
+            posterImage.alpha = 1f
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PosterViewHolder {
