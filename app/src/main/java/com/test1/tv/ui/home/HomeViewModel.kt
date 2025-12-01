@@ -387,8 +387,8 @@ class HomeViewModel @Inject constructor(
         )
 
     private fun createTraktMediaRowState(): ContentRowState {
-        val items = TRAKT_MEDIA_ROW_ENTRIES.mapIndexed { index, entry ->
-            val posterUrl = "android.resource://${BuildConfig.APPLICATION_ID}/${entry.iconRes}"
+            val items = TRAKT_MEDIA_ROW_ENTRIES.mapIndexed { index, entry ->
+                val posterUrl = "android.resource://${BuildConfig.APPLICATION_ID}/${R.drawable.trakt2}"
             ContentItem(
                 id = -1000 - index,
                 tmdbId = -1000 - index,

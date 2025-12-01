@@ -115,7 +115,7 @@ class TraktMediaFragment : Fragment() {
             val row = ContentRow(
                 title = viewModel.category.displayTitle,
                 items = items.toMutableList(),
-                presentation = RowPresentation.LANDSCAPE_16_9
+                presentation = RowPresentation.PORTRAIT
             )
             rowAdapter.updateRows(listOf(row))
             items.firstOrNull()?.let { heroSyncManager.updateHeroImmediate(it) }

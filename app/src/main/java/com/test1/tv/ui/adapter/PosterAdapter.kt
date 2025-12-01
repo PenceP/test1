@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -120,8 +121,10 @@ class PosterAdapter(
                 300 to 450
             }
 
+            val keepTitle = shouldKeepTitleOverlay(item)
             titleOverlay.text = item.title
-            titleOverlay.visibility = View.VISIBLE
+            titleOverlay.typeface = if (keepTitle) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.VISIBLE
             cardContainer?.let { ViewCompat.setElevation(it, 6f) }
 
             val cachedAccent = accentColorCache.get(item)
@@ -172,7 +175,7 @@ class PosterAdapter(
                                         transition: Transition<in Drawable>?
                                     ) {
                                         posterImage.setImageDrawable(resource)
-                                        titleOverlay.visibility = View.GONE  // Hide title when network load succeeds
+                                        titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
                                         if (cachedAccent != null) {
                                             accentColorCache.put(item, cachedAccent)
                                             if (itemView.isFocused) applyFocusOverlay(true, cachedAccent)
@@ -187,8 +190,8 @@ class PosterAdapter(
                             resource: Drawable,
                             transition: Transition<in Drawable>?
                         ) {
-                    posterImage.setImageDrawable(resource)
-                    titleOverlay.visibility = View.GONE
+                            posterImage.setImageDrawable(resource)
+                            titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
                             if (cachedAccent != null) {
                                 accentColorCache.put(item, cachedAccent)
                                 if (itemView.isFocused) {
@@ -359,6 +362,9 @@ class PosterAdapter(
 
         private fun getColorKey(item: ContentItem): Int =
             item.tmdbId.takeIf { it != 0 } ?: item.id
+
+        private fun shouldKeepTitleOverlay(item: ContentItem): Boolean =
+            item.tmdbId < 0
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PosterViewHolder {

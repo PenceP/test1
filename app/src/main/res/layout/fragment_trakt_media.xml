@@ -21,92 +21,100 @@
         android:layout_height="match_parent"
         android:background="@drawable/fullscreen_gradient" />
 
-    <LinearLayout
+    <FrameLayout
         android:id="@+id/trakt_media_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginStart="80dp"
-        android:layout_marginTop="@dimen/layout_margin_top_hero_container"
-        android:layout_marginBottom="0dp"
-        android:orientation="vertical"
         android:clipToPadding="false"
         android:clipChildren="false">
 
         <LinearLayout
-            android:id="@+id/hero_info_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="top"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingStart="@dimen/hero_container_padding_start"
-            android:paddingEnd="@dimen/hero_container_padding_end"
-            android:paddingBottom="@dimen/hero_container_padding_bottom">
+            android:weightSum="2">
 
-            <ImageView
-                android:id="@+id/hero_logo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/hero_logo_margin_top"
-                android:layout_marginBottom="@dimen/hero_logo_margin_bottom"
-                android:adjustViewBounds="true"
-                android:maxWidth="@dimen/hero_logo_max_width"
-                android:maxHeight="@dimen/hero_logo_max_height"
-                android:scaleType="fitCenter"
-                android:visibility="gone"
-                android:contentDescription="@string/hero_logo_content_description" />
-
-            <TextView
-                android:id="@+id/hero_title"
+            <LinearLayout
+                android:id="@+id/hero_info_container"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="@dimen/hero_title_size"
-                android:textStyle="bold"
-                android:layout_marginTop="@dimen/hero_title_margin_top" />
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="top"
+                android:orientation="vertical"
+                android:paddingTop="@dimen/layout_margin_top_hero_container"
+                android:paddingStart="@dimen/hero_container_padding_start"
+                android:paddingEnd="@dimen/hero_container_padding_end"
+                android:paddingBottom="@dimen/hero_container_padding_bottom">
 
-            <TextView
-                android:id="@+id/hero_metadata"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/hero_metadata_margin_top"
-                android:textColor="#F0FFFFFF"
-                android:textSize="@dimen/hero_metadata_size" />
+                <ImageView
+                    android:id="@+id/hero_logo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/hero_logo_margin_top"
+                    android:layout_marginBottom="@dimen/hero_logo_margin_bottom"
+                    android:adjustViewBounds="true"
+                    android:maxWidth="@dimen/hero_logo_max_width"
+                    android:maxHeight="@dimen/hero_logo_max_height"
+                    android:scaleType="fitCenter"
+                    android:visibility="gone"
+                    android:contentDescription="@string/hero_logo_content_description" />
 
-            <TextView
-                android:id="@+id/hero_genre_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="@dimen/hero_genre_size"
-                android:layout_marginTop="@dimen/hero_genre_margin_top" />
+                <TextView
+                    android:id="@+id/hero_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="@dimen/hero_title_size"
+                    android:textStyle="bold"
+                    android:layout_marginTop="@dimen/hero_title_margin_top" />
 
-            <TextView
-                android:id="@+id/hero_overview"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="@dimen/hero_overview_size"
-                android:layout_marginTop="@dimen/hero_overview_margin_top"
-                android:layout_marginEnd="@dimen/hero_overview_margin_end" />
+                <TextView
+                    android:id="@+id/hero_metadata"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/hero_metadata_margin_top"
+                    android:textColor="#F0FFFFFF"
+                    android:textSize="@dimen/hero_metadata_size" />
 
-            <TextView
-                android:id="@+id/hero_cast"
+                <TextView
+                    android:id="@+id/hero_genre_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="@dimen/hero_genre_size"
+                    android:layout_marginTop="@dimen/hero_genre_margin_top" />
+
+                <TextView
+                    android:id="@+id/hero_overview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="@dimen/hero_overview_size"
+                    android:layout_marginTop="@dimen/hero_overview_margin_top"
+                    android:layout_marginEnd="@dimen/hero_overview_margin_end" />
+
+                <TextView
+                    android:id="@+id/hero_cast"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="@dimen/hero_cast_size"
+                    android:layout_marginTop="@dimen/hero_cast_margin_top" />
+            </LinearLayout>
+
+            <androidx.leanback.widget.VerticalGridView
+                android:id="@+id/content_rows"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="@dimen/hero_cast_size"
-                android:layout_marginTop="@dimen/hero_cast_margin_top" />
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="bottom|center_horizontal"
+                android:layout_marginBottom="32dp"
+                android:scrollbars="none"
+                android:clipToPadding="false"
+                android:clipChildren="false" />
         </LinearLayout>
-
-        <androidx.leanback.widget.VerticalGridView
-            android:id="@+id/content_rows"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:scrollbars="none"
-            android:clipToPadding="false"
-            android:clipChildren="false" />
-    </LinearLayout>
+    </FrameLayout>
 
     <ProgressBar
         android:id="@+id/loading_indicator"
