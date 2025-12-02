@@ -62,10 +62,12 @@ class RowConfigAdapter(
 
             // Disable move up button for first item
             btnMoveUp.isEnabled = position > 0
+            btnMoveUp.isFocusable = position > 0  // Skip disabled buttons in D-pad navigation
             btnMoveUp.alpha = if (position > 0) 1.0f else 0.3f
 
             // Disable move down button for last item
             btnMoveDown.isEnabled = position < totalItems - 1
+            btnMoveDown.isFocusable = position < totalItems - 1  // Skip disabled buttons in D-pad navigation
             btnMoveDown.alpha = if (position < totalItems - 1) 1.0f else 0.3f
 
             // Set visibility switch
