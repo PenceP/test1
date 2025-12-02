@@ -297,6 +297,15 @@ class HomeFragment : Fragment() {
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
         Log.d(TAG, "Item clicked: ${item.title}")
 
+        // Handle collections, directors, and networks with Trakt list URLs
+        if (item.tmdbId == -1 && item.imdbId?.startsWith("https://trakt.tv/users/") == true) {
+            // For now, open the Trakt list in a browser
+            // TODO: Implement in-app Trakt list viewing
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.imdbId))
+            startActivity(intent)
+            return
+        }
+
         if (item.tmdbId == -1 && item.title.contains("trakt", ignoreCase = true)) {
             promptTraktAuth()
             return

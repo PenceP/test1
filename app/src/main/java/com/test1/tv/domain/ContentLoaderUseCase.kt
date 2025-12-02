@@ -1,5 +1,6 @@
 package com.test1.tv.domain
 
+import com.test1.tv.data.config.StaticRowData
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
@@ -110,21 +111,87 @@ class ContentLoaderUseCase @Inject constructor(
     }
 
     private suspend fun loadNetworks(): List<ContentItem> {
-        // Placeholder for network loading
-        // Will be implemented when network rows are added
-        return emptyList()
+        return StaticRowData.networks.map { network ->
+            ContentItem(
+                id = network.id.hashCode(),
+                tmdbId = -1,
+                imdbId = network.traktListUrl,
+                title = network.name,
+                overview = null,
+                posterUrl = "drawable://network_${network.id.lowercase().replace(" ", "_")}",
+                backdropUrl = null,
+                logoUrl = null,
+                year = null,
+                rating = null,
+                ratingPercentage = null,
+                genres = null,
+                type = ContentItem.ContentType.MOVIE,
+                runtime = null,
+                cast = null,
+                certification = null,
+                imdbRating = null,
+                rottenTomatoesRating = null,
+                traktRating = null,
+                watchProgress = null,
+                isPlaceholder = false
+            )
+        }
     }
 
     private suspend fun loadCollections(): List<ContentItem> {
-        // Placeholder for collections loading
-        // Will be implemented when collection rows are added
-        return emptyList()
+        return StaticRowData.collections.map { collection ->
+            ContentItem(
+                id = collection.id.hashCode(),
+                tmdbId = -1,
+                imdbId = collection.traktListUrl,
+                title = collection.name,
+                overview = null,
+                posterUrl = "drawable://collection_${collection.id.replace("-", "_")}",
+                backdropUrl = null,
+                logoUrl = null,
+                year = null,
+                rating = null,
+                ratingPercentage = null,
+                genres = null,
+                type = ContentItem.ContentType.MOVIE,
+                runtime = null,
+                cast = null,
+                certification = null,
+                imdbRating = null,
+                rottenTomatoesRating = null,
+                traktRating = null,
+                watchProgress = null,
+                isPlaceholder = false
+            )
+        }
     }
 
     private suspend fun loadDirectors(): List<ContentItem> {
-        // Placeholder for directors loading
-        // Will be implemented when director rows are added
-        return emptyList()
+        return StaticRowData.directors.map { director ->
+            ContentItem(
+                id = director.id.hashCode(),
+                tmdbId = -1,
+                imdbId = director.traktListUrl,
+                title = director.name,
+                overview = null,
+                posterUrl = "drawable://director_${director.id}",
+                backdropUrl = null,
+                logoUrl = null,
+                year = null,
+                rating = null,
+                ratingPercentage = null,
+                genres = null,
+                type = ContentItem.ContentType.MOVIE,
+                runtime = null,
+                cast = null,
+                certification = null,
+                imdbRating = null,
+                rottenTomatoesRating = null,
+                traktRating = null,
+                watchProgress = null,
+                isPlaceholder = false
+            )
+        }
     }
 
     /**

@@ -137,6 +137,26 @@ class PosterAdapter(
                 return
             }
 
+            // Handle drawable resources (collections, directors, networks)
+            if (artworkUrl?.startsWith("drawable://") == true) {
+                val drawableName = artworkUrl.removePrefix("drawable://")
+                val drawableId = glideContext.resources.getIdentifier(
+                    drawableName,
+                    "drawable",
+                    glideContext.packageName
+                )
+                if (drawableId != 0) {
+                    posterImage.setImageResource(drawableId)
+                    titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
+                    accentColorCache.put(item, DEFAULT_BORDER_COLOR)
+                } else {
+                    posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
+                    titleOverlay.visibility = View.VISIBLE
+                }
+                stopPlaceholderAnimation()
+                return
+            }
+
             if (isPlaceholder) {
                 if (item.title.contains("Trakt", ignoreCase = true)) {
                     posterImage.setImageResource(R.drawable.ic_trakt_logo)

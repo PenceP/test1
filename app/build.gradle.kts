@@ -96,6 +96,12 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.arch.core.testing)
 
+    // Testing
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.junit)
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.22")
+
     // Lifecycle & ViewModel
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.livedata)

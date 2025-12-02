@@ -58,6 +58,7 @@ class MediaRepositoryTest {
                     cachedAt = System.currentTimeMillis()
                 ),
                 MediaImageEntity(tmdbId = 1, posterUrl = "p", backdropUrl = "b", logoUrl = null),
+                null,
                 null
             )
         )
@@ -89,6 +90,7 @@ class MediaRepositoryTest {
                     cachedAt = 0L
                 ),
                 MediaImageEntity(tmdbId = 2, posterUrl = "p2", backdropUrl = "b2", logoUrl = null),
+                null,
                 null
             )
         )
