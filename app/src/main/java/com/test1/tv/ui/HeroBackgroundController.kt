@@ -172,14 +172,29 @@ class HeroBackgroundController(
     }
 
     private fun crossfadeBackdrop(newDrawable: Drawable?) {
-        val current = backdropView.drawable
-        if (current != null && newDrawable != null && current !== newDrawable) {
-            val transition = TransitionDrawable(arrayOf(current, newDrawable))
-            transition.isCrossFadeEnabled = true
-            backdropView.setImageDrawable(transition)
-            transition.startTransition(180)
-        } else {
-            backdropView.setImageDrawable(newDrawable)
+        backdropView.animate().cancel()
+        val safeDrawable = cloneDrawable(newDrawable)
+
+        if (safeDrawable == null) {
+            backdropView.setImageDrawable(null)
+            backdropView.alpha = 1f
+            return
         }
+
+        backdropView.animate()
+            .alpha(0f)
+            .setDuration(200L)
+            .withEndAction {
+                backdropView.setImageDrawable(safeDrawable)
+                backdropView.animate()
+                    .alpha(1f)
+                    .setDuration(180L)
+                    .start()
+            }.start()
+    }
+
+    private fun cloneDrawable(drawable: Drawable?): Drawable? {
+        return drawable?.constantState?.newDrawable()?.mutate()
+            ?: drawable?.let { it.constantState?.newDrawable()?.mutate() ?: it }
     }
 }

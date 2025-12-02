@@ -30,6 +30,7 @@
     <!-- Corner radii -->
     <dimen name="radius_poster">18dp</dimen>
     <dimen name="radius_card">12dp</dimen>
+    <dimen name="actor_corner_radius">20dp</dimen>
 
     <dimen name="hero_logo_max_width">400dp</dimen>
     <dimen name="hero_logo_max_height">75dp</dimen>

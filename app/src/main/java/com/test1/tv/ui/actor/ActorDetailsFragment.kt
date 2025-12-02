@@ -14,6 +14,7 @@ import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.leanback.widget.VerticalGridView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -33,6 +34,7 @@ import com.test1.tv.ui.adapter.RowPresentation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import dagger.hilt.android.AndroidEntryPoint
@@ -52,6 +54,9 @@ class ActorDetailsFragment : Fragment() {
 
     private var rowsAdapter: ContentRowAdapter? = null
     private var heroUpdateJob: Job? = null
+    private var heroSequence = 0
+    private var currentHeroKey: Pair<Int, ContentItem.ContentType>? = null
+    private var pendingHeroKey: Pair<Int, ContentItem.ContentType>? = null
 
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
     @Inject lateinit var accentColorCache: AccentColorCache
@@ -252,12 +257,17 @@ class ActorDetailsFragment : Fragment() {
     }
 
     private fun updateHeroSection(item: ContentItem) {
+        val key = item.tmdbId to item.type
+        if (currentHeroKey == key) return
         Log.d(TAG, "Updating hero section with: ${item.title}")
         renderHero(item)
         loadBackdropAndPalette(item)
         heroUpdateJob?.cancel()
+        currentHeroKey = key
+        val sequence = ++heroSequence
         heroUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
             fetchDetailedHero(item)?.let { detailed ->
+                if (!isActive || sequence != heroSequence) return@launch
                 renderHero(detailed)
                 loadBackdropAndPalette(detailed)
             }
@@ -347,13 +357,16 @@ class ActorDetailsFragment : Fragment() {
     private fun handleItemFocused(item: ContentItem, rowIndex: Int, itemIndex: Int) {
         Log.d(TAG, "Item focused: ${item.title} at row $rowIndex, position $itemIndex")
 
-        // Cancel any pending hero update
+        val key = item.tmdbId to item.type
+        if (pendingHeroKey == key) return
+        pendingHeroKey = key
         heroUpdateJob?.cancel()
-
-        // Debounce hero section updates
         heroUpdateJob = viewLifecycleOwner.lifecycleScope.launch {
             delay(250)
-            updateHeroSection(item)
+            if (viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                updateHeroSection(item)
+            }
+            pendingHeroKey = null
         }
     }
 

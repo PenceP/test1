@@ -7,12 +7,15 @@
     android:focusableInTouchMode="true"
     android:layout_marginEnd="12dp"
     android:clipToOutline="true"
+    android:outlineProvider="background"
     android:background="@drawable/cast_card_background">
 
     <ImageView
         android:id="@+id/person_photo"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:clipToOutline="true"
         android:scaleType="centerCrop" />
 
     <TextView
@@ -20,7 +23,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="#99000000"
+        android:background="@drawable/cast_name_overlay"
         android:padding="8dp"
         android:textColor="#FFFFFF"
         android:textSize="12sp"
@@ -33,6 +36,7 @@
         android:id="@+id/focus_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/cast_focus_border" />
+        android:background="@drawable/cast_focus_border"
+        android:visibility="invisible" />
 
 </FrameLayout>

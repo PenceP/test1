@@ -5,9 +5,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestOptions
 import com.test1.tv.R
 import com.test1.tv.data.model.tmdb.TMDBCast
 
@@ -23,11 +29,14 @@ class PersonAdapter(
 
         fun bind(person: TMDBCast) {
             // Load profile photo
+            val cornerRadius = itemView.resources.getDimensionPixelSize(R.dimen.actor_corner_radius)
+            val placeholder = ColorDrawable(Color.TRANSPARENT)
             Glide.with(itemView.context)
                 .load(person.getProfileUrl())
                 .transition(DrawableTransitionOptions.withCrossFade())
-                .placeholder(R.drawable.default_background)
-                .error(R.drawable.default_background)
+                .apply(RequestOptions().transforms(CenterCrop(), RoundedCorners(cornerRadius)))
+                .placeholder(placeholder)
+                .error(placeholder)
                 .into(personPhoto)
 
             personName.text = person.name
