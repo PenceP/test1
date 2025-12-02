@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.test1.tv.BuildConfig
 import com.test1.tv.R
 import com.test1.tv.data.local.AppDatabase
+import com.test1.tv.data.local.MIGRATION_11_12
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
@@ -56,6 +57,7 @@ object AppModule {
             AppDatabase::class.java,
             "test1_tv_database"
         )
+            .addMigrations(MIGRATION_11_12)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -77,6 +79,9 @@ object AppModule {
 
     @Provides
     fun provideMediaDao(database: AppDatabase) = database.mediaDao()
+
+    @Provides
+    fun provideRowConfigDao(database: AppDatabase) = database.rowConfigDao()
 
     // Repository helpers
     @Provides
@@ -110,6 +115,15 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideContentLoaderUseCase(
+        contentRepository: com.test1.tv.data.repository.ContentRepository,
+        mediaRepository: com.test1.tv.data.repository.MediaRepository,
+        continueWatchingRepository: ContinueWatchingRepository
+    ): com.test1.tv.domain.ContentLoaderUseCase =
+        com.test1.tv.domain.ContentLoaderUseCase(contentRepository, mediaRepository, continueWatchingRepository)
+
+    @Provides
+    @Singleton
     fun provideTraktMediaRepository(
         traktUserItemDao: com.test1.tv.data.local.dao.TraktUserItemDao,
         tmdbApiService: TMDBApiService,
@@ -121,6 +135,14 @@ object AppModule {
     @Singleton
     fun provideHomeConfigRepository(@ApplicationContext context: Context, gson: Gson): HomeConfigRepository =
         HomeConfigRepository(context, gson)
+
+    @Provides
+    @Singleton
+    fun provideScreenConfigRepository(
+        rowConfigDao: com.test1.tv.data.local.dao.RowConfigDao,
+        @ApplicationContext context: Context
+    ): com.test1.tv.data.repository.ScreenConfigRepository =
+        com.test1.tv.data.repository.ScreenConfigRepository(rowConfigDao, context)
 
     @Provides
     @Singleton

@@ -60,6 +60,7 @@
         <activity
             android:name=".BrowseErrorActivity"
             android:exported="false" />
+        <activity android:name="com.test1.tv.debug.DatabaseDebugActivity" />
     </application>
 
 </manifest>

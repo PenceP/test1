@@ -4,6 +4,7 @@ import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -12,6 +13,7 @@ import androidx.leanback.widget.VerticalGridView
 import com.test1.tv.R
 import com.test1.tv.ui.settings.adapter.SubmenuAdapter
 import com.test1.tv.ui.settings.fragments.AccountsFragment
+import com.test1.tv.ui.settings.fragments.RowCustomizationFragment
 import com.test1.tv.ui.settings.model.SubmenuItem
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -28,6 +30,7 @@ class SettingsActivity : FragmentActivity() {
 
     private val submenuItems = listOf(
         SubmenuItem("accounts", "Accounts", R.drawable.ic_user, "Manage your accounts preferences"),
+        SubmenuItem("layout", "Layout & Rows", R.drawable.ic_layout, "Customize row visibility and order"),
         SubmenuItem("resolving", "Link Resolving", R.drawable.ic_link, "Configure link resolution settings"),
         SubmenuItem("filtering", "Link Filtering", R.drawable.ic_filter, "Set up content filtering rules"),
         SubmenuItem("playback", "Playback", R.drawable.ic_play_circle, "Adjust playback preferences"),
@@ -82,19 +85,23 @@ class SettingsActivity : FragmentActivity() {
     }
 
     private fun loadFragment(item: SubmenuItem) {
-        // Update header
-        contentTitle.text = item.label
-        contentSubtitle.text = item.description
-
         // Load appropriate fragment
         val fragment = when (item.id) {
             "accounts" -> AccountsFragment()
+            "layout" -> RowCustomizationFragment()
             "resolving" -> AccountsFragment() // Placeholder - create ResolvingFragment
             "filtering" -> AccountsFragment() // Placeholder - create FilteringFragment
             "playback" -> AccountsFragment() // Placeholder - create PlaybackFragment
             "display" -> AccountsFragment() // Placeholder - create DisplayFragment
             "about" -> AccountsFragment() // Placeholder - create AboutFragment
             else -> AccountsFragment()
+        }
+
+        // Update header (RowCustomizationFragment will hide it and manage its own tabs)
+        if (fragment !is RowCustomizationFragment) {
+            contentTitle.text = item.label
+            contentSubtitle.text = item.description
+            findViewById<View>(R.id.content_header)?.visibility = View.VISIBLE
         }
 
         val transaction = supportFragmentManager.beginTransaction()

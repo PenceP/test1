@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Focused state - Red stroke -->
+    <item android:color="#FF5252" android:state_focused="true" />
+    <!-- Default state - Transparent -->
+    <item android:color="@android:color/transparent" />
+</selector>

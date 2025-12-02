@@ -8,6 +8,10 @@ import java.io.InputStreamReader
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@Deprecated(
+    message = "Use ScreenConfigRepository instead. This will be removed in Phase 3.",
+    replaceWith = ReplaceWith("ScreenConfigRepository")
+)
 @Singleton
 class HomeConfigRepository @Inject constructor(
     private val context: Context,

@@ -35,15 +35,6 @@ class SubmenuAdapter(
                     onItemClick(items[position])
                 }
             }
-
-            view.setOnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) {
-                    val position = bindingAdapterPosition
-                    if (position != RecyclerView.NO_POSITION) {
-                        onItemClick(items[position])
-                    }
-                }
-            }
         }
     }
 

@@ -1,0 +1,193 @@
+package com.test1.tv.ui.settings.fragments
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.leanback.widget.VerticalGridView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.test1.tv.R
+import com.test1.tv.data.repository.ScreenConfigRepository
+import com.test1.tv.ui.settings.adapter.RowConfigAdapter
+import com.test1.tv.ui.settings.viewmodel.RowCustomizationViewModel
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
+class RowCustomizationFragment : Fragment() {
+
+    private val viewModel: RowCustomizationViewModel by viewModels()
+    private lateinit var adapter: RowConfigAdapter
+
+    private lateinit var tabHome: MaterialButton
+    private lateinit var tabMovies: MaterialButton
+    private lateinit var tabTvShows: MaterialButton
+    private lateinit var rowsList: VerticalGridView
+    private lateinit var btnResetDefaults: MaterialButton
+
+    private var currentScreen = ScreenConfigRepository.ScreenType.HOME
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_row_customization, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Hide the header and adjust container margin for this fragment
+        activity?.findViewById<View>(R.id.content_header)?.apply {
+            visibility = View.GONE
+        }
+
+        // Reduce the fragment container's top margin since header is hidden
+        activity?.findViewById<View>(R.id.fragment_container)?.apply {
+            val params = layoutParams as? ViewGroup.MarginLayoutParams
+            params?.topMargin = 0
+            layoutParams = params
+        }
+
+        initializeViews(view)
+        setupTabs()
+        setupRecyclerView()
+        setupResetButton()
+        observeViewModel()
+
+        // Load initial screen
+        switchScreen(ScreenConfigRepository.ScreenType.HOME)
+
+        // Request focus on the Home tab for TV remote navigation
+        tabHome.post {
+            tabHome.requestFocus()
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // Restore header visibility and container margin when leaving this fragment
+        activity?.findViewById<View>(R.id.content_header)?.visibility = View.VISIBLE
+
+        activity?.findViewById<View>(R.id.fragment_container)?.apply {
+            val params = layoutParams as? ViewGroup.MarginLayoutParams
+            // Restore original 140dp margin (convert to pixels)
+            val marginInDp = 140
+            val marginInPx = (marginInDp * resources.displayMetrics.density).toInt()
+            params?.topMargin = marginInPx
+            layoutParams = params
+        }
+    }
+
+    private fun initializeViews(view: View) {
+        tabHome = view.findViewById(R.id.tab_home)
+        tabMovies = view.findViewById(R.id.tab_movies)
+        tabTvShows = view.findViewById(R.id.tab_tv_shows)
+        rowsList = view.findViewById(R.id.rows_list)
+        btnResetDefaults = view.findViewById(R.id.btn_reset_defaults)
+    }
+
+    private fun setupTabs() {
+        tabHome.setOnClickListener {
+            switchScreen(ScreenConfigRepository.ScreenType.HOME)
+        }
+
+        tabMovies.setOnClickListener {
+            switchScreen(ScreenConfigRepository.ScreenType.MOVIES)
+        }
+
+        tabTvShows.setOnClickListener {
+            switchScreen(ScreenConfigRepository.ScreenType.TV_SHOWS)
+        }
+    }
+
+    private fun switchScreen(screen: ScreenConfigRepository.ScreenType) {
+        currentScreen = screen
+        viewModel.loadRowsForScreen(screen)
+        updateTabSelection()
+        updateFocusNavigation()
+    }
+
+    private fun updateFocusNavigation() {
+        // Set up bi-directional focus between tabs and list
+        // When pressing UP from the first card, focus should return to the active tab
+        val activeTab = when (currentScreen) {
+            ScreenConfigRepository.ScreenType.HOME -> tabHome
+            ScreenConfigRepository.ScreenType.MOVIES -> tabMovies
+            ScreenConfigRepository.ScreenType.TV_SHOWS -> tabTvShows
+        }
+
+        // Tell the adapter which tab is active so it can set nextFocusUp on the first item
+        adapter.setActiveTabId(activeTab.id)
+    }
+
+    private fun updateTabSelection() {
+        // Reset all tabs
+        tabHome.alpha = 0.6f
+        tabMovies.alpha = 0.6f
+        tabTvShows.alpha = 0.6f
+
+        // Highlight selected tab
+        when (currentScreen) {
+            ScreenConfigRepository.ScreenType.HOME -> tabHome.alpha = 1.0f
+            ScreenConfigRepository.ScreenType.MOVIES -> tabMovies.alpha = 1.0f
+            ScreenConfigRepository.ScreenType.TV_SHOWS -> tabTvShows.alpha = 1.0f
+        }
+    }
+
+    private fun setupRecyclerView() {
+        adapter = RowConfigAdapter(
+            onToggleVisibility = { row -> viewModel.toggleRowVisibility(row) },
+            onMoveUp = { row -> viewModel.moveRowUp(row) },
+            onMoveDown = { row -> viewModel.moveRowDown(row) }
+        )
+
+        rowsList.adapter = adapter
+        // VerticalGridView already has its own GridLayoutManager, no need to set one
+    }
+
+    private fun setupResetButton() {
+        btnResetDefaults.setOnClickListener {
+            showResetConfirmationDialog()
+        }
+    }
+
+    private fun showResetConfirmationDialog() {
+        val screenName = when (currentScreen) {
+            ScreenConfigRepository.ScreenType.HOME -> "Home"
+            ScreenConfigRepository.ScreenType.MOVIES -> "Movies"
+            ScreenConfigRepository.ScreenType.TV_SHOWS -> "TV Shows"
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Reset to Defaults")
+            .setMessage("This will reset all row settings for $screenName to their defaults. Continue?")
+            .setPositiveButton("Reset") { _, _ ->
+                viewModel.resetToDefaults()
+                Toast.makeText(
+                    requireContext(),
+                    "$screenName rows reset to defaults",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun observeViewModel() {
+        viewModel.rows.observe(viewLifecycleOwner) { rows ->
+            adapter.submitList(rows)
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+}

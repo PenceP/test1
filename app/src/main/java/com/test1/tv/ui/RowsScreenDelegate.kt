@@ -12,6 +12,7 @@ import com.google.android.material.button.MaterialButton
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
+import com.test1.tv.ui.base.RowAppendEvent
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 
@@ -113,7 +114,7 @@ class RowsScreenDelegate(
         }
 
         rowAppendEvents?.observe(lifecycleOwner) { event ->
-            val appendEvent = event as? com.test1.tv.ui.home.RowAppendEvent ?: return@observe
+            val appendEvent = event as? RowAppendEvent ?: return@observe
             if (appendEvent.newItems.isNotEmpty()) {
                 rowsAdapter?.appendItems(appendEvent.rowIndex, appendEvent.newItems)
             }

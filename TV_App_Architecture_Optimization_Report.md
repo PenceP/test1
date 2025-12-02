@@ -882,71 +882,71 @@ class RowCustomizationViewModel @Inject constructor(
 
 ### Phase 1: Database Schema (Week 1)
 
-- [ ] Create `RowConfigEntity.kt` in `data/local/`
-- [ ] Create `RowConfigDao.kt` in `data/local/dao/`
-- [ ] Add entity to `@Database` annotation in `AppDatabase.kt`
-- [ ] Add `rowConfigDao()` abstract method to `AppDatabase`
-- [ ] Increment database version to 12
-- [ ] Create migration from version 11 to 12
-- [ ] Create `DefaultRowConfigs.kt` object with all default rows
-- [ ] Add database initialization call in `Test1App.onCreate()`
+- [x] Create `RowConfigEntity.kt` in `data/local/`
+- [x] Create `RowConfigDao.kt` in `data/local/dao/`
+- [x] Add entity to `@Database` annotation in `AppDatabase.kt`
+- [x] Add `rowConfigDao()` abstract method to `AppDatabase`
+- [x] Increment database version to 12
+- [x] Create migration from version 11 to 12
+- [x] Create `DefaultRowConfigs.kt` object with all default rows
+- [x] Add database initialization call in `Test1App.onCreate()`
 - [ ] Write unit tests for RowConfigDao
 
 ### Phase 2: Repository Layer (Week 1-2)
 
-- [ ] Create `ScreenConfigRepository.kt`
-- [ ] Add `ScreenType` enum with HOME, MOVIES, TV_SHOWS
-- [ ] Implement `getRowsForScreen()` method
-- [ ] Implement `getAllRowsForSettings()` method  
-- [ ] Implement `toggleRowVisibility()` method
-- [ ] Implement `reorderRow()` method
-- [ ] Implement `resetScreenToDefaults()` method
-- [ ] Implement `initializeDefaults()` method
-- [ ] Add Hilt `@Provides` binding in `AppModule.kt`
-- [ ] Migrate logic from `HomeConfigRepository` (if keeping JSON as fallback)
+- [x] Create `ScreenConfigRepository.kt`
+- [x] Add `ScreenType` enum with HOME, MOVIES, TV_SHOWS
+- [x] Implement `getRowsForScreen()` method
+- [x] Implement `getAllRowsForSettings()` method
+- [x] Implement `toggleRowVisibility()` method
+- [x] Implement `reorderRow()` method
+- [x] Implement `resetScreenToDefaults()` method
+- [x] Implement `initializeDefaults()` method
+- [x] Add Hilt `@Provides` binding in `AppModule.kt`
+- [x] Migrate logic from `HomeConfigRepository` (if keeping JSON as fallback)
 - [ ] Write unit tests for ScreenConfigRepository
-- [ ] Delete or deprecate `HomeConfigRepository`
+- [x] Delete or deprecate `HomeConfigRepository`
 
 ### Phase 3: ViewModel Refactor (Week 2-3)
 
-- [ ] Create `ContentRowState.kt` data class (shared version)
-- [ ] Create `ContentLoaderUseCase.kt` for unified content loading
-- [ ] Create `BaseContentViewModel.kt` abstract class
-- [ ] Implement shared `buildRowsFromConfig()` method
-- [ ] Implement shared `loadAllRows()` method
-- [ ] Implement shared `loadRowContent()` method
-- [ ] Implement shared `requestNextPage()` method
-- [ ] Implement shared `publishRows()` method
-- [ ] Create `RowConfigEntity.toRowState()` extension function
-- [ ] Refactor `HomeViewModel` to extend `BaseContentViewModel`
-- [ ] Remove duplicated code from `HomeViewModel`
-- [ ] Refactor `MoviesViewModel` to extend `BaseContentViewModel`
-- [ ] Remove all hardcoded row definitions from `MoviesViewModel`
-- [ ] Refactor `TvShowsViewModel` to extend `BaseContentViewModel`
-- [ ] Remove all hardcoded row definitions from `TvShowsViewModel`
-- [ ] Update Hilt module for new ViewModel dependencies
+- [x] Create `ContentRowState.kt` data class (shared version)
+- [x] Create `ContentLoaderUseCase.kt` for unified content loading
+- [x] Create `BaseContentViewModel.kt` abstract class
+- [x] Implement shared `buildRowsFromConfig()` method
+- [x] Implement shared `loadAllRows()` method
+- [x] Implement shared `loadRowContent()` method
+- [x] Implement shared `requestNextPage()` method
+- [x] Implement shared `publishRows()` method
+- [x] Create `RowConfigEntity.toRowState()` extension function
+- [x] Refactor `HomeViewModel` to extend `BaseContentViewModel`
+- [x] Remove duplicated code from `HomeViewModel`
+- [x] Refactor `MoviesViewModel` to extend `BaseContentViewModel`
+- [x] Remove all hardcoded row definitions from `MoviesViewModel`
+- [x] Refactor `TvShowsViewModel` to extend `BaseContentViewModel`
+- [x] Remove all hardcoded row definitions from `TvShowsViewModel`
+- [x] Update Hilt module for new ViewModel dependencies
 - [ ] Write unit tests for `BaseContentViewModel`
 - [ ] Write unit tests for refactored ViewModels
-- [ ] Delete any remaining duplicated code
+- [x] Delete any remaining duplicated code
 
 ### Phase 4: Settings UI (Week 3-4)
 
-- [ ] Create `fragment_row_customization.xml` layout
-- [ ] Create `item_row_config.xml` for list items
-- [ ] Create `RowConfigAdapter.kt` RecyclerView adapter
-- [ ] Create `RowCustomizationFragment.kt`
-- [ ] Create `RowCustomizationViewModel.kt`
-- [ ] Add "Layout & Rows" item to `SettingsActivity` submenu
-- [ ] Wire up fragment loading in `SettingsActivity.loadFragment()`
-- [ ] Implement tab switching (Home/Movies/TV Shows)
-- [ ] Implement visibility toggle switches
-- [ ] Create `RowDragCallback.kt` for ItemTouchHelper
-- [ ] Implement drag-and-drop reordering
-- [ ] Implement move up/down buttons (TV remote friendly)
-- [ ] Implement "Reset to Defaults" dialog and functionality
-- [ ] Add TV-friendly focus handling for all controls
-- [ ] Style the UI to match existing Settings design
-- [ ] Test with D-pad navigation
+- [x] Create `fragment_row_customization.xml` layout
+- [x] Create `item_row_config.xml` for list items
+- [x] Create `RowConfigAdapter.kt` RecyclerView adapter
+- [x] Create `RowCustomizationFragment.kt`
+- [x] Create `RowCustomizationViewModel.kt`
+- [x] Add "Layout & Rows" item to `SettingsActivity` submenu
+- [x] Wire up fragment loading in `SettingsActivity.loadFragment()`
+- [x] Implement tab switching (Home/Movies/TV Shows)
+- [x] Implement visibility toggle switches
+- [x] Create `RowDragCallback.kt` for ItemTouchHelper (SKIPPED - using move buttons for TV)
+- [x] Implement drag-and-drop reordering (SKIPPED - using move buttons for TV)
+- [x] Implement move up/down buttons (TV remote friendly)
+- [x] Implement "Reset to Defaults" dialog and functionality
+- [x] Add TV-friendly focus handling for all controls
+- [x] Style the UI to match existing Settings design
+- [ ] Test with D-pad navigation (Requires manual testing on device)
 
 ### Phase 5: Testing & Polish (Week 4)
 

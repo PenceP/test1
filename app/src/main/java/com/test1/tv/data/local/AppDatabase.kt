@@ -10,11 +10,13 @@ import com.test1.tv.data.local.dao.TraktUserItemDao
 import com.test1.tv.data.local.dao.ContinueWatchingDao
 import com.test1.tv.data.local.dao.WatchStatusDao
 import com.test1.tv.data.local.dao.MediaDao
+import com.test1.tv.data.local.dao.RowConfigDao
 import com.test1.tv.data.local.entity.CachedContent
 import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.data.local.entity.TraktUserItem
 import com.test1.tv.data.local.entity.ContinueWatchingEntity
 import com.test1.tv.data.local.entity.WatchStatusEntity
+import com.test1.tv.data.local.entity.RowConfigEntity
 
 @Database(
     entities = [
@@ -26,9 +28,10 @@ import com.test1.tv.data.local.entity.WatchStatusEntity
         MediaContentEntity::class,
         MediaImageEntity::class,
         MediaRatingEntity::class,
-        WatchProgressEntity::class
+        WatchProgressEntity::class,
+        RowConfigEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -39,4 +42,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun continueWatchingDao(): ContinueWatchingDao
     abstract fun watchStatusDao(): WatchStatusDao
     abstract fun mediaDao(): MediaDao
+    abstract fun rowConfigDao(): RowConfigDao
 }
