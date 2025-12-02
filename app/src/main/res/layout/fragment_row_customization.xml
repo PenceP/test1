@@ -96,9 +96,17 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="6dp"
         android:text="Reset to Defaults"
         android:focusable="true"
-        android:focusableInTouchMode="true" />
+        android:focusableInTouchMode="true"
+        android:background="@drawable/tab_button_background"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:padding="6dp"
+        app:strokeColor="@color/tab_button_stroke_color"
+        app:strokeWidth="3dp"
+        app:cornerRadius="8dp"
+        />
 
 </LinearLayout>

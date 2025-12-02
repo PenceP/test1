@@ -144,16 +144,51 @@ class RowCustomizationFragment : Fragment() {
         adapter = RowConfigAdapter(
             onToggleVisibility = { row -> viewModel.toggleRowVisibility(row) },
             onMoveUp = { row -> viewModel.moveRowUp(row) },
-            onMoveDown = { row -> viewModel.moveRowDown(row) }
+            onMoveDown = { row -> viewModel.moveRowDown(row) },
+            onNavigateUpFromFirst = {
+                // When UP is pressed on the first item, move focus to the active tab
+                getActiveTab().requestFocus()
+            },
+            onNavigateDownFromLast = {
+                // When DOWN is pressed on the last item, move focus to the reset button
+                btnResetDefaults.requestFocus()
+            }
         )
 
         rowsList.adapter = adapter
-        // VerticalGridView already has its own GridLayoutManager, no need to set one
+    }
+    
+    private fun getActiveTab(): MaterialButton {
+        return when (currentScreen) {
+            ScreenConfigRepository.ScreenType.HOME -> tabHome
+            ScreenConfigRepository.ScreenType.MOVIES -> tabMovies
+            ScreenConfigRepository.ScreenType.TV_SHOWS -> tabTvShows
+        }
     }
 
     private fun setupResetButton() {
         btnResetDefaults.setOnClickListener {
             showResetConfirmationDialog()
+        }
+
+        // Set up focus navigation: UP from reset button should go back to the list
+        btnResetDefaults.nextFocusUpId = R.id.rows_list
+
+        // Set up focus effect: scale to 1.05x when focused (matching tab button style)
+        btnResetDefaults.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) {
+                view.animate()
+                    .scaleX(1.15f)
+                    .scaleY(1.15f)
+                    .setDuration(150)
+                    .start()
+            } else {
+                view.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(150)
+                    .start()
+            }
         }
     }
 
@@ -181,7 +216,13 @@ class RowCustomizationFragment : Fragment() {
 
     private fun observeViewModel() {
         viewModel.rows.observe(viewLifecycleOwner) { rows ->
-            adapter.submitList(rows)
+            adapter.submitList(rows) {
+                // After list is updated, refresh focus navigation for first and last items
+                if (rows.isNotEmpty()) {
+                    // Refresh focus navigation setup after list update
+                    updateFocusNavigation()
+                }
+            }
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->

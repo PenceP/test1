@@ -36,29 +36,9 @@
                 android:id="@+id/row_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="18sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 tools:text="Trending Movies" />
-
-            <TextView
-                android:id="@+id/row_type"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="14sp"
-                android:alpha="0.7"
-                tools:text="trending • movies" />
-
-            <TextView
-                android:id="@+id/system_row_indicator"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="System Row"
-                android:textSize="12sp"
-                android:textStyle="italic"
-                android:alpha="0.5"
-                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Controls -->
