@@ -111,14 +111,14 @@ class ContentLoaderUseCase @Inject constructor(
     }
 
     private suspend fun loadNetworks(): List<ContentItem> {
-        return StaticRowData.networks.map { network ->
+        return StaticRowData.networks.mapIndexed { index, network ->
             ContentItem(
-                id = network.id.hashCode(),
+                id = "network_${network.id}".hashCode() + index * 100000,
                 tmdbId = -1,
                 imdbId = network.traktListUrl,
                 title = network.name,
                 overview = null,
-                posterUrl = "drawable://network_${network.id.lowercase().replace(" ", "_")}",
+                posterUrl = "drawable://network_${network.id}",
                 backdropUrl = null,
                 logoUrl = null,
                 year = null,
@@ -139,9 +139,9 @@ class ContentLoaderUseCase @Inject constructor(
     }
 
     private suspend fun loadCollections(): List<ContentItem> {
-        return StaticRowData.collections.map { collection ->
+        return StaticRowData.collections.mapIndexed { index, collection ->
             ContentItem(
-                id = collection.id.hashCode(),
+                id = "collection_${collection.id}".hashCode() + index * 100000,
                 tmdbId = -1,
                 imdbId = collection.traktListUrl,
                 title = collection.name,
@@ -167,9 +167,9 @@ class ContentLoaderUseCase @Inject constructor(
     }
 
     private suspend fun loadDirectors(): List<ContentItem> {
-        return StaticRowData.directors.map { director ->
+        return StaticRowData.directors.mapIndexed { index, director ->
             ContentItem(
-                id = director.id.hashCode(),
+                id = "director_${director.id}".hashCode() + index * 100000,
                 tmdbId = -1,
                 imdbId = director.traktListUrl,
                 title = director.name,

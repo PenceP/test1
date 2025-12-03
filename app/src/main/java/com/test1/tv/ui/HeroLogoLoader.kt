@@ -39,6 +39,19 @@ class HeroLogoLoader(
 
         if (logoUrl.isNullOrBlank()) return
 
+        // Convert drawable:// URLs to resource IDs for Glide
+        val loadTarget: Any = if (logoUrl.startsWith("drawable://")) {
+            val drawableName = logoUrl.removePrefix("drawable://")
+            val drawableId = fragment.requireContext().resources.getIdentifier(
+                drawableName,
+                "drawable",
+                fragment.requireContext().packageName
+            )
+            if (drawableId != 0) drawableId else logoUrl
+        } else {
+            logoUrl
+        }
+
         currentTarget = object : CustomTarget<Drawable>() {
             override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
                 if (version != currentVersion) return
@@ -61,10 +74,10 @@ class HeroLogoLoader(
         }
 
         Glide.with(fragment)
-            .load(logoUrl)
+            .load(loadTarget)
             .thumbnail(
                 Glide.with(fragment)
-                    .load(logoUrl)
+                    .load(loadTarget)
                     .override(300, 100)
             )
             .transition(DrawableTransitionOptions.withCrossFade(150))

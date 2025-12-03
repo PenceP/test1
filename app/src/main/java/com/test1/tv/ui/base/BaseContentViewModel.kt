@@ -130,7 +130,11 @@ abstract class BaseContentViewModel(
             state.items.clear()
             state.items.addAll(items)
             state.currentPage = 1
-            state.hasMore = items.size >= state.pageSize
+            // Static rows (collections, directors, networks) have no pagination
+            state.hasMore = when (state.rowType) {
+                "collections", "directors", "networks" -> false
+                else -> items.size >= state.pageSize
+            }
 
             publishRows()
 

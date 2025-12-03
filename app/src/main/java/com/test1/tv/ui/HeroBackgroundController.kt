@@ -47,8 +47,21 @@ class HeroBackgroundController(
             return
         }
 
+        // Convert drawable:// URLs to resource IDs for Glide
+        val loadTarget: Any = if (backdropUrl.startsWith("drawable://")) {
+            val drawableName = backdropUrl.removePrefix("drawable://")
+            val drawableId = fragment.requireContext().resources.getIdentifier(
+                drawableName,
+                "drawable",
+                fragment.requireContext().packageName
+            )
+            if (drawableId != 0) drawableId else backdropUrl
+        } else {
+            backdropUrl
+        }
+
         val thumbnailRequest = Glide.with(fragment)
-            .load(backdropUrl)
+            .load(loadTarget)
             .override(320, 180)
 
         // Main backdrop - track target for cancellation
@@ -71,7 +84,7 @@ class HeroBackgroundController(
         }
 
         Glide.with(fragment)
-            .load(backdropUrl)
+            .load(loadTarget)
             .thumbnail(thumbnailRequest)
             .into(currentBackdropTarget!!)
 
@@ -91,7 +104,7 @@ class HeroBackgroundController(
 
         Glide.with(fragment)
             .asBitmap()
-            .load(backdropUrl)
+            .load(loadTarget)
             .override(150, 150)
             .into(currentPaletteTarget!!)
     }

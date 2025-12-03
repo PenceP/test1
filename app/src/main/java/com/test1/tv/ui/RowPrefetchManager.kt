@@ -39,9 +39,22 @@ class RowPrefetchManager @Inject constructor(
 
         row.items.take(8).forEach { item ->
             val url = if (isLandscape) item.backdropUrl ?: item.posterUrl else item.posterUrl
-            url?.let {
+            url?.let { imageUrl ->
+                // Convert drawable:// URLs to resource IDs for Glide
+                val loadTarget: Any = if (imageUrl.startsWith("drawable://")) {
+                    val drawableName = imageUrl.removePrefix("drawable://")
+                    val drawableId = context.resources.getIdentifier(
+                        drawableName,
+                        "drawable",
+                        context.packageName
+                    )
+                    if (drawableId != 0) drawableId else imageUrl
+                } else {
+                    imageUrl
+                }
+
                 Glide.with(context)
-                    .load(it)
+                    .load(loadTarget)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .preload(targetWidth, targetHeight)
             }

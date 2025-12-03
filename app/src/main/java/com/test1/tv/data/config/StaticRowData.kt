@@ -260,37 +260,37 @@ object StaticRowData {
      */
     val networks = listOf(
         NetworkItem(
-            id = "Netflix",
+            id = "netflix",
             name = "Netflix",
             drawableRes = R.drawable.network_netflix,
             traktListUrl = "https://trakt.tv/users/lhuss13/lists/netflix-movies?sort=released,asc"
         ),
         NetworkItem(
-            id = "DisneyPlus",
+            id = "disney_plus",
             name = "Disney+",
             drawableRes = R.drawable.network_disney_plus,
             traktListUrl = "https://trakt.tv/users/bonnno1/lists/disney-movies?sort=released,asc"
         ),
         NetworkItem(
-            id = "HBOMax",
+            id = "hbo_max",
             name = "HBO Max",
             drawableRes = R.drawable.network_hbo_max,
             traktListUrl = "https://trakt.tv/users/alaxkouad/lists/hbo-max-movies?sort=released,asc"
         ),
         NetworkItem(
-            id = "Hulu",
+            id = "hulu",
             name = "Hulu",
             drawableRes = R.drawable.network_hulu,
             traktListUrl = "https://trakt.tv/users/garycrawfordgc/lists/hulu-movies?sort=released,asc"
         ),
         NetworkItem(
-            id = "AmazonPrime",
+            id = "amazon_prime",
             name = "Amazon Prime",
             drawableRes = R.drawable.network_amazon_prime,
             traktListUrl = "https://trakt.tv/users/garycrawfordgc/lists/amazon-prime-movies?sort=released,asc"
         ),
         NetworkItem(
-            id = "AppleTVPlus",
+            id = "apple_tv_plus",
             name = "Apple TV+",
             drawableRes = R.drawable.network_apple_tv_plus,
             traktListUrl = "https://trakt.tv/users/shaunatkins11/lists/apple-tv-movies?sort=released,asc"

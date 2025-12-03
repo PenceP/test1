@@ -71,7 +71,10 @@ class PosterAdapter(
     }
 
     override fun getItemId(position: Int): Long {
-        return getItem(position).tmdbId.toLong()
+        val item = getItem(position)
+        // Use unique 'id' field for items with tmdbId = -1 (collections, directors, networks)
+        // Otherwise use tmdbId for regular content items
+        return if (item.tmdbId == -1) item.id.toLong() else item.tmdbId.toLong()
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -137,98 +140,123 @@ class PosterAdapter(
                 return
             }
 
-            // Handle drawable resources (collections, directors, networks)
-            if (artworkUrl?.startsWith("drawable://") == true) {
-                val drawableName = artworkUrl.removePrefix("drawable://")
-                val drawableId = glideContext.resources.getIdentifier(
-                    drawableName,
-                    "drawable",
-                    glideContext.packageName
-                )
-                if (drawableId != 0) {
-                    posterImage.setImageResource(drawableId)
-                    titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
-                    accentColorCache.put(item, DEFAULT_BORDER_COLOR)
-                } else {
-                    posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
-                    titleOverlay.visibility = View.VISIBLE
-                }
-                stopPlaceholderAnimation()
-                return
-            }
+            // Determine loading strategy upfront to avoid conflicts
+            val isDrawableResource = artworkUrl?.startsWith("drawable://") == true
 
-            if (isPlaceholder) {
-                if (item.title.contains("Trakt", ignoreCase = true)) {
-                    posterImage.setImageResource(R.drawable.ic_trakt_logo)
-                } else {
-                    posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
-                }
-                accentColorCache.put(item, DEFAULT_BORDER_COLOR)
-                startPlaceholderAnimation()
-            } else {
-                stopPlaceholderAnimation()
-                Glide.with(glideContext)
-                    .load(artworkUrl)
-                    .onlyRetrieveFromCache(true)  // Force cache-only for instant loading
-                    .transition(DrawableTransitionOptions.withCrossFade(150))
-                    .placeholder(PLACEHOLDER_DRAWABLE)
-                    .error(PLACEHOLDER_DRAWABLE)
-                    .override(overrideWidth, overrideHeight)
-                    .into(object : CustomTarget<Drawable>() {
-                        override fun onLoadCleared(placeholder: Drawable?) {
-                            posterImage.setImageDrawable(placeholder)
-                            titleOverlay.visibility = View.VISIBLE
-                        }
-
-                        override fun onLoadFailed(errorDrawable: Drawable?) {
-                            super.onLoadFailed(errorDrawable)
-                            posterImage.setImageDrawable(errorDrawable)
-                            titleOverlay.visibility = View.VISIBLE
-
-                            // If cache fails, load from network in background
-                            Glide.with(glideContext)
-                                .load(artworkUrl)
-                                .onlyRetrieveFromCache(false)
-                                .override(overrideWidth, overrideHeight)
-                                .into(object : CustomTarget<Drawable>() {
-                                    override fun onLoadCleared(placeholder: Drawable?) {
-                                        // Keep current state
-                                    }
-
-                                    override fun onResourceReady(
-                                        resource: Drawable,
-                                        transition: Transition<in Drawable>?
-                                    ) {
-                                        posterImage.setImageDrawable(resource)
-                                        titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
-                                        if (cachedAccent != null) {
-                                            accentColorCache.put(item, cachedAccent)
-                                            if (itemView.isFocused) applyFocusOverlay(true, cachedAccent)
-                                        } else {
-                                            extractAccentColorAsync(item, resource)
-                                        }
-                                        stopPlaceholderAnimation()
-                                    }
-                                })
-                        }
-
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            transition: Transition<in Drawable>?
-                        ) {
-                            posterImage.setImageDrawable(resource)
-                            titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
-                            if (cachedAccent != null) {
-                                accentColorCache.put(item, cachedAccent)
-                                if (itemView.isFocused) {
-                                    applyFocusOverlay(true, cachedAccent)
+            when {
+                isDrawableResource -> {
+                    // Handle drawable resources (collections, directors, networks) using Glide for async loading
+                    stopPlaceholderAnimation()
+                    val drawableName = artworkUrl.removePrefix("drawable://")
+                    val drawableId = glideContext.resources.getIdentifier(
+                        drawableName,
+                        "drawable",
+                        glideContext.packageName
+                    )
+                    if (drawableId != 0) {
+                        // Use Glide to load drawable resources asynchronously to avoid blocking UI thread
+                        Glide.with(glideContext)
+                            .load(drawableId)
+                            .transition(DrawableTransitionOptions.withCrossFade(100))
+                            .placeholder(PLACEHOLDER_DRAWABLE)
+                            .override(overrideWidth, overrideHeight)
+                            .into(object : CustomTarget<Drawable>() {
+                                override fun onLoadCleared(placeholder: Drawable?) {
+                                    posterImage.setImageDrawable(placeholder)
                                 }
-                            } else {
-                                extractAccentColorAsync(item, resource)
+
+                                override fun onResourceReady(
+                                    resource: Drawable,
+                                    transition: Transition<in Drawable>?
+                                ) {
+                                    posterImage.setImageDrawable(resource)
+                                    titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
+                                    accentColorCache.put(item, DEFAULT_BORDER_COLOR)
+                                }
+                            })
+                    } else {
+                        posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
+                        titleOverlay.visibility = View.VISIBLE
+                        accentColorCache.put(item, DEFAULT_BORDER_COLOR)
+                    }
+                }
+                isPlaceholder -> {
+                    // Handle placeholders
+                    stopPlaceholderAnimation()
+                    if (item.title.contains("Trakt", ignoreCase = true)) {
+                        posterImage.setImageResource(R.drawable.ic_trakt_logo)
+                    } else {
+                        posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
+                    }
+                    accentColorCache.put(item, DEFAULT_BORDER_COLOR)
+                    startPlaceholderAnimation()
+                }
+                else -> {
+                    // Only use Glide for regular HTTP/HTTPS URLs
+                    stopPlaceholderAnimation()
+                    Glide.with(glideContext)
+                        .load(artworkUrl)
+                        .onlyRetrieveFromCache(true)  // Force cache-only for instant loading
+                        .transition(DrawableTransitionOptions.withCrossFade(150))
+                        .placeholder(PLACEHOLDER_DRAWABLE)
+                        .error(PLACEHOLDER_DRAWABLE)
+                        .override(overrideWidth, overrideHeight)
+                        .into(object : CustomTarget<Drawable>() {
+                            override fun onLoadCleared(placeholder: Drawable?) {
+                                posterImage.setImageDrawable(placeholder)
+                                titleOverlay.visibility = View.VISIBLE
                             }
-                            stopPlaceholderAnimation()
-                        }
-                    })
+
+                            override fun onLoadFailed(errorDrawable: Drawable?) {
+                                super.onLoadFailed(errorDrawable)
+                                posterImage.setImageDrawable(errorDrawable)
+                                titleOverlay.visibility = View.VISIBLE
+
+                                // If cache fails, load from network in background
+                                Glide.with(glideContext)
+                                    .load(artworkUrl)
+                                    .onlyRetrieveFromCache(false)
+                                    .override(overrideWidth, overrideHeight)
+                                    .into(object : CustomTarget<Drawable>() {
+                                        override fun onLoadCleared(placeholder: Drawable?) {
+                                            // Keep current state
+                                        }
+
+                                        override fun onResourceReady(
+                                            resource: Drawable,
+                                            transition: Transition<in Drawable>?
+                                        ) {
+                                            posterImage.setImageDrawable(resource)
+                                            titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
+                                            if (cachedAccent != null) {
+                                                accentColorCache.put(item, cachedAccent)
+                                                if (itemView.isFocused) applyFocusOverlay(true, cachedAccent)
+                                            } else {
+                                                extractAccentColorAsync(item, resource)
+                                            }
+                                            stopPlaceholderAnimation()
+                                        }
+                                    })
+                            }
+
+                            override fun onResourceReady(
+                                resource: Drawable,
+                                transition: Transition<in Drawable>?
+                            ) {
+                                posterImage.setImageDrawable(resource)
+                                titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
+                                if (cachedAccent != null) {
+                                    accentColorCache.put(item, cachedAccent)
+                                    if (itemView.isFocused) {
+                                        applyFocusOverlay(true, cachedAccent)
+                                    }
+                                } else {
+                                    extractAccentColorAsync(item, resource)
+                                }
+                                stopPlaceholderAnimation()
+                            }
+                        })
+                }
             }
 
             itemView.setOnFocusChangeListener { _, hasFocus ->
