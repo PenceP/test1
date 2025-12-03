@@ -99,6 +99,16 @@
 
 ## Completed ✅
 
+- [x] **Fix RecyclerView crashes**
+  - Fixed duplicate stable IDs: PosterAdapter now uses unique `id` field for tmdbId = -1 items
+  - Fixed drawable:// URL loading in 5 files: PosterAdapter, HeroBackgroundController, HeroLogoLoader, RowPrefetchManager
+  - All images now load asynchronously via Glide with resource IDs
+
+- [x] **Fix infinite scroll bug**
+  - Static rows (Collections, Directors, Networks) now correctly marked as `hasMore = false`
+  - No more duplicate items or infinite scrolling
+  - Can navigate left to nav bar from all rows
+
 - [x] **Network, Collection, and Director rows enlarge 1.1x on focus**
   - Fixed: Removed early return in PosterAdapter drawable handling (line 157)
   - Focus listener now properly attached to all items

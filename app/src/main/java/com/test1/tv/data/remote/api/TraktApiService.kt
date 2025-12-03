@@ -211,6 +211,18 @@ interface TraktApiService {
         @Query("limit") limit: Int = 40
     ): List<TraktListItem>
 
+    @GET("users/{user}/lists/{list}/items/shows")
+    suspend fun getListShows(
+        @Path("user") user: String,
+        @Path("list") list: String,
+        @Header("Authorization") authHeader: String? = null,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("extended") extended: String = "full",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 40
+    ): List<TraktListItem>
+
     @GET("movies/trending")
     suspend fun getTrendingMovies(
         @Header("Content-Type") contentType: String = "application/json",

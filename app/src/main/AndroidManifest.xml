@@ -51,6 +51,10 @@
             android:exported="false"
             android:screenOrientation="landscape" />
         <activity
+            android:name=".TraktListActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
             android:screenOrientation="landscape" />

@@ -33,6 +33,7 @@ import com.test1.tv.BuildConfig
 import com.test1.tv.data.model.ContentItem
 import dagger.hilt.android.AndroidEntryPoint
 import com.test1.tv.TraktMediaActivity
+import com.test1.tv.TraktListActivity
 import com.test1.tv.data.model.trakt.TraktMediaList
 import com.test1.tv.data.repository.TraktAuthRepository
 import com.test1.tv.data.repository.TraktAccountRepository
@@ -294,15 +295,39 @@ class HomeFragment : Fragment() {
         binding.homeContentContainer.visibility = View.VISIBLE
     }
 
+    private fun parseTraktListUrl(url: String): Pair<String, String>? {
+        // Pattern: https://trakt.tv/users/{username}/lists/{list-id} (stop at ? or end)
+        val pattern = """https://trakt\.tv/users/([^/]+)/lists/([^/?]+)""".toRegex()
+        val matchResult = pattern.find(url)
+        return matchResult?.let {
+            val username = it.groupValues[1]
+            val listId = it.groupValues[2]
+            Pair(username, listId)
+        }
+    }
+
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
         Log.d(TAG, "Item clicked: ${item.title}")
+        Log.d(TAG, "Item tmdbId: ${item.tmdbId}, imdbId: ${item.imdbId}")
 
         // Handle collections, directors, and networks with Trakt list URLs
         if (item.tmdbId == -1 && item.imdbId?.startsWith("https://trakt.tv/users/") == true) {
-            // For now, open the Trakt list in a browser
-            // TODO: Implement in-app Trakt list viewing
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.imdbId))
-            startActivity(intent)
+            Log.d(TAG, "Matched Trakt list URL pattern, parsing...")
+            parseTraktListUrl(item.imdbId)?.let { (username, listId) ->
+                Log.d(TAG, "Parsed username: $username, listId: $listId")
+                val intent = TraktListActivity.newIntent(
+                    context = requireContext(),
+                    username = username,
+                    listId = listId,
+                    title = item.title,
+                    traktUrl = item.imdbId
+                )
+                startActivity(intent)
+            } ?: run {
+                // Fallback to browser if parsing fails
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.imdbId))
+                startActivity(intent)
+            }
             return
         }
 
