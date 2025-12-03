@@ -16,6 +16,7 @@ import com.test1.tv.data.model.trakt.TraktWatchedMovie
 import com.test1.tv.data.model.trakt.TraktWatchedShow
 import com.test1.tv.data.model.trakt.TraktListItem
 import com.test1.tv.data.model.trakt.TraktShowProgress
+import com.test1.tv.data.model.trakt.TraktUserList
 import com.test1.tv.data.model.trakt.TraktPlaybackItem
 import com.test1.tv.data.model.trakt.RemovePlaybackRequest
 import retrofit2.http.Body
@@ -67,6 +68,13 @@ interface TraktApiService {
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String
     ): TraktUserStats
+
+    @GET("users/me/lists")
+    suspend fun getUserLists(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String
+    ): List<TraktUserList>
 
     @GET("sync/last_activities")
     suspend fun getLastActivities(

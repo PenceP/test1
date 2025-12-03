@@ -2,27 +2,30 @@
 
 ## High Priority - Core Functionality
 
-### In-App Trakt List Viewing
-- [ ] **Parse Trakt URL → extract username & list ID**
-  - Example: `https://trakt.tv/users/goingnineteen/lists/mcu` → `username="goingnineteen", list="mcu"`
-  - Use regex: `Regex("trakt\\.tv/users/([^/]+)/lists/([^/?]+)")`
+### ✅ In-App Trakt List Viewing (COMPLETED)
+- [x] **Parse Trakt URL → extract username & list ID**
+  - Implemented regex: `https://trakt\.tv/users/([^/]+)/lists/([^/?]+)`
+  - Correctly strips query parameters from list ID
+  - HomeFragment.kt:298-307
 
-- [ ] **Create TraktListActivity/Fragment**
-  - Similar to TraktMediaActivity
-  - Accept username, listId, and title as intent extras
-  - Call `TraktApiService.getListMovies()` or `getListShows()` to fetch content
-  - Display content in rows (reuse ContentRowAdapter)
+- [x] **Create TraktListActivity/Fragment**
+  - TraktListActivity.kt - Container activity with intent extras
+  - TraktListFragment.kt - UI with hero section and content rows
+  - TraktListViewModel.kt - Fetches from TraktApiService
+  - Added to AndroidManifest.xml
 
-- [ ] **Update click handler in HomeFragment**
-  - Replace browser redirect with in-app activity launch
-  - Handle both movies and shows lists
-  - Show loading state while fetching
+- [x] **Update click handler in HomeFragment**
+  - Replaced browser redirect with TraktListActivity launch
+  - Handles both movies and shows lists
+  - Shows loading state while fetching
+  - HomeFragment.kt:313-328
 
-- [ ] **Implement click navigation for all static rows**
-  - Collections (Harry Potter, Marvel, Star Wars, etc.)
-  - Directors (Nolan, Spielberg, Scorsese, etc.)
-  - Networks (Netflix, Disney+, HBO Max, etc.)
-  - All should navigate to TraktListActivity and show content
+- [x] **Implement click navigation for all static rows**
+  - Collections (Harry Potter, Marvel, Star Wars, etc.) ✓
+  - Directors (Nolan, Spielberg, Scorsese, etc.) ✓
+  - Networks (Netflix, Disney+, HBO Max, etc.) ✓
+  - All navigate to TraktListActivity and display content
+  - Fixed PosterAdapter.kt:124 to allow clicks on tmdbId=-1 items with Trakt URLs
 
 ### Authentication-Gated Features
 - [ ] **Implement 'My Trakt' row**

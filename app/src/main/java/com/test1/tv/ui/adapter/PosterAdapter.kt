@@ -121,8 +121,10 @@ class PosterAdapter(
                 item.posterUrl
             }
             // Items with tmdbId == -1 are placeholders UNLESS they have a Trakt URL (Collections/Directors/Networks)
+            // or they're standard Trakt media lists (Movie Collection, etc.)
             val hasTraktUrl = item.imdbId?.startsWith("https://trakt.tv/") == true
-            val isPlaceholder = item.isPlaceholder || (item.tmdbId == -1 && !hasTraktUrl) || artworkUrl.isNullOrBlank()
+            val isTraktMediaList = com.test1.tv.data.model.trakt.TraktMediaList.fromId(item.imdbId) != null
+            val isPlaceholder = item.isPlaceholder || (item.tmdbId == -1 && !hasTraktUrl && !isTraktMediaList) || artworkUrl.isNullOrBlank()
             val (overrideWidth, overrideHeight) = if (presentation == RowPresentation.LANDSCAPE_16_9) {
                 600 to 338
             } else {

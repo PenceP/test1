@@ -16,7 +16,9 @@ import javax.inject.Singleton
 class ContentLoaderUseCase @Inject constructor(
     private val contentRepository: ContentRepository,
     private val mediaRepository: MediaRepository,
-    private val continueWatchingRepository: ContinueWatchingRepository
+    private val continueWatchingRepository: ContinueWatchingRepository,
+    private val traktApiService: com.test1.tv.data.remote.api.TraktApiService,
+    private val traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository
 ) {
 
     /**
@@ -41,6 +43,7 @@ class ContentLoaderUseCase @Inject constructor(
             "networks" -> loadNetworks()
             "collections" -> loadCollections()
             "directors" -> loadDirectors()
+            "my_trakt" -> loadMyTraktLists()
             else -> emptyList()
         }
     }
@@ -191,6 +194,154 @@ class ContentLoaderUseCase @Inject constructor(
                 watchProgress = null,
                 isPlaceholder = false
             )
+        }
+    }
+
+    private suspend fun loadMyTraktLists(): List<ContentItem> {
+        return try {
+            val account = traktAccountRepository.getAccount() ?: return emptyList()
+            val authHeader = traktAccountRepository.buildAuthHeader(account.accessToken)
+
+            // First, add the 4 standard Trakt items in order
+            val standardItems = listOf(
+                ContentItem(
+                    id = "trakt_movie_collection".hashCode(),
+                    tmdbId = -1,
+                    imdbId = "MOVIE_COLLECTION", // TraktMediaList enum name
+                    title = "Movie Collection",
+                    overview = "Movies you've collected on Trakt",
+                    posterUrl = "drawable://trakt2",
+                    backdropUrl = null,
+                    logoUrl = null,
+                    year = null,
+                    rating = null,
+                    ratingPercentage = null,
+                    genres = null,
+                    type = ContentItem.ContentType.MOVIE,
+                    runtime = null,
+                    cast = null,
+                    certification = null,
+                    imdbRating = null,
+                    rottenTomatoesRating = null,
+                    traktRating = null,
+                    watchProgress = null,
+                    isPlaceholder = false
+                ),
+                ContentItem(
+                    id = "trakt_movie_watchlist".hashCode(),
+                    tmdbId = -1,
+                    imdbId = "MOVIE_WATCHLIST",
+                    title = "Movie Watchlist",
+                    overview = "Movies you want to watch on Trakt",
+                    posterUrl = "drawable://ic_watchlist",
+                    backdropUrl = null,
+                    logoUrl = null,
+                    year = null,
+                    rating = null,
+                    ratingPercentage = null,
+                    genres = null,
+                    type = ContentItem.ContentType.MOVIE,
+                    runtime = null,
+                    cast = null,
+                    certification = null,
+                    imdbRating = null,
+                    rottenTomatoesRating = null,
+                    traktRating = null,
+                    watchProgress = null,
+                    isPlaceholder = false
+                ),
+                ContentItem(
+                    id = "trakt_show_collection".hashCode(),
+                    tmdbId = -1,
+                    imdbId = "TV_COLLECTION",
+                    title = "TV Show Collection",
+                    overview = "TV shows you've collected on Trakt",
+                    posterUrl = "drawable://trakt2",
+                    backdropUrl = null,
+                    logoUrl = null,
+                    year = null,
+                    rating = null,
+                    ratingPercentage = null,
+                    genres = null,
+                    type = ContentItem.ContentType.TV_SHOW,
+                    runtime = null,
+                    cast = null,
+                    certification = null,
+                    imdbRating = null,
+                    rottenTomatoesRating = null,
+                    traktRating = null,
+                    watchProgress = null,
+                    isPlaceholder = false
+                ),
+                ContentItem(
+                    id = "trakt_show_watchlist".hashCode(),
+                    tmdbId = -1,
+                    imdbId = "TV_WATCHLIST",
+                    title = "TV Show Watchlist",
+                    overview = "TV shows you want to watch on Trakt",
+                    posterUrl = "drawable://ic_watchlist",
+                    backdropUrl = null,
+                    logoUrl = null,
+                    year = null,
+                    rating = null,
+                    ratingPercentage = null,
+                    genres = null,
+                    type = ContentItem.ContentType.TV_SHOW,
+                    runtime = null,
+                    cast = null,
+                    certification = null,
+                    imdbRating = null,
+                    rottenTomatoesRating = null,
+                    traktRating = null,
+                    watchProgress = null,
+                    isPlaceholder = false
+                )
+            )
+
+            // Then, fetch and add user's custom lists
+            val customLists = try {
+                val lists = traktApiService.getUserLists(
+                    authHeader = authHeader,
+                    clientId = com.test1.tv.BuildConfig.TRAKT_CLIENT_ID
+                )
+
+                lists.mapIndexed { index, list ->
+                    val username = list.user?.username ?: account.userSlug
+                    val slug = list.ids?.slug ?: ""
+                    val traktUrl = "https://trakt.tv/users/$username/lists/$slug"
+
+                    ContentItem(
+                        id = "trakt_list_${list.ids?.trakt ?: index}".hashCode(),
+                        tmdbId = -1,
+                        imdbId = traktUrl,
+                        title = list.name,
+                        overview = list.description,
+                        posterUrl = "drawable://trakt2",
+                        backdropUrl = null,
+                        logoUrl = null,
+                        year = null,
+                        rating = null,
+                        ratingPercentage = null,
+                        genres = null,
+                        type = ContentItem.ContentType.MOVIE,
+                        runtime = null,
+                        cast = null,
+                        certification = null,
+                        imdbRating = null,
+                        rottenTomatoesRating = null,
+                        traktRating = null,
+                        watchProgress = null,
+                        isPlaceholder = false
+                    )
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            // Return standard items first, then custom lists
+            standardItems + customLists
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 

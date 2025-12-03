@@ -118,9 +118,11 @@ object AppModule {
     fun provideContentLoaderUseCase(
         contentRepository: com.test1.tv.data.repository.ContentRepository,
         mediaRepository: com.test1.tv.data.repository.MediaRepository,
-        continueWatchingRepository: ContinueWatchingRepository
+        continueWatchingRepository: ContinueWatchingRepository,
+        traktApiService: TraktApiService,
+        traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository
     ): com.test1.tv.domain.ContentLoaderUseCase =
-        com.test1.tv.domain.ContentLoaderUseCase(contentRepository, mediaRepository, continueWatchingRepository)
+        com.test1.tv.domain.ContentLoaderUseCase(contentRepository, mediaRepository, continueWatchingRepository, traktApiService, traktAccountRepository)
 
     @Provides
     @Singleton
@@ -128,8 +130,9 @@ object AppModule {
         traktUserItemDao: com.test1.tv.data.local.dao.TraktUserItemDao,
         tmdbApiService: TMDBApiService,
         cacheRepository: CacheRepository,
-        watchStatusRepository: WatchStatusRepository
-    ) = TraktMediaRepository(traktUserItemDao, tmdbApiService, cacheRepository, watchStatusRepository)
+        watchStatusRepository: WatchStatusRepository,
+        traktSyncRepository: com.test1.tv.data.repository.TraktSyncRepository
+    ) = TraktMediaRepository(traktUserItemDao, tmdbApiService, cacheRepository, watchStatusRepository, traktSyncRepository)
 
     @Provides
     @Singleton
@@ -140,9 +143,10 @@ object AppModule {
     @Singleton
     fun provideScreenConfigRepository(
         rowConfigDao: com.test1.tv.data.local.dao.RowConfigDao,
+        traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository,
         @ApplicationContext context: Context
     ): com.test1.tv.data.repository.ScreenConfigRepository =
-        com.test1.tv.data.repository.ScreenConfigRepository(rowConfigDao, context)
+        com.test1.tv.data.repository.ScreenConfigRepository(rowConfigDao, traktAccountRepository, context)
 
     @Provides
     @Singleton

@@ -13,6 +13,7 @@ import javax.inject.Singleton
 @Singleton
 class ScreenConfigRepository @Inject constructor(
     private val rowConfigDao: RowConfigDao,
+    private val traktAccountRepository: TraktAccountRepository,
     @ApplicationContext private val context: Context
 ) {
     enum class ScreenType(val key: String) {
@@ -24,10 +25,22 @@ class ScreenConfigRepository @Inject constructor(
     /**
      * Get enabled rows for a specific screen.
      * Returns a Flow that emits updated list whenever database changes.
-     * Only returns rows where enabled = true.
+     * Only returns rows where enabled = true and authentication requirements are met.
      */
     fun getRowsForScreen(screen: ScreenType): Flow<List<RowConfigEntity>> =
-        rowConfigDao.getEnabledRowsForScreen(screen.key)
+        kotlinx.coroutines.flow.flow {
+            rowConfigDao.getEnabledRowsForScreen(screen.key).collect { rows ->
+                // Filter out rows that require auth if user is not authenticated
+                val account = traktAccountRepository.getAccount()
+                val isAuthenticated = account != null
+
+                val filteredRows = rows.filter { row ->
+                    !row.requiresAuth || isAuthenticated
+                }
+
+                emit(filteredRows)
+            }
+        }
 
     /**
      * Get all rows for a specific screen (including disabled ones).

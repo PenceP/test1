@@ -21,7 +21,8 @@ class TraktMediaRepository @Inject constructor(
     private val traktUserItemDao: TraktUserItemDao,
     private val tmdbApiService: TMDBApiService,
     private val cacheRepository: CacheRepository,
-    private val watchStatusRepository: WatchStatusRepository? = null
+    private val watchStatusRepository: WatchStatusRepository? = null,
+    private val traktSyncRepository: TraktSyncRepository
 ) {
 
     suspend fun getMediaList(
@@ -33,7 +34,14 @@ class TraktMediaRepository @Inject constructor(
             return@withContext Result.success(cached)
         }
 
-        val traktItems = traktUserItemDao.getItems(category.listType, category.itemType)
+        var traktItems = traktUserItemDao.getItems(category.listType, category.itemType)
+
+        // If database is empty, trigger a sync first
+        if (traktItems.isEmpty()) {
+            traktSyncRepository.syncAll()
+            traktItems = traktUserItemDao.getItems(category.listType, category.itemType)
+        }
+
         val content = buildContentItems(traktItems, category)
 
         if (content.isNotEmpty()) {
