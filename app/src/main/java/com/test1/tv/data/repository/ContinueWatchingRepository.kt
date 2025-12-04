@@ -28,8 +28,24 @@ class ContinueWatchingRepository @Inject constructor(
     private val traktApiService: TraktApiService,
     private val tmdbApiService: TMDBApiService,
     private val accountRepository: TraktAccountRepository,
+    private val syncMetadataRepository: SyncMetadataRepository,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+
+    companion object {
+        private const val PLAYBACK_MOVIE_LIMIT = 50
+        private const val PLAYBACK_EPISODE_LIMIT = 50
+        private const val HISTORY_FETCH_LIMIT = 20
+        private const val NEAR_COMPLETE_PROGRESS = 0.9f
+        private const val SYNC_KEY_CONTINUE_WATCHING = "continue_watching"
+
+        private fun normalizeProgress(raw: Double?): Float =
+            ((raw ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
+    }
+
+    // In-memory cache for continue watching items
+    @Volatile
+    private var cachedItems: List<ContentItem>? = null
 
     suspend fun hasAccount(): Boolean = accountRepository.getAccount() != null
 
@@ -39,11 +55,19 @@ class ContinueWatchingRepository @Inject constructor(
      * 2) inflate next episodes for shows that finished or are near completion,
      * 3) backfill new episodes for recently completed shows via history,
      * 4) sort by the most recent timestamp while deduping per-show.
+     *
+     * Optimized with last_activities check to avoid unnecessary API calls.
      */
     suspend fun load(limit: Int = 20, forceRefresh: Boolean = false): List<ContentItem> =
         withContext(ioDispatcher) {
             val account = accountRepository.refreshTokenIfNeeded() ?: return@withContext emptyList()
             val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+            // Check if we need to refresh using last_activities
+            if (!forceRefresh && !shouldRefresh(authHeader)) {
+                // Return cached data if available
+                cachedItems?.let { return@withContext it }
+            }
 
             val playbackEntries = fetchPlaybackEntries(authHeader)
             val processedTraktIds = playbackEntries.mapNotNull {
@@ -67,12 +91,46 @@ class ContinueWatchingRepository @Inject constructor(
                 processedTmdbIds = processedTmdbIds
             )
 
-            (playbackEntries + historyEntries)
+            val result = (playbackEntries + historyEntries)
                 .sortedByDescending { it.lastWatchedAtMillis }
                 .let { dedupeEpisodes(it) }
                 .take(limit)
                 .mapNotNull { enrichToContentItem(it) }
+
+            // Cache the result and update sync timestamp
+            cachedItems = result
+
+            // Update sync metadata with latest paused_at timestamp
+            val activities = runCatching {
+                traktApiService.getLastActivities(authHeader, "2", BuildConfig.TRAKT_CLIENT_ID)
+            }.getOrNull()
+            val pausedAt = activities?.movies?.pausedAt ?: activities?.episodes?.pausedAt
+            syncMetadataRepository.markSynced(SYNC_KEY_CONTINUE_WATCHING, pausedAt)
+
+            result
         }
+
+    /**
+     * Check if continue watching data needs to be refreshed.
+     * Returns true if data is stale (>24h) or Trakt activity timestamp changed.
+     */
+    private suspend fun shouldRefresh(authHeader: String): Boolean {
+        // First check 24-hour staleness
+        if (syncMetadataRepository.isStale(SYNC_KEY_CONTINUE_WATCHING)) {
+            return true
+        }
+
+        // Then check Trakt last_activities
+        val activities = runCatching {
+            traktApiService.getLastActivities(authHeader, "2", BuildConfig.TRAKT_CLIENT_ID)
+        }.getOrNull() ?: return false // Network error, use cache
+
+        val remotePausedAt = activities.movies?.pausedAt ?: activities.episodes?.pausedAt
+        val localPausedAt = syncMetadataRepository.getTraktTimestamp(SYNC_KEY_CONTINUE_WATCHING)
+
+        // If remote timestamp is newer, we need to refresh
+        return remotePausedAt != null && remotePausedAt != localPausedAt
+    }
 
     /**
      * Remove a single playback entry from Trakt.
@@ -444,15 +502,5 @@ class ContinueWatchingRepository @Inject constructor(
         } else {
             "S${seasonStr}E${episodeStr} • $epTitle"
         }
-    }
-
-    companion object {
-        private const val PLAYBACK_MOVIE_LIMIT = 50
-        private const val PLAYBACK_EPISODE_LIMIT = 50
-        private const val HISTORY_FETCH_LIMIT = 20
-        private const val NEAR_COMPLETE_PROGRESS = 0.9f
-
-        private fun normalizeProgress(raw: Double?): Float =
-            ((raw ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
     }
 }

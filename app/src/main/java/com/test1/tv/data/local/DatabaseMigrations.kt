@@ -31,3 +31,35 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         """)
     }
 }
+
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create sync_metadata table
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS sync_metadata (
+                `key` TEXT PRIMARY KEY NOT NULL,
+                lastSyncedAt INTEGER NOT NULL,
+                traktActivityTimestamp TEXT
+            )
+        """)
+    }
+}
+
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create media_enrichment table for TMDB enrichment caching
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS media_enrichment (
+                tmdbId INTEGER PRIMARY KEY NOT NULL,
+                posterUrl TEXT,
+                backdropUrl TEXT,
+                logoUrl TEXT,
+                genres TEXT,
+                cast TEXT,
+                runtime TEXT,
+                certification TEXT,
+                lastUpdated INTEGER NOT NULL
+            )
+        """)
+    }
+}

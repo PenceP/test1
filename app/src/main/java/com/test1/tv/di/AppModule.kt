@@ -7,12 +7,15 @@ import com.test1.tv.BuildConfig
 import com.test1.tv.R
 import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.local.MIGRATION_11_12
+import com.test1.tv.data.local.MIGRATION_12_13
+import com.test1.tv.data.local.MIGRATION_13_14
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TraktApiService
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
 import com.test1.tv.data.repository.HomeConfigRepository
+import com.test1.tv.data.repository.SyncMetadataRepository
 import com.test1.tv.data.repository.TraktAccountRepository
 import com.test1.tv.data.repository.TraktMediaRepository
 import com.test1.tv.data.repository.WatchStatusRepository
@@ -23,10 +26,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -57,7 +62,7 @@ object AppModule {
             AppDatabase::class.java,
             "test1_tv_database"
         )
-            .addMigrations(MIGRATION_11_12)
+            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -82,6 +87,9 @@ object AppModule {
 
     @Provides
     fun provideRowConfigDao(database: AppDatabase) = database.rowConfigDao()
+
+    @Provides
+    fun provideSyncMetadataDao(database: AppDatabase) = database.syncMetadataDao()
 
     // Repository helpers
     @Provides
@@ -110,8 +118,9 @@ object AppModule {
     fun provideContinueWatchingRepository(
         traktApiService: TraktApiService,
         tmdbApiService: TMDBApiService,
-        accountRepository: TraktAccountRepository
-    ) = ContinueWatchingRepository(traktApiService, tmdbApiService, accountRepository)
+        accountRepository: TraktAccountRepository,
+        syncMetadataRepository: SyncMetadataRepository
+    ) = ContinueWatchingRepository(traktApiService, tmdbApiService, accountRepository, syncMetadataRepository)
 
     @Provides
     @Singleton
@@ -156,8 +165,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(@ApplicationContext context: Context): OkHttpClient {
+        val cacheSize = 50L * 1024L * 1024L // 50 MB
+        val cacheDir = File(context.cacheDir, "http_cache")
+        val cache = Cache(cacheDir, cacheSize)
+
         return OkHttpClient.Builder()
+            .cache(cache)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

@@ -21,12 +21,12 @@ class AccentColorCache @Inject constructor() {
     private val colors = LruCache<Int, Int>(MAX_ENTRIES)
 
     fun get(item: ContentItem): Int? {
-        val key = item.tmdbId.takeIf { it != 0 } ?: item.id
+        val key = item.tmdbId.takeIf { it > 0 } ?: item.id
         return colors.get(key)
     }
 
     fun put(item: ContentItem, color: Int) {
-        val key = item.tmdbId.takeIf { it != 0 } ?: item.id
+        val key = item.tmdbId.takeIf { it > 0 } ?: item.id
         colors.put(key, color)
     }
 

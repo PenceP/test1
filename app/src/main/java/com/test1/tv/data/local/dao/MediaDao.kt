@@ -2,6 +2,7 @@ package com.test1.tv.data.local.dao
 
 import androidx.room.*
 import com.test1.tv.data.local.*
+import com.test1.tv.data.local.entity.MediaEnrichmentEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -120,4 +121,15 @@ interface MediaDao {
      */
     @Query("SELECT COALESCE(MAX(position), -1) FROM media_content WHERE category = :category")
     suspend fun getMaxPosition(category: String): Int
+
+    // ==================== Enrichment Cache ====================
+
+    @Query("SELECT * FROM media_enrichment WHERE tmdbId IN (:tmdbIds)")
+    suspend fun getEnrichmentsByTmdbIds(tmdbIds: List<Int>): List<MediaEnrichmentEntity>
+
+    @Query("SELECT * FROM media_enrichment WHERE tmdbId = :tmdbId")
+    suspend fun getEnrichmentByTmdbId(tmdbId: Int): MediaEnrichmentEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEnrichment(enrichment: MediaEnrichmentEntity)
 }

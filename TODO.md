@@ -28,14 +28,14 @@
   - Fixed PosterAdapter.kt:124 to allow clicks on tmdbId=-1 items with Trakt URLs
 
 ### Authentication-Gated Features
-- [ ] **Implement 'My Trakt' row**
+- [x] **Implement 'My Trakt' row**
   - Only show after user authorizes Trakt
   - Fetch user's liked lists from Trakt API: `GET /users/me/lists`
   - Dynamically create cards for each liked list
   - Use `trakt_likedlist.png` as background image
   - Show list name as title overlay
 
-- [ ] **Hide Continue Watching until Trakt auth**
+- [x] **Hide Continue Watching until Trakt auth**
   - Check `traktAuthRepository.isAuthenticated()`
   - Only load Continue Watching row if authenticated
   - Show placeholder card to prompt authentication if not authenticated
@@ -60,17 +60,6 @@
   - Test on TV to ensure readability from couch distance
 
 ## Low Priority - Future Enhancements
-
-### Dynamic Content
-- [ ] **Fetch network content from actual streaming services**
-  - Currently using Trakt lists (movies available on Netflix, etc.)
-  - Could integrate with JustWatch API or similar for real-time availability
-  - Would require additional API integration
-
-- [ ] **Add "More" option to expand collection/director rows**
-  - Collections row shows 23 items - might be overwhelming
-  - Consider showing top 10 by default with "See All Collections" card at end
-  - Same for Directors row (currently 10 items)
 
 ### Settings Integration
 - [ ] **Allow customizing which static rows appear**
@@ -98,6 +87,36 @@
   - Covered by 49 passing integration/edge-case/performance tests
   - See Phase 5 test coverage documentation
 
+
+## LOGS
+The short answer is: All of them show by default.
+
+Contrary to popular belief, compiling an Android app in release mode does not automatically strip out Log.d (debug), Log.v (verbose), or Log.i (info) statements.
+
+If you have Log.d("UserToken", "12345") in your code and build for release, that code remains in the APK. Anyone connecting your app to a computer via USB (using adb logcat) can see those logs.
+
+Here is the breakdown of how to handle this effectively.
+
+1. The Default Behavior
+If you do not explicitly configure your build to remove them, every single log level (Verbose, Debug, Info, Warn, Error) is compiled into the release application.
+
+Risk: This affects performance and, more importantly, security. You might accidentally log API keys, auth tokens, or user data that a malicious actor could easily view.
+
+2. How to Strip Logs (The "Pro" Way)
+The standard way to remove logs in a release build is using R8 (formerly ProGuard). You can tell the compiler to identify Log calls and delete those lines of code entirely so they never execute.
+
+Add the following to your proguard-rules.pro file:
+
+Code snippet
+
+# Strip all Log.v (Verbose), Log.d (Debug), and Log.i (Info)
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
+Note: Usually, developers keep Log.e (Error) and Log.w (Warning) in release builds to track crashes via tools like Crashlytics, but you can strip those too if you wish by adding them to the list above.
 ---
 
 ## Completed ✅
@@ -144,6 +163,8 @@
 - [x] **Basic click navigation (browser redirect)**
   - Collections/Directors/Networks open Trakt list in browser
   - Placeholder for in-app viewing (to be implemented above)
+
+
 
 ---
 

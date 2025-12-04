@@ -1,0 +1,108 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:name="vector"
+            android:width="500dp"
+            android:height="100dp"
+            android:viewportWidth="500"
+            android:viewportHeight="100">
+            <!-- S -->
+            <path
+                android:name="path_s"
+                android:pathData="M80 20 C 20 20, 20 50, 50 50 C 80 50, 80 80, 20 80"
+                android:strokeWidth="6"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:trimPathEnd="0"/>
+            <!-- T (Standard Lines) -->
+            <path
+                android:name="path_t"
+                android:pathData="M110 20 L 190 20 M 150 20 L 150 80"
+                android:strokeWidth="6"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:trimPathEnd="0"/>
+            <!-- R1 -->
+            <path
+                android:name="path_r1"
+                android:pathData="M220 80 L 220 20 L 260 20 C 280 20, 280 50, 260 50 L 220 50 L 270 80"
+                android:strokeWidth="6"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:trimPathEnd="0"/>
+            <!-- M -->
+            <path
+                android:name="path_m"
+                android:pathData="M310 80 L 310 20 L 350 60 L 390 20 L 390 80"
+                android:strokeWidth="6"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:trimPathEnd="0"/>
+            <!-- R2 -->
+            <path
+                android:name="path_r2"
+                android:pathData="M420 80 L 420 20 L 460 20 C 480 20, 480 50, 460 50 L 420 50 L 470 80"
+                android:strokeWidth="6"
+                android:strokeColor="#ffffff"
+                android:strokeLineCap="round"
+                android:trimPathEnd="0"/>
+        </vector>
+    </aapt:attr>
+    
+    <!-- Animations to draw the lines from 0 to 100% -->
+    <target android:name="path_s">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:duration="1500"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+    <target android:name="path_t">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:startOffset="200"
+                android:duration="1500"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+    <target android:name="path_r1">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:startOffset="400"
+                android:duration="1500"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+    <target android:name="path_m">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:startOffset="600"
+                android:duration="1500"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+    <target android:name="path_r2">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:startOffset="800"
+                android:duration="1500"
+                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+        </aapt:attr>
+    </target>
+</animated-vector>

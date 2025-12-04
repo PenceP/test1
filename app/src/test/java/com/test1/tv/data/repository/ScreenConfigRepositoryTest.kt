@@ -14,6 +14,7 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
@@ -55,7 +56,8 @@ class ScreenConfigRepositoryTest {
             .allowMainThreadQueries()
             .build()
         rowConfigDao = database.rowConfigDao()
-        repository = ScreenConfigRepository(rowConfigDao, context)
+        val mockAccountRepo = mock(TraktAccountRepository::class.java)
+        repository = ScreenConfigRepository(rowConfigDao, mockAccountRepo, context)
     }
 
     @After

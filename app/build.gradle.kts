@@ -38,7 +38,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true      // Turns on ProGuard/R8
+            isShrinkResources = true    // Removes unused images/layouts to save space
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -72,6 +73,9 @@ dependencies {
     implementation(libs.androidx.palette)
     implementation(libs.glide)
     kapt("com.github.bumptech.glide:compiler:4.16.0")
+
+    // Shimmer effect for skeleton loading UI
+    implementation("com.facebook.shimmer:shimmer:0.5.0")
 
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)

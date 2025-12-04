@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="500dp"
+    android:height="100dp"
+    android:viewportWidth="500"
+    android:viewportHeight="100">
+
+    <aapt:attr name="android:fillColor">
+        <gradient 
+            android:startX="0" 
+            android:startY="50" 
+            android:endX="500" 
+            android:endY="50"
+            android:type="linear">
+            <item android:offset="0" android:color="#FF818CF8"/>
+            <item android:offset="1" android:color="#FF4F46E5"/>
+        </gradient>
+    </aapt:attr>
+
+    <!-- S -->
+    <path android:pathData="M80 20 C 20 20, 20 50, 50 50 C 80 50, 80 80, 20 80" />
+    
+    <!-- T (Note: This is the TRIANGLE shape now) -->
+    <path android:pathData="M110 20 L 190 20 L 150 80 L 110 20" />
+    
+    <!-- R1 -->
+    <path android:pathData="M220 80 L 220 20 L 260 20 C 280 20, 280 50, 260 50 L 220 50 L 270 80" />
+    
+    <!-- M -->
+    <path android:pathData="M310 80 L 310 20 L 350 60 L 390 20 L 390 80" />
+    
+    <!-- R2 -->
+    <path android:pathData="M420 80 L 420 20 L 460 20 C 480 20, 480 50, 460 50 L 420 50 L 470 80" />
+
+</vector>

@@ -5,6 +5,56 @@
     android:layout_height="match_parent"
     android:background="@android:color/black">
 
+    <!-- Ambient Glow Background -->
+    <View
+        android:id="@+id/ambient_glow"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#1A6366F1"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Hexagon Background (Rotates) -->
+    <ImageView
+        android:id="@+id/bg_hex"
+        android:layout_width="500dp"
+        android:layout_height="500dp"
+        android:src="@drawable/ic_hex_bg"
+        android:alpha="0"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.4" />
+
+    <!-- Logo: Stroke / Trace (Animates) -->
+    <ImageView
+        android:id="@+id/logo_trace"
+        android:layout_width="400dp"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:src="@drawable/avd_strmr_trace"
+        app:layout_constraintBottom_toBottomOf="@id/bg_hex"
+        app:layout_constraintEnd_toEndOf="@id/bg_hex"
+        app:layout_constraintStart_toStartOf="@id/bg_hex"
+        app:layout_constraintTop_toTopOf="@id/bg_hex" />
+
+    <!-- Logo: Fill (Fades In) -->
+    <ImageView
+        android:id="@+id/logo_fill"
+        android:layout_width="400dp"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:src="@drawable/ic_strmr_fill"
+        android:alpha="0"
+        app:layout_constraintBottom_toBottomOf="@id/logo_trace"
+        app:layout_constraintEnd_toEndOf="@id/logo_trace"
+        app:layout_constraintStart_toStartOf="@id/logo_trace"
+        app:layout_constraintTop_toTopOf="@id/logo_trace" />
+
+    <!-- Status Text -->
     <TextView
         android:id="@+id/status_text"
         android:layout_width="wrap_content"
@@ -13,11 +63,12 @@
         android:textColor="@android:color/white"
         android:textSize="20sp"
         android:textStyle="bold"
+        android:layout_marginBottom="16dp"
         app:layout_constraintBottom_toTopOf="@id/sync_progress"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginBottom="16dp"/>
+        app:layout_constraintStart_toStartOf="parent" />
 
+    <!-- Progress Bar -->
     <ProgressBar
         android:id="@+id/sync_progress"
         style="?android:attr/progressBarStyleHorizontal"
@@ -26,22 +77,27 @@
         android:indeterminate="false"
         android:max="100"
         android:progress="0"
+        android:layout_marginStart="48dp"
+        android:layout_marginEnd="48dp"
+        android:layout_marginBottom="24dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/fun_message_text"
-        app:layout_constraintHorizontal_bias="0.5"
-        android:layout_marginStart="48dp"
-        android:layout_marginEnd="48dp"
-        android:layout_marginBottom="24dp" />
+        app:layout_constraintHorizontal_bias="0.5" />
 
+    <!-- Fun Message (Replaces Loading Experience) -->
     <TextView
         android:id="@+id/fun_message_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/sync_fun_message_default"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        app:layout_constraintTop_toBottomOf="@id/sync_progress"
+        android:textColor="#818CF8"
+        android:textSize="14sp"
+        android:textAllCaps="true"
+        android:letterSpacing="0.3"
+        android:fontFamily="sans-serif-medium"
+        android:layout_marginBottom="48dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 

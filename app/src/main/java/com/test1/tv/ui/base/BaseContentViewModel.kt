@@ -61,6 +61,7 @@ abstract class BaseContentViewModel(
     /**
      * Build row states from database configuration.
      * Subclasses can override to add custom row building logic.
+     * Pre-populates rows with skeleton items for instant UI feedback.
      */
     protected open suspend fun buildRowsFromConfig() {
         screenConfigRepository.getRowsForScreen(screenType).collect { configs ->
@@ -68,8 +69,15 @@ abstract class BaseContentViewModel(
             if (rowStates.size != configs.size) {
                 rowStates.clear()
                 configs.forEach { config ->
-                    rowStates.add(config.toRowState())
+                    val state = config.toRowState()
+                    // Pre-populate with skeleton items (6 placeholders)
+                    state.items.addAll(ContentItem.createPlaceholders(6))
+                    rowStates.add(state)
                 }
+
+                // Publish skeleton rows immediately so UI shows loading state
+                publishRows()
+
                 if (rowStates.isNotEmpty()) {
                     loadAllRows()
                 }
@@ -78,8 +86,9 @@ abstract class BaseContentViewModel(
     }
 
     /**
-     * Load all rows with Netflix-style progressive loading.
-     * First row loads immediately, others stagger with delays.
+     * Load all rows with optimized progressive loading.
+     * First row loads immediately, critical rows stagger at 200ms,
+     * non-essential rows defer by 1 second to reduce startup API load.
      */
     protected open suspend fun loadAllRows(forceRefresh: Boolean = false) {
         _isLoading.value = true
@@ -91,18 +100,34 @@ abstract class BaseContentViewModel(
 
         _isLoading.value = false
 
-        // Stagger remaining rows with delays (Netflix uses ~50-100ms stagger)
+        // Categorize rows by priority
+        val (criticalRows, deferredRows) = rowStates.drop(1).withIndex().partition { (_, state) ->
+            // Critical: Trending, Popular, Continue Watching
+            state.rowType in listOf("trending", "popular", "continue_watching")
+        }
+
+        // Load critical rows with moderate stagger (200ms)
         kotlinx.coroutines.coroutineScope {
-            rowStates.drop(1).forEachIndexed { idx, state ->
+            criticalRows.forEach { (idx, state) ->
                 launch {
-                    delay(50L * (idx + 1))
+                    delay(200L * (idx + 1))
+                    loadRowContent(idx + 1, state, forceRefresh = forceRefresh)
+                }
+            }
+        }
+
+        // Defer non-essential rows (Networks, Directors, Studios, Collections) by 1 second
+        kotlinx.coroutines.coroutineScope {
+            deferredRows.forEach { (idx, state) ->
+                launch {
+                    delay(1000L + (150L * idx))  // Start after 1s, then 150ms stagger
                     loadRowContent(idx + 1, state, forceRefresh = forceRefresh)
                 }
             }
         }
 
         // Prefetch next pages after all rows loaded
-        delay(200)
+        delay(500)
         prefetchNextPages()
     }
 

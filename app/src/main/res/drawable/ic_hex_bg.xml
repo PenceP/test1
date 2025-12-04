@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    
+    <!-- Outer Ring -->
+    <!-- Note: android:strokeDashGap/Width are not supported in Vectors. 
+         Using strokeAlpha="0.3" to create a subtle tech-ring effect instead. -->
+    <path
+        android:pathData="M100, 10 m-90, 0 a90,90 0 1,0 180,0 a90,90 0 1,0 -180,0"
+        android:strokeColor="#6366F1"
+        android:strokeWidth="1"
+        android:strokeAlpha="0.3"/>
+
+    <!-- Hexagon -->
+    <path
+        android:pathData="M100 20 L170 60 L170 140 L100 180 L30 140 L30 60 Z"
+        android:strokeColor="#66818CF8"
+        android:strokeWidth="2"/>
+
+    <!-- Crosshairs -->
+    <path
+        android:pathData="M100 20 L100 40 M100 160 L100 180 M20 100 L40 100 M160 100 L180 100"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.5"/>
+</vector>

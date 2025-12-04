@@ -32,6 +32,8 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.facebook.shimmer.Shimmer
+import com.facebook.shimmer.ShimmerDrawable
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.ui.AccentColorCache
@@ -110,6 +112,15 @@ class PosterAdapter(
             progressBar?.visibility = View.GONE
             progressBar?.alpha = 1f
 
+            // Handle skeleton placeholders immediately
+            if (item.isPlaceholder) {
+                showShimmer()
+                return
+            }
+
+            // Hide shimmer and restore normal state for real content
+            hideShimmer()
+
             val artworkUrl = if (presentation == RowPresentation.LANDSCAPE_16_9) {
                 // For continue-watching (has watchProgress), prefer poster/still so hero can keep show backdrop.
                 if (item.watchProgress != null) {
@@ -150,6 +161,7 @@ class PosterAdapter(
             when {
                 isDrawableResource -> {
                     // Handle drawable resources (collections, directors, networks) using Glide for async loading
+                    android.util.Log.d("PosterAdapter", "Loading drawable resource for '${item.title}': $artworkUrl, cachedAccent=$cachedAccent")
                     stopPlaceholderAnimation()
                     val drawableName = artworkUrl.removePrefix("drawable://")
                     val drawableId = glideContext.resources.getIdentifier(
@@ -157,6 +169,7 @@ class PosterAdapter(
                         "drawable",
                         glideContext.packageName
                     )
+                    android.util.Log.d("PosterAdapter", "Drawable ID for '$drawableName': $drawableId")
                     if (drawableId != 0) {
                         // Use Glide to load drawable resources asynchronously to avoid blocking UI thread
                         Glide.with(glideContext)
@@ -173,12 +186,22 @@ class PosterAdapter(
                                     resource: Drawable,
                                     transition: Transition<in Drawable>?
                                 ) {
+                                    android.util.Log.d("PosterAdapter", "Drawable loaded for '${item.title}', cachedAccent=$cachedAccent")
                                     posterImage.setImageDrawable(resource)
                                     titleOverlay.visibility = if (keepTitle) View.VISIBLE else View.GONE
-                                    accentColorCache.put(item, DEFAULT_BORDER_COLOR)
+                                    // Extract accent color from drawable resources for focus border
+                                    if (cachedAccent != null) {
+                                        android.util.Log.d("PosterAdapter", "Using cached accent for '${item.title}': ${String.format("#%06X", 0xFFFFFF and cachedAccent)}")
+                                        accentColorCache.put(item, cachedAccent)
+                                        if (itemView.isFocused) applyFocusOverlay(true, cachedAccent)
+                                    } else {
+                                        android.util.Log.d("PosterAdapter", "No cached accent, extracting for '${item.title}'")
+                                        extractAccentColorAsync(item, resource)
+                                    }
                                 }
                             })
                     } else {
+                        android.util.Log.d("PosterAdapter", "Drawable not found for '${item.title}': $drawableName")
                         posterImage.setImageDrawable(PLACEHOLDER_DRAWABLE)
                         titleOverlay.visibility = View.VISIBLE
                         accentColorCache.put(item, DEFAULT_BORDER_COLOR)
@@ -265,6 +288,9 @@ class PosterAdapter(
 
             itemView.setOnFocusChangeListener { _, hasFocus ->
                 val accentColor = accentColorCache.get(item) ?: DEFAULT_BORDER_COLOR
+                if (hasFocus) {
+                    android.util.Log.d("PosterAdapter", "Item focused: '${item.title}', accentColor: ${String.format("#%06X", 0xFFFFFF and accentColor)}")
+                }
                 applyFocusOverlay(hasFocus, accentColor)
                 if (hasFocus) {
                     itemView.playSoundEffect(SoundEffectConstants.CLICK)
@@ -405,13 +431,16 @@ class PosterAdapter(
                     }
                     if (bitmap.isRecycled) return@runCatching DEFAULT_BORDER_COLOR
                     val palette = Palette.from(bitmap).generate()
-                    palette.vibrantSwatch?.rgb
+                    val extractedColor = palette.vibrantSwatch?.rgb
                         ?: palette.darkVibrantSwatch?.rgb
                         ?: palette.dominantSwatch?.rgb
                         ?: DEFAULT_BORDER_COLOR
+                    android.util.Log.d("PosterAdapter", "Extracted color for '${item.title}': ${String.format("#%06X", 0xFFFFFF and extractedColor)} (vibrant: ${palette.vibrantSwatch?.rgb != null}, darkVibrant: ${palette.darkVibrantSwatch?.rgb != null}, dominant: ${palette.dominantSwatch?.rgb != null})")
+                    extractedColor
                 }.getOrDefault(DEFAULT_BORDER_COLOR)
 
                 accentColorCache.put(item, color)
+                android.util.Log.d("PosterAdapter", "Cached accent color for '${item.title}': ${String.format("#%06X", 0xFFFFFF and color)}, isFocused: ${itemView.isFocused}")
                 withContext(Dispatchers.Main) {
                     if (itemView.isFocused) {
                         applyFocusOverlay(true, color)
@@ -443,6 +472,45 @@ class PosterAdapter(
             placeholderAnimator?.cancel()
             placeholderAnimator = null
             posterImage.alpha = 1f
+        }
+
+        /**
+         * Show shimmer effect for skeleton placeholder items.
+         * Used during initial loading to provide visual feedback.
+         */
+        private fun showShimmer() {
+            stopPlaceholderAnimation()
+            val shimmer = Shimmer.AlphaHighlightBuilder()
+                .setDuration(1000)
+                .setBaseAlpha(0.7f)
+                .setHighlightAlpha(0.9f)
+                .setDirection(Shimmer.Direction.LEFT_TO_RIGHT)
+                .setAutoStart(true)
+                .build()
+
+            val shimmerDrawable = ShimmerDrawable().apply {
+                setShimmer(shimmer)
+            }
+
+            posterImage.setImageDrawable(shimmerDrawable)
+            titleOverlay.text = ""
+            titleOverlay.visibility = View.GONE
+            watchedBadge?.visibility = View.GONE
+            progressBar?.visibility = View.GONE
+
+            // Disable interactions for placeholders
+            itemView.isFocusable = false
+            itemView.isClickable = false
+        }
+
+        /**
+         * Hide shimmer effect and restore normal state.
+         * Called when real content is loaded.
+         */
+        private fun hideShimmer() {
+            // Normal bind() handles this, just ensure item is interactable
+            itemView.isFocusable = true
+            itemView.isClickable = true
         }
     }
 

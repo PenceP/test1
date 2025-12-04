@@ -1,7 +1,11 @@
 package com.test1.tv.ui.splash
 
 import android.content.Intent
+import android.graphics.drawable.Animatable
 import android.os.Bundle
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
@@ -29,6 +33,9 @@ class SyncSplashActivity : FragmentActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
     private lateinit var funMessageText: TextView
+    private lateinit var logoTrace: ImageView
+    private lateinit var logoFill: ImageView
+    private lateinit var bgHex: ImageView
 
     private val funMessages = listOf(
         "Hacking the mainframe...",
@@ -48,10 +55,18 @@ class SyncSplashActivity : FragmentActivity() {
         setContentView(R.layout.activity_sync_splash)
         LaunchGate.reset()
 
+        // Bind Views
         progressBar = findViewById(R.id.sync_progress)
         statusText = findViewById(R.id.status_text)
         funMessageText = findViewById(R.id.fun_message_text)
+        logoTrace = findViewById(R.id.logo_trace)
+        logoFill = findViewById(R.id.logo_fill)
+        bgHex = findViewById(R.id.bg_hex)
 
+        // Start the Visual Animations
+        startLogoAnimations()
+
+        // Start the Logic / Data Loading
         lifecycleScope.launch {
             val messageJob = launch { rotateFunMessages() }
 
@@ -69,6 +84,10 @@ class SyncSplashActivity : FragmentActivity() {
                 }
             }
 
+            // Small delay to ensure the cool logo animation has at least finished the "Drawing" phase
+            // before we jump screens (optional, but looks nicer)
+            delay(2000)
+
             messageJob.cancel()
 
             startActivity(Intent(this@SyncSplashActivity, MainActivity::class.java))
@@ -76,6 +95,60 @@ class SyncSplashActivity : FragmentActivity() {
             // Keep splash visible until home reports ready (first pages loaded)
             LaunchGate.homeReady.first { it }
             finish()
+        }
+    }
+
+    private fun startLogoAnimations() {
+        // 1. Start Background Rotation
+        bgHex.animate()
+            .alpha(0.2f)
+            .setDuration(1000)
+            .start()
+            
+        // Rotate continuously
+        val rotateAnim = android.animation.ObjectAnimator.ofFloat(bgHex, "rotation", 0f, 360f)
+        rotateAnim.duration = 20000 // 20 seconds for full rotation
+        rotateAnim.repeatCount = android.animation.ObjectAnimator.INFINITE
+        rotateAnim.interpolator = android.view.animation.LinearInterpolator()
+        rotateAnim.start()
+
+        // 2. Trigger the "Trace" animation (AVD)
+        val drawable = logoTrace.drawable
+        if (drawable is Animatable) {
+            drawable.start()
+        }
+
+        // 3. Sequence: Fade in the Fill after the trace is mostly done
+        lifecycleScope.launch {
+            delay(1800) // Wait for trace to near completion
+            
+            // Fade OUT the trace lines
+            logoTrace.animate().alpha(0f).setDuration(500).start()
+            
+            // Fade IN the solid fill
+            logoFill.alpha = 0f
+            logoFill.scaleX = 0.9f
+            logoFill.scaleY = 0.9f
+            logoFill.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(800)
+                .setInterpolator(AccelerateDecelerateInterpolator())
+                .start()
+                
+            // Pulse effect on the fill
+            delay(800)
+            val pulseScaleX = android.animation.ObjectAnimator.ofFloat(logoFill, "scaleX", 1f, 1.05f, 1f)
+            val pulseScaleY = android.animation.ObjectAnimator.ofFloat(logoFill, "scaleY", 1f, 1.05f, 1f)
+            pulseScaleX.repeatCount = android.animation.ObjectAnimator.INFINITE
+            pulseScaleY.repeatCount = android.animation.ObjectAnimator.INFINITE
+            pulseScaleX.duration = 2000
+            pulseScaleY.duration = 2000
+            
+            val animatorSet = android.animation.AnimatorSet()
+            animatorSet.playTogether(pulseScaleX, pulseScaleY)
+            animatorSet.start()
         }
     }
 

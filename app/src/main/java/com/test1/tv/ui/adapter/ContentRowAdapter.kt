@@ -34,7 +34,8 @@ class ContentRowAdapter(
     private val onRequestMore: (Int) -> Unit,
     private val viewPool: RecyclerView.RecycledViewPool? = null,
     private val accentColorCache: com.test1.tv.ui.AccentColorCache,
-    private val coroutineScope: CoroutineScope
+    private val coroutineScope: CoroutineScope,
+    private val heroPrefetchManager: com.test1.tv.ui.HeroPrefetchManager? = null
 ) : RecyclerView.Adapter<ContentRowAdapter.RowViewHolder>() {
 
     private val rows = initialRows.toMutableList()
@@ -59,6 +60,10 @@ class ContentRowAdapter(
                     onItemClick = onItemClick,
                     onItemFocused = { item, itemIndex ->
                         onItemFocused(item, rowIndex, itemIndex)
+                        // Prefetch hero data for nearby items (only for first row)
+                        if (rowIndex == 0) {
+                            heroPrefetchManager?.onFocusChanged(itemIndex)
+                        }
                     },
                     onNavigateToNavBar = onNavigateToNavBar,
                     onItemLongPressed = onItemLongPress,
@@ -103,6 +108,11 @@ class ContentRowAdapter(
             rowContent.layoutParams = layoutParams
 
             adapter.submitList(row.items.toList())
+
+            // Trigger prefetch for first row
+            if (rowIndex == 0 && row.items.isNotEmpty()) {
+                heroPrefetchManager?.onRowLoaded(row.items)
+            }
         }
     }
 
@@ -123,6 +133,13 @@ class ContentRowAdapter(
         rows.addAll(newRows)
         rowAdapters.clear()
         notifyDataSetChanged()
+
+        // Prefetch first row's items when rows are updated
+        newRows.firstOrNull()?.let { firstRow ->
+            if (firstRow.items.isNotEmpty()) {
+                heroPrefetchManager?.onRowLoaded(firstRow.items)
+            }
+        }
     }
 
     fun appendItems(rowIndex: Int, newItems: List<ContentItem>) {
