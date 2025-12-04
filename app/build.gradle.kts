@@ -38,12 +38,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true      // Turns on ProGuard/R8
-            isShrinkResources = true    // Removes unused images/layouts to save space
+            isMinifyEnabled = false     // Disabled temporarily until keep rules are validated
+            isShrinkResources = false   // Keep resources intact while we analyze what shrinking needs
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

@@ -20,6 +20,57 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
+# Hilt/Dagger - Prevent R8 from obfuscating dependency injection code
+-dontwarn dagger.hilt.**
+-dontwarn javax.inject.**
+-dontwarn com.test1.tv.**Hilt_**
+
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+-keep class dagger.hilt.android.internal.** { *; }
+-keep class dagger.hilt.android.internal.lifecycle.** { *; }
+-keep class hilt_aggregated_deps.** { *; }
+-keep class com.test1.tv.**HiltComponents* { *; }
+-keep class com.test1.tv.**HiltModules* { *; }
+
+# Keep ViewModels with Hilt annotations
+-keep,allowobfuscation @dagger.hilt.android.lifecycle.HiltViewModel class *
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+
+# Keep Hilt generated classes but allow obfuscation
+-keep,allowobfuscation class **_HiltComponents$** { *; }
+-keep,allowobfuscation class **_HiltModules** { *; }
+-keep,allowobfuscation class **_Factory
+-keep,allowobfuscation class **_MembersInjector
+
+# Keep injected constructors
+-keepclasseswithmembers class * {
+    @javax.inject.Inject <init>(...);
+}
+
+# Keep Hilt Android entry points
+-keep,allowobfuscation @dagger.hilt.android.AndroidEntryPoint class *
+
+# Material Components - Fix ColorStateList inflation
+-keep class com.google.android.material.** { *; }
+-dontwarn com.google.android.material.**
+-keepclassmembers class com.google.android.material.** {
+    *;
+}
+
+# Room database implementations must survive minification so Room can find the generated `_Impl`.
+-keep class androidx.room.RoomDatabase { *; }
+-keep class * extends androidx.room.RoomDatabase { *; }
+
+# Gson/Retrofit models - Keep for serialization
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class com.test1.tv.data.model.** { *; }
+-keep class com.test1.tv.data.remote.response.** { *; }
+
 # Strip all Log.v (Verbose), Log.d (Debug), and Log.i (Info)
 -assumenosideeffects class android.util.Log {
     public static boolean isLoggable(java.lang.String, int);
