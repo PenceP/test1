@@ -120,7 +120,7 @@ class SyncSplashActivity : FragmentActivity() {
 
         // 3. Sequence: Fade in the Fill after the trace is mostly done
         lifecycleScope.launch {
-            delay(1800) // Wait for trace to near completion
+            delay(900) // Wait for trace to near completion
             
             // Fade OUT the trace lines
             logoTrace.animate().alpha(0f).setDuration(500).start()

@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- The Triangle Logo Mark (Centered and Scaled) -->
+    <group
+        android:scaleX="0.5"
+        android:scaleY="0.5"
+        android:translateX="27"
+        android:translateY="27">
+        
+        <path
+            android:pathData="M10 20 L 90 20 L 50 80 L 10 20"
+            android:fillType="nonZero">
+            <aapt:attr name="android:fillColor">
+                <gradient 
+                    android:startX="10" 
+                    android:startY="20" 
+                    android:endX="90" 
+                    android:endY="80"
+                    android:type="linear">
+                    <item android:offset="0" android:color="#FF818CF8"/> <!-- Indigo 400 -->
+                    <item android:offset="1" android:color="#FF4F46E5"/> <!-- Indigo 600 -->
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>

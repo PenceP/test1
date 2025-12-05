@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 1. Background Color (Deep Slate) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#0F172A"/> <!-- Slate 950 -->
+            <size android:width="320dp" android:height="180dp"/>
+        </shape>
+    </item>
+
+    <!-- 2. The Hexagon Pattern (Reused) -->
+    <item android:gravity="center">
+        <bitmap
+            android:src="@drawable/ic_hex_bg"
+            android:gravity="center"
+            android:alpha="0.2"/> <!-- Low opacity for texture -->
+    </item>
+
+    <!-- 3. The Logo (Centered) -->
+    <item 
+        android:width="200dp"
+        android:height="40dp"
+        android:gravity="center">
+        <bitmap 
+            android:src="@drawable/ic_strmr_fill"
+            android:gravity="center"/>
+    </item>
+
+</layer-list>
