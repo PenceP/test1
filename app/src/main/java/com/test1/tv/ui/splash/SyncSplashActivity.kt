@@ -123,7 +123,7 @@ class SyncSplashActivity : FragmentActivity() {
             delay(900) // Wait for trace to near completion
             
             // Fade OUT the trace lines
-            logoTrace.animate().alpha(0f).setDuration(500).start()
+            //logoTrace.animate().alpha(0f).setDuration(500).start()
             
             // Fade IN the solid fill
             logoFill.alpha = 0f

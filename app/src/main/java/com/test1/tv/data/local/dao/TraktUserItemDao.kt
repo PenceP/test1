@@ -26,4 +26,22 @@ interface TraktUserItemDao {
 
     @Query("DELETE FROM trakt_user_items")
     suspend fun clearAll()
+
+    @Query("""
+        SELECT * FROM trakt_user_items
+        WHERE tmdbId = :tmdbId AND listType = :listType AND itemType = :itemType
+        LIMIT 1
+    """)
+    suspend fun findByTmdbId(tmdbId: Int, listType: String, itemType: String): TraktUserItem?
+
+    @Query("DELETE FROM trakt_user_items WHERE tmdbId = :tmdbId AND listType = :listType")
+    suspend fun deleteByTmdbId(tmdbId: Int, listType: String)
+
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM trakt_user_items
+            WHERE tmdbId = :tmdbId AND listType = :listType
+        )
+    """)
+    suspend fun existsByTmdbId(tmdbId: Int, listType: String): Boolean
 }

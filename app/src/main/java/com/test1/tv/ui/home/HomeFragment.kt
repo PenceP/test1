@@ -37,6 +37,7 @@ import com.test1.tv.TraktListActivity
 import com.test1.tv.data.model.trakt.TraktMediaList
 import com.test1.tv.data.repository.TraktAuthRepository
 import com.test1.tv.data.repository.TraktAccountRepository
+import com.test1.tv.data.repository.TraktSyncRepository
 import com.test1.tv.databinding.FragmentHomeBinding
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.HeroSyncManager
@@ -93,6 +94,7 @@ class HomeFragment : Fragment() {
     @Inject lateinit var accentColorCache: AccentColorCache
     @Inject lateinit var traktAuthRepository: TraktAuthRepository
     @Inject lateinit var traktAccountRepository: TraktAccountRepository
+    @Inject lateinit var traktSyncRepository: TraktSyncRepository
     @Inject lateinit var traktApiService: com.test1.tv.data.remote.api.TraktApiService
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
     private var resumedOnce = false
@@ -485,36 +487,141 @@ class HomeFragment : Fragment() {
     }
 
     private fun showItemContextMenu(item: ContentItem) {
-        val options = arrayOf(
-            getString(R.string.action_play_immediately),
-            getString(R.string.action_mark_watched),
-            getString(R.string.action_add_to_list)
-        )
+        // Exclude non-TMDB items (collections, directors, networks, My Trakt placeholders)
+        if (item.tmdbId == -1) {
+            Toast.makeText(requireContext(), "Actions not available for this item", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(item.title)
-            .setItems(options) { dialog, which ->
-                when (which) {
-                    0 -> Toast.makeText(
-                        requireContext(),
-                        getString(R.string.action_play_immediately_feedback, item.title),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    1 -> Toast.makeText(
-                        requireContext(),
-                        getString(R.string.action_mark_watched_feedback, item.title),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    2 -> Toast.makeText(
-                        requireContext(),
-                        getString(R.string.action_add_to_list_feedback, item.title),
-                        Toast.LENGTH_SHORT
-                    ).show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Fetch current state from local DB
+            val isMovie = item.type == ContentItem.ContentType.MOVIE
+            val itemType = if (isMovie) "MOVIE" else "SHOW"
+
+            val isWatched = traktSyncRepository.isInList(item.tmdbId, "HISTORY", itemType)
+            val isInCollection = traktSyncRepository.isInList(item.tmdbId, "COLLECTION", itemType)
+            val isInWatchlist = traktSyncRepository.isInList(item.tmdbId, "WATCHLIST", itemType)
+
+            // Build state-aware options
+            val options = mutableListOf<String>()
+            val actions = mutableListOf<suspend () -> Boolean>()
+
+            // Play option
+            options.add(getString(R.string.action_play_immediately))
+            actions.add {
+                // Placeholder for play action
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Play: ${item.title}", Toast.LENGTH_SHORT).show()
                 }
-                dialog.dismiss()
+                true
             }
-            .setNegativeButton(R.string.dismiss_error, null)
-            .show()
+
+            // Watched toggle
+            if (isWatched) {
+                options.add(getString(R.string.action_mark_unwatched))
+                actions.add {
+                    val result = if (isMovie) {
+                        traktSyncRepository.markMovieUnwatched(item.tmdbId)
+                    } else {
+                        traktSyncRepository.markShowUnwatched(item.tmdbId)
+                    }
+                    if (result) {
+                        // Wait for sync to complete before refreshing UI
+                        val synced = traktSyncRepository.syncHistoryOnly()
+                    }
+                    result
+                }
+            } else {
+                options.add(getString(R.string.action_mark_watched))
+                actions.add {
+                    val result = if (isMovie) {
+                        traktSyncRepository.markMovieWatched(item.tmdbId)
+                    } else {
+                        traktSyncRepository.markShowWatched(item.tmdbId)
+                    }
+                    if (result) {
+                        // Wait for sync to complete before refreshing UI
+                        val synced = traktSyncRepository.syncHistoryOnly()
+                    }
+                    result
+                }
+            }
+
+            // Collection toggle
+            if (isInCollection) {
+                options.add(getString(R.string.action_remove_from_collection))
+                actions.add {
+                    val result = traktSyncRepository.removeFromCollection(item.tmdbId, isMovie)
+                    if (result) {
+                        // Wait for sync to complete before refreshing UI
+                        val synced = traktSyncRepository.syncCollectionOnly()
+                    }
+                    result
+                }
+            } else {
+                options.add(getString(R.string.action_add_to_collection))
+                actions.add {
+                    val result = traktSyncRepository.addToCollection(item.tmdbId, isMovie)
+                    if (result) {
+                        // Wait for sync to complete before refreshing UI
+                        val synced = traktSyncRepository.syncCollectionOnly()
+                    }
+                    result
+                }
+            }
+
+            // Watchlist toggle
+            if (isInWatchlist) {
+                options.add(getString(R.string.action_remove_from_watchlist))
+                actions.add {
+                    val result = traktSyncRepository.removeFromWatchlist(item.tmdbId, isMovie)
+                    if (result) {
+                        // Wait for sync to complete before refreshing UI
+                        val synced = traktSyncRepository.syncWatchlistOnly()
+                    }
+                    result
+                }
+            } else {
+                options.add(getString(R.string.action_add_to_watchlist))
+                actions.add {
+                    val result = traktSyncRepository.addToWatchlist(item.tmdbId, isMovie)
+                    if (result) {
+                        // Wait for sync to complete before refreshing UI
+                        val synced = traktSyncRepository.syncWatchlistOnly()
+                    }
+                    result
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(item.title)
+                    .setItems(options.toTypedArray()) { dialog, which ->
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val success = actions[which].invoke()
+                            withContext(Dispatchers.Main) {
+                                if (success) {
+                                    val actionName = options[which]
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "$actionName: ${item.title}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Action failed. Please try again.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                        dialog.dismiss()
+                    }
+                    .setNegativeButton(R.string.dismiss_error, null)
+                    .show()
+            }
+        }
     }
 
     override fun onDestroyView() {

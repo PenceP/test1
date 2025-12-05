@@ -4,10 +4,19 @@ import com.test1.tv.BuildConfig
 import com.test1.tv.data.local.dao.TraktUserItemDao
 import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.data.local.entity.TraktUserItem
+import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.model.trakt.TraktCollectionItem
 import com.test1.tv.data.model.trakt.TraktHistoryItem
 import com.test1.tv.data.model.trakt.TraktLastActivities
 import com.test1.tv.data.model.trakt.TraktWatchlistItem
+import com.test1.tv.data.model.trakt.TraktSyncRequest
+import com.test1.tv.data.model.trakt.TraktSyncMovie
+import com.test1.tv.data.model.trakt.TraktSyncShow
+import com.test1.tv.data.model.trakt.TraktSyncSeason
+import com.test1.tv.data.model.trakt.TraktSyncSeasonEpisode
+import com.test1.tv.data.model.trakt.TraktIds
+import com.test1.tv.data.model.trakt.TraktRatingRequest
+import com.test1.tv.data.model.trakt.TraktRatingItem
 import com.test1.tv.data.remote.api.TraktApiService
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -20,7 +29,8 @@ import javax.inject.Singleton
 class TraktSyncRepository @Inject constructor(
     private val traktApiService: TraktApiService,
     private val accountRepository: TraktAccountRepository,
-    private val userItemDao: TraktUserItemDao
+    private val userItemDao: TraktUserItemDao,
+    private val cacheRepository: CacheRepository
 ) {
     suspend fun syncAll(): Boolean {
         val account = accountRepository.refreshTokenIfNeeded() ?: return true
@@ -258,6 +268,521 @@ class TraktSyncRepository @Inject constructor(
             OffsetDateTime.parse(raw, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant().toEpochMilli()
         } catch (e: DateTimeParseException) {
             null
+        }
+    }
+
+    // ==================== CONTEXT MENU ACTIONS ====================
+
+    /**
+     * Mark a movie as watched
+     */
+    suspend fun markMovieWatched(tmdbId: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = TraktSyncRequest(
+                movies = listOf(TraktSyncMovie(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId)))
+            )
+            traktApiService.addToHistory(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            // Update local DB
+            val item = TraktUserItem(
+                id = TraktUserItem.key(LIST_HISTORY, ITEM_MOVIE, null),
+                listType = LIST_HISTORY,
+                itemType = ITEM_MOVIE,
+                traktId = null,
+                tmdbId = tmdbId,
+                slug = null,
+                title = null,
+                year = null,
+                updatedAt = System.currentTimeMillis(),
+                listedAt = null,
+                collectedAt = null,
+                watchedAt = System.currentTimeMillis()
+            )
+            userItemDao.insertAll(listOf(item))
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to mark movie watched", e)
+            false
+        }
+    }
+
+    /**
+     * Mark a movie as unwatched
+     */
+    suspend fun markMovieUnwatched(tmdbId: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = TraktSyncRequest(
+                movies = listOf(TraktSyncMovie(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId)))
+            )
+            traktApiService.removeFromHistory(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            // Remove from local DB (by tmdbId pattern)
+            userItemDao.deleteByTmdbId(tmdbId, LIST_HISTORY)
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to mark movie unwatched", e)
+            false
+        }
+    }
+
+    /**
+     * Mark a show as watched (all episodes)
+     */
+    suspend fun markShowWatched(tmdbId: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = TraktSyncRequest(
+                shows = listOf(TraktSyncShow(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId)))
+            )
+            traktApiService.addToHistory(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            // Update local DB
+            val item = TraktUserItem(
+                id = TraktUserItem.key(LIST_HISTORY, ITEM_SHOW, null),
+                listType = LIST_HISTORY,
+                itemType = ITEM_SHOW,
+                traktId = null,
+                tmdbId = tmdbId,
+                slug = null,
+                title = null,
+                year = null,
+                updatedAt = System.currentTimeMillis(),
+                listedAt = null,
+                collectedAt = null,
+                watchedAt = System.currentTimeMillis()
+            )
+            userItemDao.insertAll(listOf(item))
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to mark show watched", e)
+            false
+        }
+    }
+
+    /**
+     * Mark a show as unwatched
+     */
+    suspend fun markShowUnwatched(tmdbId: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = TraktSyncRequest(
+                shows = listOf(TraktSyncShow(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId)))
+            )
+            traktApiService.removeFromHistory(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            // Remove from local DB
+            userItemDao.deleteByTmdbId(tmdbId, LIST_HISTORY)
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to mark show unwatched", e)
+            false
+        }
+    }
+
+    /**
+     * Mark a specific season as watched
+     */
+    suspend fun markSeasonWatched(showTmdbId: Int, seasonNumber: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = TraktSyncRequest(
+                shows = listOf(
+                    TraktSyncShow(
+                        ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = showTmdbId),
+                        seasons = listOf(TraktSyncSeason(number = seasonNumber))
+                    )
+                )
+            )
+            traktApiService.addToHistory(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to mark season watched", e)
+            false
+        }
+    }
+
+    /**
+     * Mark a specific episode as watched
+     */
+    suspend fun markEpisodeWatched(showTmdbId: Int, seasonNumber: Int, episodeNumber: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = TraktSyncRequest(
+                shows = listOf(
+                    TraktSyncShow(
+                        ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = showTmdbId),
+                        seasons = listOf(
+                            TraktSyncSeason(
+                                number = seasonNumber,
+                                episodes = listOf(TraktSyncSeasonEpisode(number = episodeNumber))
+                            )
+                        )
+                    )
+                )
+            )
+            traktApiService.addToHistory(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to mark episode watched", e)
+            false
+        }
+    }
+
+    /**
+     * Mark a specific episode as unwatched
+     */
+    suspend fun markEpisodeUnwatched(showTmdbId: Int, seasonNumber: Int, episodeNumber: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = TraktSyncRequest(
+                shows = listOf(
+                    TraktSyncShow(
+                        ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = showTmdbId),
+                        seasons = listOf(
+                            TraktSyncSeason(
+                                number = seasonNumber,
+                                episodes = listOf(TraktSyncSeasonEpisode(number = episodeNumber))
+                            )
+                        )
+                    )
+                )
+            )
+            traktApiService.removeFromHistory(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to mark episode unwatched", e)
+            false
+        }
+    }
+
+    /**
+     * Add item to collection
+     */
+    suspend fun addToCollection(tmdbId: Int, isMovie: Boolean): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = if (isMovie) {
+                TraktSyncRequest(movies = listOf(TraktSyncMovie(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            } else {
+                TraktSyncRequest(shows = listOf(TraktSyncShow(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            }
+            traktApiService.addToCollection(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            // Update local DB
+            val itemType = if (isMovie) ITEM_MOVIE else ITEM_SHOW
+            val item = TraktUserItem(
+                id = "${LIST_COLLECTION}_${itemType}_tmdb_$tmdbId",
+                listType = LIST_COLLECTION,
+                itemType = itemType,
+                traktId = null,
+                tmdbId = tmdbId,
+                slug = null,
+                title = null,
+                year = null,
+                updatedAt = System.currentTimeMillis(),
+                listedAt = null,
+                collectedAt = System.currentTimeMillis(),
+                watchedAt = null
+            )
+            userItemDao.insertAll(listOf(item))
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to add to collection", e)
+            false
+        }
+    }
+
+    /**
+     * Remove item from collection
+     */
+    suspend fun removeFromCollection(tmdbId: Int, isMovie: Boolean): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = if (isMovie) {
+                TraktSyncRequest(movies = listOf(TraktSyncMovie(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            } else {
+                TraktSyncRequest(shows = listOf(TraktSyncShow(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            }
+            traktApiService.removeFromCollection(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            userItemDao.deleteByTmdbId(tmdbId, LIST_COLLECTION)
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to remove from collection", e)
+            false
+        }
+    }
+
+    /**
+     * Add item to watchlist
+     */
+    suspend fun addToWatchlist(tmdbId: Int, isMovie: Boolean): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = if (isMovie) {
+                TraktSyncRequest(movies = listOf(TraktSyncMovie(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            } else {
+                TraktSyncRequest(shows = listOf(TraktSyncShow(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            }
+            traktApiService.addToWatchlist(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            // Update local DB
+            val itemType = if (isMovie) ITEM_MOVIE else ITEM_SHOW
+            val item = TraktUserItem(
+                id = "${LIST_WATCHLIST}_${itemType}_tmdb_$tmdbId",
+                listType = LIST_WATCHLIST,
+                itemType = itemType,
+                traktId = null,
+                tmdbId = tmdbId,
+                slug = null,
+                title = null,
+                year = null,
+                updatedAt = System.currentTimeMillis(),
+                listedAt = System.currentTimeMillis(),
+                collectedAt = null,
+                watchedAt = null
+            )
+            userItemDao.insertAll(listOf(item))
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to add to watchlist", e)
+            false
+        }
+    }
+
+    /**
+     * Remove item from watchlist
+     */
+    suspend fun removeFromWatchlist(tmdbId: Int, isMovie: Boolean): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = if (isMovie) {
+                TraktSyncRequest(movies = listOf(TraktSyncMovie(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            } else {
+                TraktSyncRequest(shows = listOf(TraktSyncShow(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            }
+            traktApiService.removeFromWatchlist(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            userItemDao.deleteByTmdbId(tmdbId, LIST_WATCHLIST)
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to remove from watchlist", e)
+            false
+        }
+    }
+
+    /**
+     * Add rating to an item
+     * @param rating 1-10, where 8 = Like, 4 = Dislike
+     */
+    suspend fun addRating(tmdbId: Int, isMovie: Boolean, rating: Int): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val ratingItem = TraktRatingItem(
+                ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId),
+                rating = rating.coerceIn(1, 10)
+            )
+            val request = if (isMovie) {
+                TraktRatingRequest(movies = listOf(ratingItem))
+            } else {
+                TraktRatingRequest(shows = listOf(ratingItem))
+            }
+            traktApiService.addRating(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to add rating", e)
+            false
+        }
+    }
+
+    /**
+     * Remove rating from an item
+     */
+    suspend fun removeRating(tmdbId: Int, isMovie: Boolean): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val request = if (isMovie) {
+                TraktSyncRequest(movies = listOf(TraktSyncMovie(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            } else {
+                TraktSyncRequest(shows = listOf(TraktSyncShow(ids = TraktIds(trakt = 0, slug = null, imdb = null, tmdb = tmdbId))))
+            }
+            traktApiService.removeRating(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                body = request
+            )
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to remove rating", e)
+            false
+        }
+    }
+
+    /**
+     * Check if item is in a specific list
+     */
+    suspend fun isInList(tmdbId: Int, listType: String, itemType: String): Boolean {
+        val items = userItemDao.getItems(listType, itemType)
+        return items.any { it.tmdbId == tmdbId }
+    }
+
+    /**
+     * Get all watched episodes for a show as a set of "S{season}E{episode}" strings
+     */
+    suspend fun getWatchedEpisodesForShow(showTmdbId: Int): Set<String> {
+        // Note: This requires storing episode-level watch data
+        // For now, return empty set - full implementation requires schema changes
+        return emptySet()
+    }
+
+    // ==================== TARGETED SYNC METHODS ====================
+
+    /**
+     * Sync only the watch history from Trakt
+     */
+    suspend fun syncHistoryOnly(): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val history = fetchHistory(authHeader)
+            userItemDao.clearList(LIST_HISTORY)
+            userItemDao.insertAll(history)
+            accountRepository.updateSyncTimestamps(
+                lastSyncAt = System.currentTimeMillis(),
+                history = System.currentTimeMillis(),
+                collection = null,
+                watchlist = null,
+                lastActivities = null
+            )
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to sync history", e)
+            false
+        }
+    }
+
+    /**
+     * Sync only the collection from Trakt and clear cache
+     */
+    suspend fun syncCollectionOnly(): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val collection = fetchCollection(authHeader)
+            userItemDao.clearList(LIST_COLLECTION)
+            userItemDao.insertAll(collection)
+            accountRepository.updateSyncTimestamps(
+                lastSyncAt = System.currentTimeMillis(),
+                history = null,
+                collection = System.currentTimeMillis(),
+                watchlist = null,
+                lastActivities = null
+            )
+            // Clear cache so UI loads fresh data
+            cacheRepository.clearCategoryCache("MY_TRAKT_MOVIE_COLLECTION")
+            cacheRepository.clearCategoryCache("MY_TRAKT_TV_COLLECTION")
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to sync collection", e)
+            false
+        }
+    }
+
+    /**
+     * Sync only the watchlist from Trakt and clear cache
+     */
+    suspend fun syncWatchlistOnly(): Boolean {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return false
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val watchlist = fetchWatchlist(authHeader)
+            userItemDao.clearList(LIST_WATCHLIST)
+            userItemDao.insertAll(watchlist)
+            accountRepository.updateSyncTimestamps(
+                lastSyncAt = System.currentTimeMillis(),
+                history = null,
+                collection = null,
+                watchlist = System.currentTimeMillis(),
+                lastActivities = null
+            )
+            // Clear cache so UI loads fresh data
+            cacheRepository.clearCategoryCache("MY_TRAKT_MOVIE_WATCHLIST")
+            cacheRepository.clearCategoryCache("MY_TRAKT_TV_WATCHLIST")
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to sync watchlist", e)
+            false
         }
     }
 

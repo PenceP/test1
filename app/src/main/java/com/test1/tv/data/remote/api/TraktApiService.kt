@@ -19,6 +19,9 @@ import com.test1.tv.data.model.trakt.TraktShowProgress
 import com.test1.tv.data.model.trakt.TraktUserList
 import com.test1.tv.data.model.trakt.TraktPlaybackItem
 import com.test1.tv.data.model.trakt.RemovePlaybackRequest
+import com.test1.tv.data.model.trakt.TraktSyncRequest
+import com.test1.tv.data.model.trakt.TraktSyncResponse
+import com.test1.tv.data.model.trakt.TraktRatingRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -292,4 +295,94 @@ interface TraktApiService {
         @Query("page") page: Int = 1,
         @Query("extended") extended: String = "full"
     ): List<TraktShow>
+
+    // ==================== SYNC ACTIONS ====================
+
+    /**
+     * Add items to watched history (mark as watched)
+     */
+    @POST("sync/history")
+    suspend fun addToHistory(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktSyncRequest
+    ): TraktSyncResponse
+
+    /**
+     * Remove items from watched history (mark as unwatched)
+     */
+    @POST("sync/history/remove")
+    suspend fun removeFromHistory(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktSyncRequest
+    ): TraktSyncResponse
+
+    /**
+     * Add items to collection
+     */
+    @POST("sync/collection")
+    suspend fun addToCollection(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktSyncRequest
+    ): TraktSyncResponse
+
+    /**
+     * Remove items from collection
+     */
+    @POST("sync/collection/remove")
+    suspend fun removeFromCollection(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktSyncRequest
+    ): TraktSyncResponse
+
+    /**
+     * Add items to watchlist
+     */
+    @POST("sync/watchlist")
+    suspend fun addToWatchlist(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktSyncRequest
+    ): TraktSyncResponse
+
+    /**
+     * Remove items from watchlist
+     */
+    @POST("sync/watchlist/remove")
+    suspend fun removeFromWatchlist(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktSyncRequest
+    ): TraktSyncResponse
+
+    /**
+     * Rate an item
+     */
+    @POST("sync/ratings")
+    suspend fun addRating(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktRatingRequest
+    ): TraktSyncResponse
+
+    /**
+     * Remove rating from item
+     */
+    @POST("sync/ratings/remove")
+    suspend fun removeRating(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktSyncRequest
+    ): TraktSyncResponse
 }
