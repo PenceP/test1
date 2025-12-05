@@ -93,6 +93,8 @@ class DetailsFragment : Fragment() {
     private lateinit var buttonPlay: MaterialButton
     private lateinit var buttonTrailer: MaterialButton
     private lateinit var buttonWatchlist: MaterialButton
+    private lateinit var buttonWatched: MaterialButton
+    private lateinit var buttonCollection: MaterialButton
 
     private lateinit var castSection: LinearLayout
     private lateinit var similarSection: LinearLayout
@@ -122,6 +124,7 @@ class DetailsFragment : Fragment() {
     @Inject lateinit var rateLimiter: com.test1.tv.data.remote.RateLimiter
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
     @Inject lateinit var traktApiService: com.test1.tv.data.remote.api.TraktApiService
+    @Inject lateinit var traktSyncRepository: com.test1.tv.data.repository.TraktSyncRepository
 
     private var showTitleOriginal: String? = null
     private var showMetadataOriginal: CharSequence? = null
@@ -129,6 +132,8 @@ class DetailsFragment : Fragment() {
 
     private var isWatched = false
     private var isInCollection = false
+    private var isItemWatched = false
+    private var isItemInCollection = false
     private var currentRating: Int = 0 // 0 = none, 1 = thumbs up, 2 = thumbs down
     private lateinit var heroBackgroundController: HeroBackgroundController
     private lateinit var heroLogoLoader: HeroLogoLoader
@@ -175,6 +180,8 @@ class DetailsFragment : Fragment() {
         buttonPlay = view.findViewById(R.id.button_play)
         buttonTrailer = view.findViewById(R.id.button_trailer)
         buttonWatchlist = view.findViewById(R.id.button_watchlist)
+        buttonWatched = view.findViewById(R.id.button_watched)
+        buttonCollection = view.findViewById(R.id.button_collection)
         heroBackgroundController = HeroBackgroundController(
             fragment = this,
             backdropView = backdrop,
@@ -236,6 +243,70 @@ class DetailsFragment : Fragment() {
             isWatched = !isWatched
             val message = if (isWatched) "Added to watchlist" else "Removed from watchlist"
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        }
+
+        buttonWatched.setOnClickListener {
+            contentItem?.let { item ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val isMovie = item.type == ContentItem.ContentType.MOVIE
+                    val itemType = if (isMovie) "MOVIE" else "SHOW"
+
+                    // Check current state
+                    val currentlyWatched = withContext(Dispatchers.IO) {
+                        traktSyncRepository.isInList(item.tmdbId, "HISTORY", itemType)
+                    }
+
+                    val success = withContext(Dispatchers.IO) {
+                        if (currentlyWatched) {
+                            if (isMovie) traktSyncRepository.markMovieUnwatched(item.tmdbId)
+                            else traktSyncRepository.markShowUnwatched(item.tmdbId)
+                        } else {
+                            if (isMovie) traktSyncRepository.markMovieWatched(item.tmdbId)
+                            else traktSyncRepository.markShowWatched(item.tmdbId)
+                        }
+                    }
+
+                    if (success) {
+                        withContext(Dispatchers.Main) {
+                            isItemWatched = !currentlyWatched
+                            updateButtonStates()
+                            val message = if (isItemWatched) "Marked as watched" else "Marked as unwatched"
+                            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        buttonCollection.setOnClickListener {
+            contentItem?.let { item ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val isMovie = item.type == ContentItem.ContentType.MOVIE
+                    val itemType = if (isMovie) "MOVIE" else "SHOW"
+
+                    // Check current state
+                    val currentlyInCollection = withContext(Dispatchers.IO) {
+                        traktSyncRepository.isInList(item.tmdbId, "COLLECTION", itemType)
+                    }
+
+                    val success = withContext(Dispatchers.IO) {
+                        if (currentlyInCollection) {
+                            traktSyncRepository.removeFromCollection(item.tmdbId, isMovie)
+                        } else {
+                            traktSyncRepository.addToCollection(item.tmdbId, isMovie)
+                        }
+                    }
+
+                    if (success) {
+                        withContext(Dispatchers.Main) {
+                            isItemInCollection = !currentlyInCollection
+                            updateButtonStates()
+                            val message = if (isItemInCollection) "Added to collection" else "Removed from collection"
+                            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
         }
 
         // Setup button focus handlers
@@ -369,6 +440,9 @@ class DetailsFragment : Fragment() {
         HeroSectionHelper.updateGenres(detailsGenreText, item.genres)
         HeroSectionHelper.updateCast(detailsCast, item.cast)
         //updateRatingBadges(item)
+
+        // Load item state (watched, collection status)
+        loadItemState(item)
 
         // Show row sections
         showRowSections()
@@ -751,11 +825,15 @@ class DetailsFragment : Fragment() {
         if (seasonAdapter == null) {
             seasonAdapter = SeasonAdapter(
                 seasons = seasons,
+                showTmdbId = tmdbShowId,
                 onSeasonClick = { season, position ->
                     season.seasonNumber?.let {
                         loadEpisodesForSeason(tmdbShowId, it, position)
                         seasonAdapter?.setSelectedPosition(position)
                     }
+                },
+                onSeasonLongPress = { season, position ->
+                    showSeasonContextMenu(tmdbShowId, season)
                 }
             )
             seasonRow.adapter = seasonAdapter
@@ -797,7 +875,9 @@ class DetailsFragment : Fragment() {
 
                 episodeAdapter = EpisodeAdapter(
                     episodes = episodes,
-                    onEpisodeFocused = { episode -> updateEpisodeShelf(episode) }
+                    showTmdbId = showId,
+                    onEpisodeFocused = { episode -> updateEpisodeShelf(episode) },
+                    onEpisodeLongPress = { episode -> showEpisodeContextMenu(showId, episode) }
                 )
                 episodeRow.adapter = episodeAdapter
                 episodeRow.setNumRows(1)
@@ -1078,9 +1158,130 @@ class DetailsFragment : Fragment() {
         }
     }
 
+    private fun updateButtonStates() {
+        // Update Watched button icon
+        buttonWatched.icon = if (isItemWatched) {
+            resources.getDrawable(R.drawable.ic_eye_filled, null)
+        } else {
+            resources.getDrawable(R.drawable.ic_eye, null)
+        }
+
+        // Update Collection button icon
+        buttonCollection.icon = if (isItemInCollection) {
+            resources.getDrawable(R.drawable.ic_library_filled, null)
+        } else {
+            resources.getDrawable(R.drawable.ic_library, null)
+        }
+    }
+
+    private fun loadItemState(item: ContentItem) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val isMovie = item.type == ContentItem.ContentType.MOVIE
+            val itemType = if (isMovie) "MOVIE" else "SHOW"
+
+            isItemWatched = withContext(Dispatchers.IO) {
+                traktSyncRepository.isInList(item.tmdbId, "HISTORY", itemType)
+            }
+            isItemInCollection = withContext(Dispatchers.IO) {
+                traktSyncRepository.isInList(item.tmdbId, "COLLECTION", itemType)
+            }
+
+            withContext(Dispatchers.Main) {
+                updateButtonStates()
+            }
+        }
+    }
+
+    private fun showSeasonContextMenu(showTmdbId: Int, season: TMDBSeason) {
+        val seasonNumber = season.seasonNumber ?: return
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Season $seasonNumber")
+            .setItems(arrayOf(
+                getString(R.string.action_mark_season_watched)
+            )) { dialog, which ->
+                when (which) {
+                    0 -> {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val success = withContext(Dispatchers.IO) {
+                                traktSyncRepository.markSeasonWatched(showTmdbId, seasonNumber)
+                            }
+                            withContext(Dispatchers.Main) {
+                                if (success) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Season $seasonNumber marked as watched",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    // Refresh episode adapter to show watched badges
+                                    episodeAdapter?.notifyDataSetChanged()
+                                }
+                            }
+                        }
+                    }
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.dismiss_error, null)
+            .show()
+    }
+
+    private fun showEpisodeContextMenu(showTmdbId: Int, episode: TMDBEpisode) {
+        val seasonNumber = episode.seasonNumber ?: return
+        val episodeNumber = episode.episodeNumber ?: return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Check if episode is currently watched
+            val isWatched = withContext(Dispatchers.IO) {
+                traktSyncRepository.isInList(showTmdbId, "HISTORY", "SHOW")
+                // Note: This is simplified - ideally we'd check episode-level watch status
+            }
+
+            withContext(Dispatchers.Main) {
+                val title = "S${seasonNumber}E${episodeNumber}"
+                val options = if (isWatched) {
+                    arrayOf(getString(R.string.action_mark_episode_unwatched))
+                } else {
+                    arrayOf(getString(R.string.action_mark_episode_watched))
+                }
+
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(title)
+                    .setItems(options) { dialog, which ->
+                        when (which) {
+                            0 -> {
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    val success = withContext(Dispatchers.IO) {
+                                        if (isWatched) {
+                                            traktSyncRepository.markEpisodeUnwatched(showTmdbId, seasonNumber, episodeNumber)
+                                        } else {
+                                            traktSyncRepository.markEpisodeWatched(showTmdbId, seasonNumber, episodeNumber)
+                                        }
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        if (success) {
+                                            val message = if (isWatched) "Marked as unwatched" else "Marked as watched"
+                                            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                                            // Refresh episode adapter to show watched badges
+                                            episodeAdapter?.notifyDataSetChanged()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        dialog.dismiss()
+                    }
+                    .setNegativeButton(R.string.dismiss_error, null)
+                    .show()
+            }
+        }
+    }
+
     private inner class SeasonAdapter(
         private val seasons: List<TMDBSeason>,
-        private val onSeasonClick: (TMDBSeason, Int) -> Unit
+        private val showTmdbId: Int,
+        private val onSeasonClick: (TMDBSeason, Int) -> Unit,
+        private val onSeasonLongPress: (TMDBSeason, Int) -> Unit
     ) : RecyclerView.Adapter<SeasonAdapter.SeasonViewHolder>() {
 
         var selectedPosition: Int = 0
@@ -1102,6 +1303,16 @@ class DetailsFragment : Fragment() {
                         setSelectedPosition(adapterPosition)
                         onSeasonClick(season, adapterPosition)
                     }
+                }
+
+                // Add long-press handler
+                itemView.isLongClickable = true
+                itemView.setOnLongClickListener {
+                    val adapterPosition = bindingAdapterPosition
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        onSeasonLongPress(season, adapterPosition)
+                    }
+                    true
                 }
 
                 itemView.setOnFocusChangeListener { view, hasFocus ->
@@ -1140,7 +1351,9 @@ class DetailsFragment : Fragment() {
 
     private inner class EpisodeAdapter(
         private val episodes: List<TMDBEpisode>,
-        private val onEpisodeFocused: (TMDBEpisode?) -> Unit
+        private val showTmdbId: Int,
+        private val onEpisodeFocused: (TMDBEpisode?) -> Unit,
+        private val onEpisodeLongPress: (TMDBEpisode) -> Unit
     ) : RecyclerView.Adapter<EpisodeAdapter.EpisodeViewHolder>() {
 
         inner class EpisodeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -1158,6 +1371,13 @@ class DetailsFragment : Fragment() {
 
                 val seasonEpisode = buildSeasonEpisodeLabel(episode.seasonNumber, episode.episodeNumber)
                 episodeTitle.text = seasonEpisode.ifBlank { "" }
+
+                // Add long-press handler
+                itemView.isLongClickable = true
+                itemView.setOnLongClickListener {
+                    onEpisodeLongPress(episode)
+                    true
+                }
 
                 itemView.setOnFocusChangeListener { _, hasFocus ->
                     focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
