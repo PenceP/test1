@@ -36,7 +36,7 @@ import com.test1.tv.data.local.entity.MediaEnrichmentEntity
         SyncMetadataEntity::class,
         MediaEnrichmentEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

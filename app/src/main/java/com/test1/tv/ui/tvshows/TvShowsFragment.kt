@@ -30,9 +30,15 @@ import com.test1.tv.ui.AccentColorCache
 import com.test1.tv.ui.RowsScreenDelegate
 import com.test1.tv.ui.HeroExtrasLoader
 import com.test1.tv.ui.HeroLogoLoader
+import com.test1.tv.ui.WatchedBadgeManager
+import com.test1.tv.ui.contextmenu.ContextMenuActionHandler
+import com.test1.tv.ui.contextmenu.ContextMenuHelper
+import com.test1.tv.data.repository.TraktStatusProvider
 import android.graphics.drawable.Drawable
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -44,6 +50,11 @@ class TvShowsFragment : Fragment() {
     @Inject lateinit var rowPrefetchManager: RowPrefetchManager
     @Inject lateinit var accentColorCache: AccentColorCache
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
+    @Inject lateinit var contextMenuActionHandler: ContextMenuActionHandler
+    @Inject lateinit var traktStatusProvider: TraktStatusProvider
+    @Inject lateinit var watchedBadgeManager: WatchedBadgeManager
+
+    private lateinit var contextMenuHelper: ContextMenuHelper
     private lateinit var contentRowsView: VerticalGridView
     private lateinit var loadingIndicator: ProgressBar
 
@@ -95,6 +106,17 @@ class TvShowsFragment : Fragment() {
             maxWidthRes = R.dimen.hero_logo_max_width,
             maxHeightRes = R.dimen.hero_logo_max_height
         )
+        contextMenuHelper = ContextMenuHelper(
+            context = requireContext(),
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            actionHandler = contextMenuActionHandler,
+            traktStatusProvider = traktStatusProvider,
+            onWatchedStateChanged = { tmdbId, type, isWatched ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    watchedBadgeManager.notifyWatchedStateChanged(tmdbId, type, isWatched)
+                }
+            }
+        )
         rowsDelegate = RowsScreenDelegate(
             fragment = this,
             lifecycleOwner = viewLifecycleOwner,
@@ -113,13 +135,7 @@ class TvShowsFragment : Fragment() {
             accentColorCache = accentColorCache,
             heroSyncManager = heroSyncManager,
             onItemClick = { item, posterView -> handleItemClick(item, posterView) },
-            onItemLongPress = { item ->
-                Toast.makeText(
-                    requireContext(),
-                    "Actions coming soon for ${item.title}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            },
+            onItemLongPress = { item -> contextMenuHelper.showContextMenu(item) },
             onRequestMore = { rowIndex -> viewModel.requestNextPage(rowIndex) },
             onNavigate = { section ->
                 when (section) {
@@ -144,6 +160,13 @@ class TvShowsFragment : Fragment() {
             error = viewModel.error,
             heroContent = viewModel.heroContent
         )
+
+        // Subscribe to badge updates for immediate UI refresh
+        viewLifecycleOwner.lifecycleScope.launch {
+            watchedBadgeManager.badgeUpdates.collectLatest { update ->
+                rowsDelegate.updateBadgeForItem(update.tmdbId)
+            }
+        }
     }
 
     private fun initViews(view: View) {

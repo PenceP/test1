@@ -57,6 +57,7 @@
     <string name="dismiss_error">Dismiss</string>
 
     <!-- Context Menu Actions -->
+    <string name="action_play">Play</string>
     <string name="action_mark_unwatched">Mark Unwatched</string>
     <string name="action_add_to_collection">Add to Collection</string>
     <string name="action_remove_from_collection">Remove from Collection</string>

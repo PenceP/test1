@@ -149,4 +149,18 @@ class ContentRowAdapter(
     }
 
     fun currentRows(): List<ContentRow> = rows.toList()
+
+    /**
+     * Update badge state for a specific item by tmdbId.
+     * Propagates to all child PosterAdapters.
+     */
+    fun updateBadgeForItem(tmdbId: Int) {
+        for (i in 0 until rowAdapters.size()) {
+            val adapter = rowAdapters.valueAt(i)
+            if (adapter.updateBadgeForItem(tmdbId)) {
+                // Found and updated, but continue checking other rows
+                // since the same item might appear in multiple rows
+            }
+        }
+    }
 }

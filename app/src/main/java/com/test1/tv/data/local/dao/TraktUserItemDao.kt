@@ -44,4 +44,13 @@ interface TraktUserItemDao {
         )
     """)
     suspend fun existsByTmdbId(tmdbId: Int, listType: String): Boolean
+
+    @Query("SELECT tmdbId FROM trakt_user_items WHERE listType = :listType AND tmdbId IS NOT NULL")
+    suspend fun getAllTmdbIdsInList(listType: String): List<Int>
+
+    @Query("""
+        SELECT tmdbId FROM trakt_user_items
+        WHERE listType = :listType AND itemType = :itemType AND tmdbId IS NOT NULL
+    """)
+    suspend fun getTmdbIdsByListAndType(listType: String, itemType: String): List<Int>
 }

@@ -535,6 +535,19 @@ class PosterAdapter(
         Glide.with(holder.itemView).clear(holder.posterImage)
     }
 
+    /**
+     * Find and rebind an item by tmdbId to update badge state.
+     * Returns true if the item was found and rebound.
+     */
+    fun updateBadgeForItem(tmdbId: Int): Boolean {
+        val position = currentList.indexOfFirst { it.tmdbId == tmdbId }
+        if (position >= 0) {
+            notifyItemChanged(position)
+            return true
+        }
+        return false
+    }
+
     private fun Context?.isValidForGlide(): Boolean {
         if (this == null) return false
         if (this is android.app.Activity) {

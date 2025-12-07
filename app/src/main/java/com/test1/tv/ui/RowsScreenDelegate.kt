@@ -196,4 +196,12 @@ class RowsScreenDelegate(
             NavTarget.SETTINGS -> settings
         }
     }
+
+    /**
+     * Update badge state for a specific item by tmdbId.
+     * Propagates through all rows and posters.
+     */
+    fun updateBadgeForItem(tmdbId: Int) {
+        rowsAdapter?.updateBadgeForItem(tmdbId)
+    }
 }

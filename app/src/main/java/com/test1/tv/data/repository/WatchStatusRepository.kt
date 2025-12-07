@@ -55,4 +55,28 @@ class WatchStatusRepository @Inject constructor(
         cache.clear()
         watchStatusDao.clear()
     }
+
+    /**
+     * Synchronously update the cache for immediate UI feedback.
+     * The database is updated asynchronously in the background.
+     */
+    fun setProgressSync(tmdbId: Int, type: ContentItem.ContentType, progress: Double) {
+        val entity = WatchStatusEntity(
+            key = key(tmdbId, type),
+            tmdbId = tmdbId,
+            type = type.name,
+            progress = progress,
+            updatedAt = System.currentTimeMillis()
+        )
+        cache[entity.key] = entity
+        // Database update will happen during next sync
+    }
+
+    /**
+     * Synchronously remove from cache for immediate UI feedback.
+     */
+    fun removeProgressSync(tmdbId: Int, type: ContentItem.ContentType) {
+        cache.remove(key(tmdbId, type))
+        // Database update will happen during next sync
+    }
 }

@@ -37,6 +37,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Load test tokens from secrets.properties for integration tests
+            val secretsFile = rootProject.file("secrets.properties")
+            val secrets = Properties()
+            if (secretsFile.exists()) {
+                secrets.load(secretsFile.inputStream())
+            }
+            buildConfigField("String", "TRAKT_TEST_ACCESS_TOKEN",
+                "\"${secrets.getProperty("TRAKT_TEST_ACCESS_TOKEN", "")}\"")
+            buildConfigField("String", "TRAKT_TEST_REFRESH_TOKEN",
+                "\"${secrets.getProperty("TRAKT_TEST_REFRESH_TOKEN", "")}\"")
+        }
         release {
             isMinifyEnabled = false     // Disabled temporarily until keep rules are validated
             isShrinkResources = false   // Keep resources intact while we analyze what shrinking needs
@@ -45,6 +57,9 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("debug")
+            // Empty test tokens for release builds
+            buildConfigField("String", "TRAKT_TEST_ACCESS_TOKEN", "\"\"")
+            buildConfigField("String", "TRAKT_TEST_REFRESH_TOKEN", "\"\"")
         }
     }
 

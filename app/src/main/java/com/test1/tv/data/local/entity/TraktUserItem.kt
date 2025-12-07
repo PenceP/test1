@@ -1,9 +1,17 @@
 package com.test1.tv.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "trakt_user_items")
+@Entity(
+    tableName = "trakt_user_items",
+    indices = [
+        Index(value = ["listType", "tmdbId"]),
+        Index(value = ["tmdbId"]),
+        Index(value = ["listType", "itemType"])
+    ]
+)
 data class TraktUserItem(
     @PrimaryKey val id: String,
     val listType: String, // WATCHLIST, COLLECTION, HISTORY
