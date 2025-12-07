@@ -28,7 +28,14 @@ import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import com.test1.tv.ui.adapter.RowPresentation
 import com.test1.tv.ui.AccentColorCache
+import com.test1.tv.ui.WatchedBadgeManager
+import com.test1.tv.ui.contextmenu.ContextMenuActionHandler
+import com.test1.tv.ui.contextmenu.ContextMenuHelper
+import com.test1.tv.ui.contextmenu.shouldShowContextMenu
+import com.test1.tv.data.repository.TraktStatusProvider
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -46,6 +53,11 @@ class SearchFragment : Fragment() {
     private lateinit var viewModel: SearchViewModel
     @Inject lateinit var accentColorCache: AccentColorCache
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
+    @Inject lateinit var contextMenuActionHandler: ContextMenuActionHandler
+    @Inject lateinit var traktStatusProvider: TraktStatusProvider
+    @Inject lateinit var watchedBadgeManager: WatchedBadgeManager
+
+    private lateinit var contextMenuHelper: ContextMenuHelper
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -70,6 +82,18 @@ class SearchFragment : Fragment() {
         rowsRecycler = view.findViewById(R.id.search_rows)
         backgroundImageView = view.findViewById(R.id.search_background)
 
+        contextMenuHelper = ContextMenuHelper(
+            context = requireContext(),
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            actionHandler = contextMenuActionHandler,
+            traktStatusProvider = traktStatusProvider,
+            onWatchedStateChanged = { tmdbId, type, isWatched ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    watchedBadgeManager.notifyWatchedStateChanged(tmdbId, type, isWatched)
+                }
+            }
+        )
+
         rowsState.clear()
         rowsState.add(ContentRow(getString(R.string.search_movies), mutableListOf(), RowPresentation.PORTRAIT))
         rowsState.add(ContentRow(getString(R.string.search_shows), mutableListOf(), RowPresentation.PORTRAIT))
@@ -80,7 +104,7 @@ class SearchFragment : Fragment() {
             onItemClick = { item, _ -> handleItemClick(item) },
             onItemFocused = { item, _, _ -> updateDynamicBackground(item) },
             onNavigateToNavBar = { },
-            onItemLongPress = { },
+            onItemLongPress = { item -> handleItemLongPress(item) },
             onRequestMore = { },
             viewPool = null,
             accentColorCache = accentColorCache,
@@ -89,9 +113,26 @@ class SearchFragment : Fragment() {
         rowsRecycler.layoutManager = LinearLayoutManager(requireContext())
         rowsRecycler.adapter = rowsAdapter
 
+        // Subscribe to badge updates for immediate UI refresh
+        viewLifecycleOwner.lifecycleScope.launch {
+            watchedBadgeManager.badgeUpdates.collectLatest { update ->
+                rowsAdapter.updateBadgeForItem(update.tmdbId)
+            }
+        }
+
         voiceButton.isFocusable = true
         voiceButton.isFocusableInTouchMode = true
         voiceButton.setOnClickListener { handleVoiceClick() }
+    }
+
+    private fun handleItemLongPress(item: ContentItem) {
+        // Only show context menu for movies/tv shows, not people
+        if (item.cast == "__PERSON__" || item.cast == "__PERSON_PLACEHOLDER__") {
+            return
+        }
+        if (item.shouldShowContextMenu()) {
+            contextMenuHelper.showContextMenu(item)
+        }
     }
 
     private fun setupViewModel() {

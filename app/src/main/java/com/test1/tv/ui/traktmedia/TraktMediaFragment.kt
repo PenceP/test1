@@ -28,7 +28,14 @@ import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import com.test1.tv.ui.adapter.RowPresentation
 import com.test1.tv.databinding.FragmentTraktMediaBinding
+import com.test1.tv.ui.WatchedBadgeManager
+import com.test1.tv.ui.contextmenu.ContextMenuActionHandler
+import com.test1.tv.ui.contextmenu.ContextMenuHelper
+import com.test1.tv.ui.contextmenu.shouldShowContextMenu
+import com.test1.tv.data.repository.TraktStatusProvider
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -52,7 +59,11 @@ class TraktMediaFragment : Fragment() {
     @Inject lateinit var sharedViewPool: RecyclerView.RecycledViewPool
     @Inject lateinit var accentColorCache: AccentColorCache
     @Inject lateinit var rowPrefetchManager: RowPrefetchManager
+    @Inject lateinit var contextMenuActionHandler: ContextMenuActionHandler
+    @Inject lateinit var traktStatusProvider: TraktStatusProvider
+    @Inject lateinit var watchedBadgeManager: WatchedBadgeManager
 
+    private lateinit var contextMenuHelper: ContextMenuHelper
     private lateinit var heroBackgroundController: HeroBackgroundController
     private lateinit var heroLogoLoader: HeroLogoLoader
     private lateinit var heroSyncManager: HeroSyncManager
@@ -88,6 +99,18 @@ class TraktMediaFragment : Fragment() {
             updateHeroSection(content)
         }
 
+        contextMenuHelper = ContextMenuHelper(
+            context = requireContext(),
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            actionHandler = contextMenuActionHandler,
+            traktStatusProvider = traktStatusProvider,
+            onWatchedStateChanged = { tmdbId, type, isWatched ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    watchedBadgeManager.notifyWatchedStateChanged(tmdbId, type, isWatched)
+                }
+            }
+        )
+
         rowAdapter = ContentRowAdapter(
             initialRows = emptyList(),
             onItemClick = ::handleItemClick,
@@ -96,7 +119,7 @@ class TraktMediaFragment : Fragment() {
                 rowPrefetchManager.onRowFocused(rowIndex, rowAdapter.currentRows())
             },
             onNavigateToNavBar = {},
-            onItemLongPress = {},
+            onItemLongPress = { item -> handleItemLongPress(item) },
             onRequestMore = {},
             viewPool = sharedViewPool,
             accentColorCache = accentColorCache,
@@ -134,12 +157,25 @@ class TraktMediaFragment : Fragment() {
         viewModel.heroContent.observe(viewLifecycleOwner) { item ->
             item?.let { updateHeroSection(it) }
         }
+
+        // Subscribe to badge updates for immediate UI refresh
+        viewLifecycleOwner.lifecycleScope.launch {
+            watchedBadgeManager.badgeUpdates.collectLatest { update ->
+                rowAdapter.updateBadgeForItem(update.tmdbId)
+            }
+        }
     }
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
         startActivity(Intent(requireContext(), DetailsActivity::class.java).apply {
             putExtra(DetailsActivity.CONTENT_ITEM, item)
         })
+    }
+
+    private fun handleItemLongPress(item: ContentItem) {
+        if (item.shouldShowContextMenu()) {
+            contextMenuHelper.showContextMenu(item)
+        }
     }
 
     private fun updateHeroSection(item: ContentItem) {

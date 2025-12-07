@@ -45,8 +45,14 @@ import com.test1.tv.ui.HeroBackgroundController
 import com.test1.tv.ui.adapter.PersonAdapter
 import com.test1.tv.ui.adapter.PosterAdapter
 import com.test1.tv.ui.AccentColorCache
+import com.test1.tv.ui.WatchedBadgeManager
+import com.test1.tv.ui.contextmenu.ContextMenuActionHandler
+import com.test1.tv.ui.contextmenu.ContextMenuHelper
+import com.test1.tv.ui.contextmenu.shouldShowContextMenu
+import com.test1.tv.data.repository.TraktStatusProvider
 import java.io.Serializable
 import javax.inject.Inject
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -122,6 +128,11 @@ class DetailsFragment : Fragment() {
     @Inject lateinit var rateLimiter: com.test1.tv.data.remote.RateLimiter
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
     @Inject lateinit var traktApiService: com.test1.tv.data.remote.api.TraktApiService
+    @Inject lateinit var contextMenuActionHandler: ContextMenuActionHandler
+    @Inject lateinit var traktStatusProvider: TraktStatusProvider
+    @Inject lateinit var watchedBadgeManager: WatchedBadgeManager
+
+    private lateinit var contextMenuHelper: ContextMenuHelper
 
     private var showTitleOriginal: String? = null
     private var showMetadataOriginal: CharSequence? = null
@@ -156,6 +167,27 @@ class DetailsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initViews(view)
+
+        contextMenuHelper = ContextMenuHelper(
+            context = requireContext(),
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            actionHandler = contextMenuActionHandler,
+            traktStatusProvider = traktStatusProvider,
+            onWatchedStateChanged = { tmdbId, type, isWatched ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    watchedBadgeManager.notifyWatchedStateChanged(tmdbId, type, isWatched)
+                }
+            }
+        )
+
+        // Subscribe to badge updates for immediate UI refresh
+        viewLifecycleOwner.lifecycleScope.launch {
+            watchedBadgeManager.badgeUpdates.collectLatest { update ->
+                (similarRow.adapter as? PosterAdapter)?.updateBadgeForItem(update.tmdbId)
+                (collectionRow.adapter as? PosterAdapter)?.updateBadgeForItem(update.tmdbId)
+            }
+        }
+
         contentItem?.let { bindContent(it) } ?: showMissingContent()
     }
 
@@ -663,6 +695,11 @@ class DetailsFragment : Fragment() {
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },
             onNearEnd = {},
+            onItemLongPressed = { item ->
+                if (item.shouldShowContextMenu()) {
+                    contextMenuHelper.showContextMenu(item)
+                }
+            },
             accentColorCache = accentColorCache,
             coroutineScope = viewLifecycleOwner.lifecycleScope
         )
@@ -720,6 +757,11 @@ class DetailsFragment : Fragment() {
             onItemFocused = { _, _ -> },
             onNavigateToNavBar = { },
             onNearEnd = {},
+            onItemLongPressed = { item ->
+                if (item.shouldShowContextMenu()) {
+                    contextMenuHelper.showContextMenu(item)
+                }
+            },
             accentColorCache = accentColorCache,
             coroutineScope = viewLifecycleOwner.lifecycleScope
         )

@@ -18,6 +18,8 @@ import com.test1.tv.data.model.trakt.TraktIds
 import com.test1.tv.data.model.trakt.TraktRatingRequest
 import com.test1.tv.data.model.trakt.TraktRatingItem
 import com.test1.tv.data.remote.api.TraktApiService
+import com.test1.tv.data.local.entity.WatchStatusEntity
+import com.test1.tv.data.model.ContentItem
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -30,7 +32,8 @@ class TraktSyncRepository @Inject constructor(
     private val traktApiService: TraktApiService,
     private val accountRepository: TraktAccountRepository,
     private val userItemDao: TraktUserItemDao,
-    private val cacheRepository: CacheRepository
+    private val cacheRepository: CacheRepository,
+    private val watchStatusRepository: WatchStatusRepository
 ) {
     suspend fun syncAll(): Boolean {
         val account = accountRepository.refreshTokenIfNeeded() ?: return true
@@ -69,6 +72,8 @@ class TraktSyncRepository @Inject constructor(
             val history = fetchHistory(authHeader)
             userItemDao.clearList(LIST_HISTORY)
             userItemDao.insertAll(history)
+            // Also update WatchStatusRepository as the single source of truth for watched status
+            syncWatchStatusFromHistory(history)
             updatedHistory = parseDateMillis(
                 activities.movies?.watchedAt
                     ?: activities.shows?.watchedAt
@@ -305,6 +310,8 @@ class TraktSyncRepository @Inject constructor(
                 watchedAt = System.currentTimeMillis()
             )
             userItemDao.insertAll(listOf(item))
+            // Update WatchStatusRepository (single source of truth)
+            watchStatusRepository.upsert(tmdbId, ContentItem.ContentType.MOVIE, 1.0)
             true
         } catch (e: Exception) {
             android.util.Log.e("TraktSync", "Failed to mark movie watched", e)
@@ -330,6 +337,8 @@ class TraktSyncRepository @Inject constructor(
             )
             // Remove from local DB (by tmdbId pattern)
             userItemDao.deleteByTmdbId(tmdbId, LIST_HISTORY)
+            // Update WatchStatusRepository (single source of truth)
+            watchStatusRepository.upsert(tmdbId, ContentItem.ContentType.MOVIE, null)
             true
         } catch (e: Exception) {
             android.util.Log.e("TraktSync", "Failed to mark movie unwatched", e)
@@ -369,6 +378,8 @@ class TraktSyncRepository @Inject constructor(
                 watchedAt = System.currentTimeMillis()
             )
             userItemDao.insertAll(listOf(item))
+            // Update WatchStatusRepository (single source of truth)
+            watchStatusRepository.upsert(tmdbId, ContentItem.ContentType.TV_SHOW, 1.0)
             true
         } catch (e: Exception) {
             android.util.Log.e("TraktSync", "Failed to mark show watched", e)
@@ -394,6 +405,8 @@ class TraktSyncRepository @Inject constructor(
             )
             // Remove from local DB
             userItemDao.deleteByTmdbId(tmdbId, LIST_HISTORY)
+            // Update WatchStatusRepository (single source of truth)
+            watchStatusRepository.upsert(tmdbId, ContentItem.ContentType.TV_SHOW, null)
             true
         } catch (e: Exception) {
             android.util.Log.e("TraktSync", "Failed to mark show unwatched", e)
@@ -716,6 +729,8 @@ class TraktSyncRepository @Inject constructor(
             val history = fetchHistory(authHeader)
             userItemDao.clearList(LIST_HISTORY)
             userItemDao.insertAll(history)
+            // Also update WatchStatusRepository as the single source of truth
+            syncWatchStatusFromHistory(history)
             accountRepository.updateSyncTimestamps(
                 lastSyncAt = System.currentTimeMillis(),
                 history = System.currentTimeMillis(),
@@ -727,6 +742,31 @@ class TraktSyncRepository @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("TraktSync", "Failed to sync history", e)
             false
+        }
+    }
+
+    /**
+     * Sync WatchStatusRepository from Trakt history items.
+     * Sets progress = 1.0 for all watched items.
+     */
+    private suspend fun syncWatchStatusFromHistory(history: List<TraktUserItem>) {
+        val watchStatusEntities = history.mapNotNull { item ->
+            val tmdbId = item.tmdbId ?: return@mapNotNull null
+            val type = when (item.itemType) {
+                ITEM_MOVIE -> ContentItem.ContentType.MOVIE
+                ITEM_SHOW -> ContentItem.ContentType.TV_SHOW
+                else -> return@mapNotNull null
+            }
+            WatchStatusEntity(
+                key = "${type.name}_$tmdbId",
+                tmdbId = tmdbId,
+                type = type.name,
+                progress = 1.0, // Fully watched
+                updatedAt = item.watchedAt ?: System.currentTimeMillis()
+            )
+        }
+        if (watchStatusEntities.isNotEmpty()) {
+            watchStatusRepository.upsertAll(watchStatusEntities)
         }
     }
 

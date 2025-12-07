@@ -31,9 +31,15 @@ import com.test1.tv.ui.AccentColorCache
 import com.test1.tv.ui.adapter.ContentRow
 import com.test1.tv.ui.adapter.ContentRowAdapter
 import com.test1.tv.ui.adapter.RowPresentation
+import com.test1.tv.ui.WatchedBadgeManager
+import com.test1.tv.ui.contextmenu.ContextMenuActionHandler
+import com.test1.tv.ui.contextmenu.ContextMenuHelper
+import com.test1.tv.ui.contextmenu.shouldShowContextMenu
+import com.test1.tv.data.repository.TraktStatusProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,6 +66,11 @@ class ActorDetailsFragment : Fragment() {
 
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
     @Inject lateinit var accentColorCache: AccentColorCache
+    @Inject lateinit var contextMenuActionHandler: ContextMenuActionHandler
+    @Inject lateinit var traktStatusProvider: TraktStatusProvider
+    @Inject lateinit var watchedBadgeManager: WatchedBadgeManager
+
+    private lateinit var contextMenuHelper: ContextMenuHelper
 
     companion object {
         private const val TAG = "ActorDetailsFragment"
@@ -100,6 +111,26 @@ class ActorDetailsFragment : Fragment() {
             maxWidthRes = R.dimen.hero_logo_max_width,
             maxHeightRes = R.dimen.hero_logo_max_height
         )
+
+        contextMenuHelper = ContextMenuHelper(
+            context = requireContext(),
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            actionHandler = contextMenuActionHandler,
+            traktStatusProvider = traktStatusProvider,
+            onWatchedStateChanged = { tmdbId, type, isWatched ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    watchedBadgeManager.notifyWatchedStateChanged(tmdbId, type, isWatched)
+                }
+            }
+        )
+
+        // Subscribe to badge updates for immediate UI refresh
+        viewLifecycleOwner.lifecycleScope.launch {
+            watchedBadgeManager.badgeUpdates.collectLatest { update ->
+                rowsAdapter?.updateBadgeForItem(update.tmdbId)
+            }
+        }
+
         setupContentRows()
 
         if (personId != -1) {
@@ -221,7 +252,9 @@ class ActorDetailsFragment : Fragment() {
                         // No nav bar in actor details
                     },
                     onItemLongPress = { item ->
-                        // Optional: context menu
+                        if (item.shouldShowContextMenu()) {
+                            contextMenuHelper.showContextMenu(item)
+                        }
                     },
                     onRequestMore = { rowIndex ->
                         // No pagination for actor details

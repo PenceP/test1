@@ -17,18 +17,17 @@ import javax.inject.Singleton
 @Singleton
 class TraktStatusProvider @Inject constructor(
     private val userItemDao: TraktUserItemDao,
-    private val accountRepository: TraktAccountRepository
+    private val accountRepository: TraktAccountRepository,
+    private val watchStatusRepository: WatchStatusRepository
 ) {
     companion object {
-        private const val LIST_HISTORY = "HISTORY"
+        // LIST_HISTORY removed - watched status now uses WatchStatusRepository as single source of truth
         private const val LIST_COLLECTION = "COLLECTION"
         private const val LIST_WATCHLIST = "WATCHLIST"
-        private const val ITEM_MOVIE = "MOVIE"
-        private const val ITEM_SHOW = "SHOW"
     }
 
-    // In-memory caches for instant lookups
-    private val historyCache = ConcurrentHashMap<Int, Boolean>()
+    // In-memory caches for instant lookups (collection and watchlist only)
+    // Watched status is handled by WatchStatusRepository as the single source of truth
     private val collectionCache = ConcurrentHashMap<Int, Boolean>()
     private val watchlistCache = ConcurrentHashMap<Int, Boolean>()
 
@@ -43,11 +42,13 @@ class TraktStatusProvider @Inject constructor(
     }
 
     /**
-     * Check if an item is in the watched history
+     * Check if an item is in the watched history.
+     * Uses WatchStatusRepository as the single source of truth for watched status.
      */
     suspend fun isWatched(tmdbId: Int, type: ContentItem.ContentType): Boolean {
-        ensureCacheLoaded()
-        return historyCache[tmdbId] ?: false
+        // WatchStatusRepository is the single source of truth (progress >= 90% = watched)
+        val progress = watchStatusRepository.getProgress(tmdbId, type)
+        return progress != null && progress >= 0.9
     }
 
     /**
@@ -68,16 +69,20 @@ class TraktStatusProvider @Inject constructor(
 
     /**
      * Mark an item as watched in the cache (call after successful API)
+     * @deprecated WatchStatusRepository is now the single source of truth.
+     * TraktSyncRepository updates it directly. This method is kept for backward compatibility.
      */
     fun markWatched(tmdbId: Int) {
-        historyCache[tmdbId] = true
+        // No-op: WatchStatusRepository is updated by TraktSyncRepository and WatchedBadgeManager
     }
 
     /**
      * Mark an item as unwatched in the cache (call after successful API)
+     * @deprecated WatchStatusRepository is now the single source of truth.
+     * TraktSyncRepository updates it directly. This method is kept for backward compatibility.
      */
     fun markUnwatched(tmdbId: Int) {
-        historyCache.remove(tmdbId)
+        // No-op: WatchStatusRepository is updated by TraktSyncRepository and WatchedBadgeManager
     }
 
     /**
@@ -113,8 +118,12 @@ class TraktStatusProvider @Inject constructor(
      */
     suspend fun getItemStatus(tmdbId: Int, type: ContentItem.ContentType): ItemStatus {
         ensureCacheLoaded()
+        // WatchStatusRepository is the single source of truth for watched status
+        val progress = watchStatusRepository.getProgress(tmdbId, type)
+        val isWatched = progress != null && progress >= 0.9
+
         return ItemStatus(
-            isWatched = historyCache[tmdbId] ?: false,
+            isWatched = isWatched,
             isInCollection = collectionCache[tmdbId] ?: false,
             isInWatchlist = watchlistCache[tmdbId] ?: false
         )
@@ -133,10 +142,10 @@ class TraktStatusProvider @Inject constructor(
      * Clear all caches (call on logout)
      */
     fun clearCache() {
-        historyCache.clear()
         collectionCache.clear()
         watchlistCache.clear()
         cacheInitialized = false
+        // Note: WatchStatusRepository should be cleared separately if needed
     }
 
     private suspend fun ensureCacheLoaded() {
@@ -150,13 +159,10 @@ class TraktStatusProvider @Inject constructor(
     }
 
     private suspend fun loadCacheFromDatabase() = withContext(Dispatchers.IO) {
-        // Load all tmdbIds for each list type
-        val historyIds = userItemDao.getAllTmdbIdsInList(LIST_HISTORY)
+        // Load all tmdbIds for collection and watchlist only
+        // Watched status is handled by WatchStatusRepository (single source of truth)
         val collectionIds = userItemDao.getAllTmdbIdsInList(LIST_COLLECTION)
         val watchlistIds = userItemDao.getAllTmdbIdsInList(LIST_WATCHLIST)
-
-        historyCache.clear()
-        historyIds.forEach { historyCache[it] = true }
 
         collectionCache.clear()
         collectionIds.forEach { collectionCache[it] = true }

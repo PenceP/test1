@@ -312,7 +312,7 @@ object StaticRowData {
         TraktListItem(
             id = "movie_watchlist",
             name = "Movie Watchlist",
-            drawableRes = R.drawable.trakt2, // TODO: Replace with trakt_watchlist when added
+            drawableRes = R.drawable.trakt_watchlist, // TODO: Replace with trakt_watchlist when added
             traktApiUrl = "https://api.trakt.tv/sync/watchlist/movies",
             type = "movies"
         ),
@@ -326,7 +326,7 @@ object StaticRowData {
         TraktListItem(
             id = "tv_watchlist",
             name = "TV Watchlist",
-            drawableRes = R.drawable.trakt2, // TODO: Replace with trakt_watchlist when added
+            drawableRes = R.drawable.trakt_watchlist, // TODO: Replace with trakt_watchlist when added
             traktApiUrl = "https://api.trakt.tv/sync/watchlist/shows",
             type = "shows"
         )
