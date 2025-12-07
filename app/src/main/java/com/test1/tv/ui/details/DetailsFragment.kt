@@ -148,6 +148,9 @@ class DetailsFragment : Fragment() {
     private var showMetadataOriginal: CharSequence? = null
     private var showOverviewOriginal: String? = null
 
+    // Trailer YouTube key
+    private var trailerKey: String? = null
+
     private var isWatched = false
     private var isInCollection = false
     private var currentRating: Int = 0 // 0 = none, 1 = thumbs up, 2 = thumbs down
@@ -306,7 +309,7 @@ class DetailsFragment : Fragment() {
         }
 
         buttonTrailer.setOnClickListener {
-            Toast.makeText(requireContext(), "Trailer coming soon", Toast.LENGTH_SHORT).show()
+            openTrailer()
         }
 
         buttonWatchlist.setOnClickListener {
@@ -511,6 +514,10 @@ class DetailsFragment : Fragment() {
             }
 
             withContext(Dispatchers.Main) {
+                // Extract trailer key
+                trailerKey = movieDetails.getTrailerKey()
+                Log.d(TAG, "Movie trailer key: $trailerKey")
+
                 // Populate People row
                 populateCastRow(movieDetails.credits?.cast)
 
@@ -545,6 +552,10 @@ class DetailsFragment : Fragment() {
             val relatedItems = fetchRelatedShows(showDetails.externalIds?.imdbId)
 
             withContext(Dispatchers.Main) {
+                // Extract trailer key
+                trailerKey = showDetails.getTrailerKey()
+                Log.d(TAG, "Show trailer key: $trailerKey")
+
                 // Populate People row
                 populateCastRow(showDetails.credits?.cast)
 
@@ -1174,6 +1185,36 @@ class DetailsFragment : Fragment() {
         trakt: String?
     ): String? = primary ?: external ?: trakt
 
+
+    private fun openTrailer() {
+        val key = trailerKey
+        if (key.isNullOrBlank()) {
+            Toast.makeText(requireContext(), "No trailer available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Open in YouTube app (WebView playback is blocked by YouTube)
+        val youtubeAppIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("vnd.youtube:$key"))
+        val webIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/watch?v=$key"))
+
+        try {
+            // Check if YouTube app can handle the intent
+            if (youtubeAppIntent.resolveActivity(requireContext().packageManager) != null) {
+                startActivity(youtubeAppIntent)
+            } else {
+                // Fallback to web browser
+                startActivity(webIntent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open trailer", e)
+            // Last resort: try web intent
+            try {
+                startActivity(webIntent)
+            } catch (e2: Exception) {
+                Toast.makeText(requireContext(), "Could not open trailer", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     private fun Movie.toContentItem(): ContentItem {
         return ContentItem(

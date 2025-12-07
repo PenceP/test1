@@ -25,15 +25,17 @@ class SettingsAdapter(
 ) : ListAdapter<SettingsItem, RecyclerView.ViewHolder>(SettingsDiffCallback()) {
 
     companion object {
-        private const val TYPE_TOGGLE = 0
-        private const val TYPE_ACCOUNT_CARD = 1
-        private const val TYPE_SELECT = 2
-        private const val TYPE_SLIDER = 3
-        private const val TYPE_INPUT = 4
+        private const val TYPE_HEADER = 0
+        private const val TYPE_TOGGLE = 1
+        private const val TYPE_ACCOUNT_CARD = 2
+        private const val TYPE_SELECT = 3
+        private const val TYPE_SLIDER = 4
+        private const val TYPE_INPUT = 5
     }
 
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position)) {
+            is SettingsItem.Header -> TYPE_HEADER
             is SettingsItem.Toggle -> TYPE_TOGGLE
             is SettingsItem.AccountCard -> TYPE_ACCOUNT_CARD
             is SettingsItem.Select -> TYPE_SELECT
@@ -44,10 +46,20 @@ class SettingsAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
+            TYPE_HEADER -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_setting_header, parent, false)
+                HeaderViewHolder(view)
+            }
             TYPE_TOGGLE -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_setting_toggle, parent, false)
                 ToggleViewHolder(view)
+            }
+            TYPE_SELECT -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_setting_select, parent, false)
+                SelectViewHolder(view)
             }
             TYPE_ACCOUNT_CARD -> {
                 val view = LayoutInflater.from(parent.context)
@@ -60,9 +72,66 @@ class SettingsAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = getItem(position)) {
+            is SettingsItem.Header -> (holder as HeaderViewHolder).bind(item)
             is SettingsItem.Toggle -> (holder as ToggleViewHolder).bind(item)
+            is SettingsItem.Select -> (holder as SelectViewHolder).bind(item)
             is SettingsItem.AccountCard -> (holder as AccountCardViewHolder).bind(item)
             else -> {}
+        }
+    }
+
+    // Header ViewHolder
+    inner class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val title: TextView = view.findViewById(R.id.header_title)
+
+        fun bind(item: SettingsItem.Header) {
+            title.text = item.title
+        }
+    }
+
+    // Select ViewHolder
+    inner class SelectViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val label: TextView = view.findViewById(R.id.select_label)
+        private val value: TextView = view.findViewById(R.id.select_value)
+        private val optionsContainer: LinearLayout = view.findViewById(R.id.options_container)
+
+        fun bind(item: SettingsItem.Select) {
+            label.text = item.label
+            value.text = item.options.find { it.value == item.value }?.label ?: item.value
+
+            // Build option buttons
+            optionsContainer.removeAllViews()
+            item.options.forEach { option ->
+                val button = Button(itemView.context).apply {
+                    text = option.label
+                    isSelected = option.value == item.value
+                    setBackgroundResource(
+                        if (isSelected) R.drawable.bg_select_option_selected
+                        else R.drawable.bg_select_option
+                    )
+                    setTextColor(Color.WHITE)
+                    setPadding(32, 16, 32, 16)
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    setOnClickListener {
+                        item.onSelect(option.value)
+                    }
+                    setOnFocusChangeListener { v, hasFocus ->
+                        if (hasFocus) {
+                            v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(150).start()
+                        } else {
+                            v.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+                        }
+                    }
+                }
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = 16
+                }
+                optionsContainer.addView(button, params)
+            }
         }
     }
 

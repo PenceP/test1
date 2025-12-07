@@ -69,7 +69,9 @@ data class TMDBShowDetails(
     @SerializedName("content_ratings")
     val contentRatings: TMDBContentRatingsResponse?,
     @SerializedName("external_ids")
-    val externalIds: TMDBExternalIds? = null
+    val externalIds: TMDBExternalIds? = null,
+    @SerializedName("videos")
+    val videos: TMDBVideosResponse? = null
 ) {
     fun getPosterUrl(): String? {
         return posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
@@ -103,6 +105,21 @@ data class TMDBShowDetails(
     fun getCertification(): String? {
         // Look for US content rating
         return contentRatings?.results?.find { it.iso31661 == "US" }?.rating
+    }
+
+    /**
+     * Get the best trailer YouTube key.
+     * Prioritizes official trailers, then teasers, then any video.
+     */
+    fun getTrailerKey(): String? {
+        val youtubeVideos = videos?.results?.filter { it.site?.equals("YouTube", ignoreCase = true) == true }
+        if (youtubeVideos.isNullOrEmpty()) return null
+
+        // Priority: Official Trailer > Trailer > Teaser > any video
+        return youtubeVideos.find { it.type?.equals("Trailer", ignoreCase = true) == true && it.official == true }?.key
+            ?: youtubeVideos.find { it.type?.equals("Trailer", ignoreCase = true) == true }?.key
+            ?: youtubeVideos.find { it.type?.equals("Teaser", ignoreCase = true) == true }?.key
+            ?: youtubeVideos.firstOrNull()?.key
     }
 }
 

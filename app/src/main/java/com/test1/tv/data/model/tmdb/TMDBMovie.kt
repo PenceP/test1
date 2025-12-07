@@ -69,7 +69,9 @@ data class TMDBMovieDetails(
     @SerializedName("belongs_to_collection")
     val belongsToCollection: TMDBCollection?,
     @SerializedName("external_ids")
-    val externalIds: TMDBExternalIds? = null
+    val externalIds: TMDBExternalIds? = null,
+    @SerializedName("videos")
+    val videos: TMDBVideosResponse? = null
 ) {
     fun getPosterUrl(): String? {
         return posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
@@ -105,6 +107,21 @@ data class TMDBMovieDetails(
         val usRelease = releaseDates?.results?.find { it.iso31661 == "US" }
         // Get the first certification from release dates (usually theatrical release)
         return usRelease?.releaseDates?.firstOrNull { !it.certification.isNullOrBlank() }?.certification
+    }
+
+    /**
+     * Get the best trailer YouTube key.
+     * Prioritizes official trailers, then teasers, then any video.
+     */
+    fun getTrailerKey(): String? {
+        val youtubeVideos = videos?.results?.filter { it.site?.equals("YouTube", ignoreCase = true) == true }
+        if (youtubeVideos.isNullOrEmpty()) return null
+
+        // Priority: Official Trailer > Trailer > Teaser > any video
+        return youtubeVideos.find { it.type?.equals("Trailer", ignoreCase = true) == true && it.official == true }?.key
+            ?: youtubeVideos.find { it.type?.equals("Trailer", ignoreCase = true) == true }?.key
+            ?: youtubeVideos.find { it.type?.equals("Teaser", ignoreCase = true) == true }?.key
+            ?: youtubeVideos.firstOrNull()?.key
     }
 }
 
@@ -193,4 +210,24 @@ data class TMDBMovieListResponse(
     val totalPages: Int?,
     @SerializedName("total_results")
     val totalResults: Int?
+)
+
+data class TMDBVideosResponse(
+    @SerializedName("results")
+    val results: List<TMDBVideo>?
+)
+
+data class TMDBVideo(
+    @SerializedName("id")
+    val id: String?,
+    @SerializedName("key")
+    val key: String?,
+    @SerializedName("name")
+    val name: String?,
+    @SerializedName("site")
+    val site: String?,
+    @SerializedName("type")
+    val type: String?,
+    @SerializedName("official")
+    val official: Boolean?
 )

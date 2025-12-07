@@ -1,6 +1,11 @@
 package com.test1.tv.ui.settings.model
 
 sealed class SettingsItem {
+    data class Header(
+        val id: String,
+        val title: String
+    ) : SettingsItem()
+
     data class Toggle(
         val id: String,
         val label: String,

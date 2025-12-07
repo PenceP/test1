@@ -49,6 +49,11 @@
             android:name=".DetailsActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.trailer.TrailerWebViewActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <activity
             android:name=".ActorDetailsActivity"
             android:exported="false" />
         <activity
