@@ -285,57 +285,6 @@
                     app:iconPadding="12dp"
                     app:iconSize="@dimen/details_button_icon_size"
                     app:iconTint="@android:color/white" />
-
-                <!-- Watched Button -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_watched"
-                    style="@style/Widget.Material3.Button.IconButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="@dimen/details_secondary_button_size"
-                    android:layout_marginEnd="@dimen/details_button_spacing"
-                    android:contentDescription="Mark Watched"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:clickable="true"
-                    android:text=""
-                    android:textSize="14sp"
-                    android:lines="1"
-                    android:ellipsize="end"
-                    android:background="@drawable/glass_pill_bg"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    app:backgroundTint="@null"
-                    app:cornerRadius="28dp"
-                    app:icon="@drawable/ic_eye"
-                    app:iconGravity="textStart"
-                    app:iconPadding="12dp"
-                    app:iconSize="@dimen/details_button_icon_size"
-                    app:iconTint="@android:color/white" />
-
-                <!-- Collection Button -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_collection"
-                    style="@style/Widget.Material3.Button.IconButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="@dimen/details_secondary_button_size"
-                    android:contentDescription="Add to Collection"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:clickable="true"
-                    android:text=""
-                    android:textSize="14sp"
-                    android:lines="1"
-                    android:ellipsize="end"
-                    android:background="@drawable/glass_pill_bg"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    app:backgroundTint="@null"
-                    app:cornerRadius="28dp"
-                    app:icon="@drawable/ic_library"
-                    app:iconGravity="textStart"
-                    app:iconPadding="12dp"
-                    app:iconSize="@dimen/details_button_icon_size"
-                    app:iconTint="@android:color/white" />
             </LinearLayout>
 
             <!-- TV Show Seasons & Episodes -->
