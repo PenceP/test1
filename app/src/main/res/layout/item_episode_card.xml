@@ -43,6 +43,18 @@
             android:textSize="13sp"
             android:gravity="bottom|start"
             tools:text="S1:E2" />
+
+        <!-- Watched badge - top right corner (semi-transparent like home page) -->
+        <ImageView
+            android:id="@+id/episode_watched_badge"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="8dp"
+            android:src="@drawable/ic_check_badge"
+            android:visibility="gone"
+            android:contentDescription="@string/watched"
+            tools:visibility="visible" />
     </androidx.cardview.widget.CardView>
 
     <View

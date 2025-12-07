@@ -13,13 +13,21 @@ import com.test1.tv.data.model.tmdb.TMDBEpisode
 
 class EpisodeAdapter(
     private val episodes: List<TMDBEpisode>,
-    private val onEpisodeFocused: (TMDBEpisode?) -> Unit
+    private val showTmdbId: Int,
+    private val watchedEpisodes: Set<String> = emptySet(),
+    private val onEpisodeFocused: (TMDBEpisode?) -> Unit,
+    private val onEpisodeClick: ((TMDBEpisode) -> Unit)? = null,
+    private val onEpisodeLongPress: ((TMDBEpisode, Boolean) -> Unit)? = null
 ) : RecyclerView.Adapter<EpisodeAdapter.EpisodeViewHolder>() {
+
+    // Mutable set to track watched episodes for immediate UI updates
+    private val mutableWatchedEpisodes = watchedEpisodes.toMutableSet()
 
     inner class EpisodeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val episodeImage: ImageView = itemView.findViewById(R.id.episode_image)
         private val episodeTitle: TextView = itemView.findViewById(R.id.episode_title)
         private val focusOverlay: View = itemView.findViewById(R.id.episode_focus_overlay)
+        private val watchedBadge: ImageView = itemView.findViewById(R.id.episode_watched_badge)
 
         fun bind(episode: TMDBEpisode) {
             Glide.with(itemView.context)
@@ -32,6 +40,11 @@ class EpisodeAdapter(
             val seasonEpisode = buildSeasonEpisodeLabel(episode.seasonNumber, episode.episodeNumber)
             episodeTitle.text = seasonEpisode.ifBlank { "" }
 
+            // Show watched badge if episode is watched
+            val episodeKey = "S${episode.seasonNumber}E${episode.episodeNumber}"
+            val isWatched = mutableWatchedEpisodes.contains(episodeKey)
+            watchedBadge.visibility = if (isWatched) View.VISIBLE else View.GONE
+
             itemView.setOnFocusChangeListener { _, hasFocus ->
                 focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
                 if (hasFocus) {
@@ -41,7 +54,19 @@ class EpisodeAdapter(
                     itemView.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
                 }
             }
+
+            // Click handler
+            itemView.setOnClickListener {
+                onEpisodeClick?.invoke(episode)
+            }
+
+            // Long press handler for context menu
+            itemView.setOnLongClickListener {
+                onEpisodeLongPress?.invoke(episode, isWatched)
+                true
+            }
         }
+
         private fun buildSeasonEpisodeLabel(seasonNumber: Int?, episodeNumber: Int?): String {
             if (seasonNumber == null && episodeNumber == null) return ""
             return buildString {
@@ -67,4 +92,38 @@ class EpisodeAdapter(
     override fun getItemCount(): Int = episodes.size
 
     fun getEpisode(position: Int): TMDBEpisode? = episodes.getOrNull(position)
+
+    /**
+     * Update watched status for a specific episode and refresh its badge
+     */
+    fun updateEpisodeWatchedStatus(seasonNumber: Int, episodeNumber: Int, isWatched: Boolean) {
+        val episodeKey = "S${seasonNumber}E${episodeNumber}"
+        if (isWatched) {
+            mutableWatchedEpisodes.add(episodeKey)
+        } else {
+            mutableWatchedEpisodes.remove(episodeKey)
+        }
+        // Find and update the specific episode
+        val position = episodes.indexOfFirst {
+            it.seasonNumber == seasonNumber && it.episodeNumber == episodeNumber
+        }
+        if (position >= 0) {
+            notifyItemChanged(position)
+        }
+    }
+
+    /**
+     * Mark all episodes in a season as watched/unwatched
+     */
+    fun updateSeasonWatchedStatus(seasonNumber: Int, isWatched: Boolean) {
+        episodes.filter { it.seasonNumber == seasonNumber }.forEach { episode ->
+            val episodeKey = "S${episode.seasonNumber}E${episode.episodeNumber}"
+            if (isWatched) {
+                mutableWatchedEpisodes.add(episodeKey)
+            } else {
+                mutableWatchedEpisodes.remove(episodeKey)
+            }
+        }
+        notifyDataSetChanged()
+    }
 }

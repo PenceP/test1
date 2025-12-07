@@ -10,7 +10,8 @@ import com.test1.tv.data.model.tmdb.TMDBSeason
 
 class SeasonAdapter(
     private val seasons: List<TMDBSeason>,
-    private val onSeasonClick: (TMDBSeason, Int) -> Unit
+    private val onSeasonClick: (TMDBSeason, Int) -> Unit,
+    private val onSeasonLongPress: ((TMDBSeason, Int) -> Unit)? = null
 ) : RecyclerView.Adapter<SeasonAdapter.SeasonViewHolder>() {
 
     var selectedPosition: Int = 0
@@ -32,6 +33,14 @@ class SeasonAdapter(
                     setSelectedPosition(adapterPosition)
                     onSeasonClick(season, adapterPosition)
                 }
+            }
+
+            itemView.setOnLongClickListener {
+                val adapterPosition = bindingAdapterPosition
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    onSeasonLongPress?.invoke(season, adapterPosition)
+                }
+                true
             }
 
             itemView.setOnFocusChangeListener { view, hasFocus ->
@@ -66,4 +75,6 @@ class SeasonAdapter(
     }
 
     fun getSelectedSeason(): TMDBSeason? = seasons.getOrNull(selectedPosition)
+
+    fun getSeason(position: Int): TMDBSeason? = seasons.getOrNull(position)
 }

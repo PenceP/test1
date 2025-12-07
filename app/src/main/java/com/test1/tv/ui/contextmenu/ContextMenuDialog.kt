@@ -16,12 +16,20 @@ import com.test1.tv.data.model.ContentItem
  * Styled to match the nav bar aesthetic with semi-transparent background.
  * Supports D-pad navigation for Android TV.
  */
-class ContextMenuDialog(
+class ContextMenuDialog private constructor(
     context: Context,
-    private val item: ContentItem,
+    private val titleText: String,
     private val actions: List<ContextMenuAction>,
     private val onActionSelected: (ContextMenuAction) -> Unit
 ) : Dialog(context, R.style.ContextMenuDialogTheme) {
+
+    // Secondary constructor for backward compatibility with ContentItem
+    constructor(
+        context: Context,
+        item: ContentItem,
+        actions: List<ContextMenuAction>,
+        onActionSelected: (ContextMenuAction) -> Unit
+    ) : this(context, item.title, actions, onActionSelected)
 
     private var actionSelectedCallback: ((ContextMenuAction) -> Unit)? = null
 
@@ -37,7 +45,7 @@ class ContextMenuDialog(
 
     private fun setupTitle() {
         val titleView = findViewById<TextView>(R.id.context_menu_title)
-        titleView.text = item.title
+        titleView.text = titleText
     }
 
     private fun setupActionsList() {
@@ -82,7 +90,7 @@ class ContextMenuDialog(
 
     companion object {
         /**
-         * Create and show a context menu dialog
+         * Create and show a context menu dialog for a ContentItem
          */
         fun show(
             context: Context,
@@ -90,7 +98,21 @@ class ContextMenuDialog(
             actions: List<ContextMenuAction>,
             onActionSelected: (ContextMenuAction) -> Unit
         ): ContextMenuDialog {
-            return ContextMenuDialog(context, item, actions, onActionSelected).apply {
+            return ContextMenuDialog(context, item.title, actions, onActionSelected).apply {
+                show()
+            }
+        }
+
+        /**
+         * Create and show a context menu dialog with a custom title
+         */
+        fun show(
+            context: Context,
+            title: String,
+            actions: List<ContextMenuAction>,
+            onActionSelected: (ContextMenuAction) -> Unit
+        ): ContextMenuDialog {
+            return ContextMenuDialog(context, title, actions, onActionSelected).apply {
                 show()
             }
         }

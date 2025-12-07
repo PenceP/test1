@@ -22,6 +22,7 @@ import com.test1.tv.data.model.trakt.RemovePlaybackRequest
 import com.test1.tv.data.model.trakt.TraktSyncRequest
 import com.test1.tv.data.model.trakt.TraktSyncResponse
 import com.test1.tv.data.model.trakt.TraktRatingRequest
+import com.test1.tv.data.model.trakt.TraktSearchResult
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -168,7 +169,7 @@ interface TraktApiService {
 
     @GET("shows/{id}/progress/watched")
     suspend fun getShowProgress(
-        @Path("id") showId: Int,
+        @Path("id") showId: String,
         @Header("Authorization") authHeader: String,
         @Header("trakt-api-version") apiVersion: String = "2",
         @Header("trakt-api-key") clientId: String,
@@ -385,4 +386,15 @@ interface TraktApiService {
         @Header("trakt-api-key") clientId: String,
         @Body body: TraktSyncRequest
     ): TraktSyncResponse
+
+    /**
+     * Lookup a show by TMDB ID to get Trakt ID
+     */
+    @GET("search/tmdb/{id}")
+    suspend fun lookupByTmdbId(
+        @Path("id") tmdbId: Int,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Query("type") type: String = "show"
+    ): List<TraktSearchResult>
 }

@@ -17,6 +17,7 @@ import com.test1.tv.data.model.trakt.TraktSyncSeasonEpisode
 import com.test1.tv.data.model.trakt.TraktIds
 import com.test1.tv.data.model.trakt.TraktRatingRequest
 import com.test1.tv.data.model.trakt.TraktRatingItem
+import com.test1.tv.data.model.trakt.TraktShowProgress
 import com.test1.tv.data.remote.api.TraktApiService
 import com.test1.tv.data.local.entity.WatchStatusEntity
 import com.test1.tv.data.model.ContentItem
@@ -823,6 +824,70 @@ class TraktSyncRepository @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("TraktSync", "Failed to sync watchlist", e)
             false
+        }
+    }
+
+    /**
+     * Lookup Trakt ID from TMDB ID
+     */
+    private suspend fun lookupTraktId(tmdbId: Int, type: String = "show"): Int? {
+        return try {
+            val results = traktApiService.lookupByTmdbId(
+                tmdbId = tmdbId,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                type = type
+            )
+            val traktId = when (type) {
+                "show" -> results.firstOrNull()?.show?.ids?.trakt
+                "movie" -> results.firstOrNull()?.movie?.ids?.trakt
+                else -> null
+            }
+            android.util.Log.d("TraktSync", "Lookup TMDB $tmdbId -> Trakt $traktId")
+            traktId
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to lookup Trakt ID for TMDB $tmdbId", e)
+            null
+        }
+    }
+
+    /**
+     * Get show progress (watched episodes) from Trakt
+     * Returns null if not authenticated or on error
+     */
+    suspend fun getShowProgress(showTmdbId: Int): TraktShowProgress? {
+        val account = accountRepository.refreshTokenIfNeeded()
+        if (account == null) {
+            android.util.Log.d("TraktSync", "getShowProgress: Not authenticated")
+            return null
+        }
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        // First, lookup the Trakt ID from TMDB ID
+        val traktId = lookupTraktId(showTmdbId, "show")
+        if (traktId == null) {
+            android.util.Log.e("TraktSync", "Could not find Trakt ID for TMDB $showTmdbId")
+            return null
+        }
+
+        return try {
+            android.util.Log.d("TraktSync", "Fetching show progress for Trakt ID: $traktId (TMDB: $showTmdbId)")
+            val progress = traktApiService.getShowProgress(
+                showId = traktId.toString(),
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID
+            )
+            android.util.Log.d("TraktSync", "Show progress result: aired=${progress.aired}, completed=${progress.completed}, seasons=${progress.seasons?.size ?: 0}")
+            progress.seasons?.forEach { season ->
+                val watchedEps = season.episodes?.count { it.completed == true } ?: 0
+                android.util.Log.d("TraktSync", "  Season ${season.number}: $watchedEps/${season.episodes?.size ?: 0} watched")
+            }
+            progress
+        } catch (e: retrofit2.HttpException) {
+            android.util.Log.e("TraktSync", "HTTP error getting show progress for Trakt $traktId: ${e.code()} ${e.message()}", e)
+            null
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to get show progress for Trakt $traktId", e)
+            null
         }
     }
 

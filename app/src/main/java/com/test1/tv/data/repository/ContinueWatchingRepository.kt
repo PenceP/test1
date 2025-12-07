@@ -334,7 +334,7 @@ class ContinueWatchingRepository @Inject constructor(
     ): TraktShowProgress? {
         return runCatching {
             traktApiService.getShowProgress(
-                showId = showTraktId,
+                showId = showTraktId.toString(),
                 authHeader = authHeader,
                 clientId = BuildConfig.TRAKT_CLIENT_ID
             )

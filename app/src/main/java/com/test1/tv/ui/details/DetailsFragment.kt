@@ -40,6 +40,7 @@ import com.test1.tv.data.model.tmdb.TMDBCollection
 import com.test1.tv.data.model.tmdb.TMDBMovie
 import com.test1.tv.data.model.tmdb.TMDBEpisode
 import com.test1.tv.data.model.tmdb.TMDBSeason
+import com.test1.tv.data.model.trakt.TraktShowProgress
 import com.test1.tv.ui.HeroSectionHelper
 import com.test1.tv.ui.HeroBackgroundController
 import com.test1.tv.ui.adapter.PersonAdapter
@@ -122,8 +123,8 @@ class DetailsFragment : Fragment() {
     private lateinit var shelfEpisodeOverview: TextView
     private val scrollThrottler = SmartScrollThrottler(repeatDelayMs = 120L)
 
-    private var seasonAdapter: SeasonAdapter? = null
-    private var episodeAdapter: EpisodeAdapter? = null
+    private var seasonAdapter: com.test1.tv.ui.details.SeasonAdapter? = null
+    private var episodeAdapter: com.test1.tv.ui.details.EpisodeAdapter? = null
     @Inject lateinit var accentColorCache: AccentColorCache
     @Inject lateinit var rateLimiter: com.test1.tv.data.remote.RateLimiter
     @Inject lateinit var tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
@@ -131,8 +132,17 @@ class DetailsFragment : Fragment() {
     @Inject lateinit var contextMenuActionHandler: ContextMenuActionHandler
     @Inject lateinit var traktStatusProvider: TraktStatusProvider
     @Inject lateinit var watchedBadgeManager: WatchedBadgeManager
+    @Inject lateinit var traktSyncRepository: com.test1.tv.data.repository.TraktSyncRepository
+    @Inject lateinit var traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository
 
     private lateinit var contextMenuHelper: ContextMenuHelper
+    private var episodeContextMenuHelper: EpisodeContextMenuHelper? = null
+
+    // Show progress for episode watched status
+    private var showProgress: com.test1.tv.data.model.trakt.TraktShowProgress? = null
+    private var currentShowTmdbId: Int? = null
+    // Local set to track watched episodes (persists across season changes)
+    private val localWatchedEpisodes = mutableSetOf<String>()
 
     private var showTitleOriginal: String? = null
     private var showMetadataOriginal: CharSequence? = null
@@ -177,6 +187,41 @@ class DetailsFragment : Fragment() {
                 viewLifecycleOwner.lifecycleScope.launch {
                     watchedBadgeManager.notifyWatchedStateChanged(tmdbId, type, isWatched)
                 }
+            }
+        )
+
+        episodeContextMenuHelper = EpisodeContextMenuHelper(
+            context = requireContext(),
+            lifecycleScope = viewLifecycleOwner.lifecycleScope,
+            traktAccountRepository = traktAccountRepository,
+            traktSyncRepository = traktSyncRepository,
+            onEpisodeWatchedStateChanged = { seasonNumber, episodeNumber, isWatched ->
+                // Update local tracking set for persistence across season changes
+                val episodeKey = "S${seasonNumber}E${episodeNumber}"
+                if (isWatched) {
+                    localWatchedEpisodes.add(episodeKey)
+                } else {
+                    localWatchedEpisodes.remove(episodeKey)
+                }
+                episodeAdapter?.updateEpisodeWatchedStatus(seasonNumber, episodeNumber, isWatched)
+            },
+            onSeasonWatchedStateChanged = { seasonNumber, isWatched ->
+                // Update local tracking set for all episodes in season
+                episodeAdapter?.let { adapter ->
+                    for (i in 0 until adapter.itemCount) {
+                        adapter.getEpisode(i)?.let { episode ->
+                            if (episode.seasonNumber == seasonNumber) {
+                                val episodeKey = "S${episode.seasonNumber}E${episode.episodeNumber}"
+                                if (isWatched) {
+                                    localWatchedEpisodes.add(episodeKey)
+                                } else {
+                                    localWatchedEpisodes.remove(episodeKey)
+                                }
+                            }
+                        }
+                    }
+                }
+                episodeAdapter?.updateSeasonWatchedStatus(seasonNumber, isWatched)
             }
         )
 
@@ -787,17 +832,39 @@ class DetailsFragment : Fragment() {
             return
         }
 
+        // Store the show ID for context menu operations
+        currentShowTmdbId = tmdbShowId
+        // Clear local watched episodes when loading a new show
+        localWatchedEpisodes.clear()
+
         tvShowSection.visibility = View.VISIBLE
         seasonRow.visibility = View.VISIBLE
 
         if (seasonAdapter == null) {
-            seasonAdapter = SeasonAdapter(
+            seasonAdapter = com.test1.tv.ui.details.SeasonAdapter(
                 seasons = seasons,
                 onSeasonClick = { season, position ->
                     season.seasonNumber?.let {
                         loadEpisodesForSeason(tmdbShowId, it, position)
                         seasonAdapter?.setSelectedPosition(position)
                     }
+                },
+                onSeasonLongPress = { season, _ ->
+                    val seasonNumber = season.seasonNumber ?: return@SeasonAdapter
+                    // Check both remote progress and local changes
+                    val remoteWatched = showProgress?.isSeasonWatched(seasonNumber) ?: false
+                    val localWatched = seasons.find { it.seasonNumber == seasonNumber }?.let { s ->
+                        // A season is locally watched if we have entries for all its episodes
+                        // For simplicity, check if any episode of this season is in local set
+                        localWatchedEpisodes.any { it.startsWith("S${seasonNumber}E") }
+                    } ?: false
+                    val isSeasonWatched = remoteWatched || localWatched
+                    episodeContextMenuHelper?.showSeasonContextMenu(
+                        showTmdbId = tmdbShowId,
+                        showTitle = contentItem?.title ?: "",
+                        season = season,
+                        isSeasonWatched = isSeasonWatched
+                    )
                 }
             )
             seasonRow.adapter = seasonAdapter
@@ -812,12 +879,25 @@ class DetailsFragment : Fragment() {
         val initialSeasonNumber = seasonAdapter?.getSelectedSeason()?.seasonNumber
             ?: seasons.firstOrNull()?.seasonNumber
 
-        if (initialSeasonNumber != null) {
-            loadEpisodesForSeason(
-                showId = tmdbShowId,
-                seasonNumber = initialSeasonNumber,
-                selectedPosition = seasonAdapter?.selectedPosition ?: 0
-            )
+        // Fetch show progress from Trakt, then load initial season
+        viewLifecycleOwner.lifecycleScope.launch {
+            Log.d(TAG, "Fetching show progress for TMDB ID: $tmdbShowId")
+            showProgress = withContext(Dispatchers.IO) {
+                traktSyncRepository.getShowProgress(tmdbShowId)
+            }
+            // Initialize local set with remote watched episodes
+            val remoteWatched = showProgress?.getWatchedEpisodeKeys() ?: emptySet()
+            Log.d(TAG, "Received ${remoteWatched.size} watched episodes from Trakt: $remoteWatched")
+            localWatchedEpisodes.addAll(remoteWatched)
+            Log.d(TAG, "Local watched episodes set now has ${localWatchedEpisodes.size} items")
+            // Now load episodes with the fetched progress
+            if (initialSeasonNumber != null) {
+                loadEpisodesForSeason(
+                    showId = tmdbShowId,
+                    seasonNumber = initialSeasonNumber,
+                    selectedPosition = seasonAdapter?.selectedPosition ?: 0
+                )
+            }
         }
     }
 
@@ -837,9 +917,29 @@ class DetailsFragment : Fragment() {
                     ?.sortedBy { it.episodeNumber ?: Int.MAX_VALUE }
                     .orEmpty()
 
-                episodeAdapter = EpisodeAdapter(
+                // Use local watched episodes set (includes both remote and local changes)
+                val watchedEpisodes = localWatchedEpisodes.toSet()
+
+                episodeAdapter = com.test1.tv.ui.details.EpisodeAdapter(
                     episodes = episodes,
-                    onEpisodeFocused = { episode -> updateEpisodeShelf(episode) }
+                    showTmdbId = showId,
+                    watchedEpisodes = watchedEpisodes,
+                    onEpisodeFocused = { episode -> updateEpisodeShelf(episode) },
+                    onEpisodeClick = { episode ->
+                        Toast.makeText(
+                            requireContext(),
+                            "Play: S${episode.seasonNumber}E${episode.episodeNumber}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    onEpisodeLongPress = { episode, isWatched ->
+                        episodeContextMenuHelper?.showEpisodeContextMenu(
+                            showTmdbId = showId,
+                            showTitle = contentItem?.title ?: "",
+                            episode = episode,
+                            isWatched = isWatched
+                        )
+                    }
                 )
                 episodeRow.adapter = episodeAdapter
                 episodeRow.setNumRows(1)
@@ -1118,114 +1218,6 @@ class DetailsFragment : Fragment() {
                 buttonThumbsDown.isSelected = true
             }
         }
-    }
-
-    private inner class SeasonAdapter(
-        private val seasons: List<TMDBSeason>,
-        private val onSeasonClick: (TMDBSeason, Int) -> Unit
-    ) : RecyclerView.Adapter<SeasonAdapter.SeasonViewHolder>() {
-
-        var selectedPosition: Int = 0
-            private set
-
-        inner class SeasonViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val title: TextView = itemView.findViewById(R.id.season_title)
-
-            fun bind(season: TMDBSeason, position: Int) {
-                val label = season.seasonNumber?.let { "Season $it" }
-                    ?: season.name?.takeIf { it.isNotBlank() }
-                    ?: "Season"
-                title.text = label
-                itemView.isSelected = position == selectedPosition
-
-                itemView.setOnClickListener {
-                    val adapterPosition = bindingAdapterPosition
-                    if (adapterPosition != RecyclerView.NO_POSITION) {
-                        setSelectedPosition(adapterPosition)
-                        onSeasonClick(season, adapterPosition)
-                    }
-                }
-
-                itemView.setOnFocusChangeListener { view, hasFocus ->
-                    view.isSelected = position == selectedPosition
-                    if (hasFocus) {
-                        view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(120).start()
-                    } else {
-                        view.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
-                    }
-                }
-            }
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SeasonViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_season_chip, parent, false)
-            return SeasonViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: SeasonViewHolder, position: Int) {
-            holder.bind(seasons[position], position)
-        }
-
-        override fun getItemCount(): Int = seasons.size
-
-        fun setSelectedPosition(newPosition: Int) {
-            if (newPosition == selectedPosition) return
-            val previous = selectedPosition
-            selectedPosition = newPosition
-            notifyItemChanged(previous)
-            notifyItemChanged(newPosition)
-        }
-
-        fun getSelectedSeason(): TMDBSeason? = seasons.getOrNull(selectedPosition)
-    }
-
-    private inner class EpisodeAdapter(
-        private val episodes: List<TMDBEpisode>,
-        private val onEpisodeFocused: (TMDBEpisode?) -> Unit
-    ) : RecyclerView.Adapter<EpisodeAdapter.EpisodeViewHolder>() {
-
-        inner class EpisodeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val episodeImage: ImageView = itemView.findViewById(R.id.episode_image)
-            private val episodeTitle: TextView = itemView.findViewById(R.id.episode_title)
-            private val focusOverlay: View = itemView.findViewById(R.id.episode_focus_overlay)
-
-            fun bind(episode: TMDBEpisode) {
-                Glide.with(itemView.context)
-                    .load(episode.getStillUrl())
-                    .transition(DrawableTransitionOptions.withCrossFade())
-            .placeholder(R.drawable.default_background)
-            .error(R.drawable.default_background)
-                    .into(episodeImage)
-
-                val seasonEpisode = buildSeasonEpisodeLabel(episode.seasonNumber, episode.episodeNumber)
-                episodeTitle.text = seasonEpisode.ifBlank { "" }
-
-                itemView.setOnFocusChangeListener { _, hasFocus ->
-                    focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
-                    if (hasFocus) {
-                        itemView.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).start()
-                        onEpisodeFocused(episode)
-                    } else {
-                        itemView.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
-                    }
-                }
-            }
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EpisodeViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_episode_card, parent, false)
-            return EpisodeViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: EpisodeViewHolder, position: Int) {
-            holder.bind(episodes[position])
-        }
-
-        override fun getItemCount(): Int = episodes.size
-
-        fun getEpisode(position: Int): TMDBEpisode? = episodes.getOrNull(position)
     }
 
     companion object {

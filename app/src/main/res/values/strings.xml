@@ -67,4 +67,5 @@
     <string name="action_mark_episode_watched">Mark Episode Watched</string>
     <string name="action_mark_episode_unwatched">Mark Episode Unwatched</string>
     <string name="watched_indicator">Watched indicator</string>
+    <string name="watched">Watched</string>
 </resources>
