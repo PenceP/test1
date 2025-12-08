@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
@@ -87,6 +88,11 @@ class SettingsAdapter(
                     .inflate(R.layout.item_account_card_apikey, parent, false)
                 AccountCardApiKeyViewHolder(view)
             }
+            TYPE_SLIDER -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_setting_slider, parent, false)
+                SliderViewHolder(view)
+            }
             TYPE_QUALITY_CHIP_GROUP -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_setting_quality_chips, parent, false)
@@ -113,6 +119,7 @@ class SettingsAdapter(
             is SettingsItem.Select -> (holder as SelectViewHolder).bind(item)
             is SettingsItem.AccountCard -> (holder as AccountCardViewHolder).bind(item)
             is SettingsItem.AccountCardApiKey -> (holder as AccountCardApiKeyViewHolder).bind(item)
+            is SettingsItem.Slider -> (holder as SliderViewHolder).bind(item)
             is SettingsItem.QualityChipGroup -> (holder as QualityChipGroupViewHolder).bind(item)
             is SettingsItem.Stepper -> (holder as StepperViewHolder).bind(item)
             is SettingsItem.TagInput -> (holder as TagInputViewHolder).bind(item)
@@ -271,6 +278,74 @@ class SettingsAdapter(
                 loggedInView.visibility = View.GONE
 
                 btnAuthenticate.setOnClickListener { item.onAction(AccountAction.AUTHENTICATE) }
+            }
+        }
+    }
+
+    // Slider ViewHolder
+    inner class SliderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val label: TextView = view.findViewById(R.id.slider_label)
+        private val valueText: TextView = view.findViewById(R.id.slider_value)
+        private val seekBar: SeekBar = view.findViewById(R.id.slider_seekbar)
+        private val btnDecrease: Button = view.findViewById(R.id.btn_decrease)
+        private val btnIncrease: Button = view.findViewById(R.id.btn_increase)
+
+        init {
+            FocusUtils.applyButtonFocusAnimation(btnDecrease)
+            FocusUtils.applyButtonFocusAnimation(btnIncrease)
+        }
+
+        fun bind(item: SettingsItem.Slider) {
+            label.text = item.label
+            updateValueText(item.value, item.unit)
+
+            seekBar.min = item.min
+            seekBar.max = item.max
+            seekBar.progress = item.value
+
+            // SeekBar change listener
+            seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        updateValueText(progress, item.unit)
+                    }
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                    seekBar?.let { item.onValueChange(it.progress) }
+                }
+            })
+
+            // Decrease button
+            btnDecrease.setOnClickListener {
+                val newValue = (seekBar.progress - 5).coerceAtLeast(item.min)
+                seekBar.progress = newValue
+                updateValueText(newValue, item.unit)
+                item.onValueChange(newValue)
+            }
+
+            // Increase button
+            btnIncrease.setOnClickListener {
+                val newValue = (seekBar.progress + 5).coerceAtMost(item.max)
+                seekBar.progress = newValue
+                updateValueText(newValue, item.unit)
+                item.onValueChange(newValue)
+            }
+
+            // Update button enabled states
+            btnDecrease.alpha = if (item.value <= item.min) 0.5f else 1f
+            btnIncrease.alpha = if (item.value >= item.max) 0.5f else 1f
+        }
+
+        private fun updateValueText(value: Int, unit: String) {
+            valueText.text = if (value == 0) {
+                "Off"
+            } else if (unit.isNotEmpty()) {
+                "$value $unit"
+            } else {
+                value.toString()
             }
         }
     }

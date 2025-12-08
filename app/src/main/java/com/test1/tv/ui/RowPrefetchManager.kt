@@ -40,21 +40,14 @@ class RowPrefetchManager @Inject constructor(
         row.items.take(8).forEach { item ->
             val url = if (isLandscape) item.backdropUrl ?: item.posterUrl else item.posterUrl
             url?.let { imageUrl ->
-                // Convert drawable:// URLs to resource IDs for Glide
-                val loadTarget: Any = if (imageUrl.startsWith("drawable://")) {
-                    val drawableName = imageUrl.removePrefix("drawable://")
-                    val drawableId = context.resources.getIdentifier(
-                        drawableName,
-                        "drawable",
-                        context.packageName
-                    )
-                    if (drawableId != 0) drawableId else imageUrl
-                } else {
-                    imageUrl
+                // Skip drawable:// URLs - they're local resources and don't benefit from prefetching
+                // Also, VectorDrawables can't be cached by Glide
+                if (imageUrl.startsWith("drawable://")) {
+                    return@let
                 }
 
                 Glide.with(context)
-                    .load(loadTarget)
+                    .load(imageUrl)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .preload(targetWidth, targetHeight)
             }
