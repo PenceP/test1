@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/player_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:keepScreenOn="true">
+
+    <!-- ExoPlayer view -->
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:show_buffering="never"
+        app:use_controller="true"
+        app:surface_type="surface_view"
+        app:hide_on_touch="true"
+        app:show_timeout="5000" />
+
+    <!-- Loading overlay with logo -->
+    <FrameLayout
+        android:id="@+id/loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black"
+        android:visibility="visible">
+
+        <!-- Centered logo container -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <!-- Logo image with fade animation -->
+            <ImageView
+                android:id="@+id/loading_logo"
+                android:layout_width="400dp"
+                android:layout_height="200dp"
+                android:scaleType="fitCenter"
+                android:alpha="0" />
+
+            <!-- Loading text -->
+            <TextView
+                android:id="@+id/loading_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Loading..."
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:alpha="0.8" />
+
+            <!-- Loading spinner -->
+            <ProgressBar
+                android:id="@+id/loading_spinner"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="16dp"
+                android:indeterminateTint="@android:color/white" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- Error overlay -->
+    <FrameLayout
+        android:id="@+id/error_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_error"
+                android:tint="#FF6B6B"
+                android:contentDescription="Error" />
+
+            <TextView
+                android:id="@+id/error_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="#FF6B6B"
+                android:textSize="18sp"
+                android:gravity="center"
+                android:text="Failed to load video" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:textColor="#AAAAAA"
+                android:textSize="14sp"
+                android:text="Press back to return" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</FrameLayout>

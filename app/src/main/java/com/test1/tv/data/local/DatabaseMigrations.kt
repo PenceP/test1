@@ -63,3 +63,58 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
         """)
     }
 }
+
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // This migration was part of a previous update, keeping for compatibility
+    }
+}
+
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create premiumize_accounts table for debrid service
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS premiumize_accounts (
+                providerId TEXT PRIMARY KEY NOT NULL,
+                apiKey TEXT NOT NULL,
+                customerId TEXT,
+                username TEXT,
+                email TEXT,
+                accountStatus TEXT,
+                expiresAt INTEGER,
+                pointsUsed REAL,
+                pointsAvailable REAL,
+                spaceLimitBytes INTEGER,
+                spaceUsedBytes INTEGER,
+                fairUsageLimitBytes INTEGER,
+                fairUsageUsedBytes INTEGER,
+                lastVerifiedAt INTEGER NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+        """)
+    }
+}
+
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create player_settings table for video player preferences
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS player_settings (
+                id INTEGER PRIMARY KEY NOT NULL DEFAULT 1,
+                skipMode TEXT NOT NULL DEFAULT 'instant',
+                defaultSubtitleLanguage TEXT DEFAULT 'en',
+                defaultAudioLanguage TEXT,
+                subtitleDelayMs INTEGER NOT NULL DEFAULT 0,
+                audioDelayMs INTEGER NOT NULL DEFAULT 0,
+                autoplayNextEpisode INTEGER NOT NULL DEFAULT 1,
+                rememberPosition INTEGER NOT NULL DEFAULT 1,
+                autoplayCountdownSeconds INTEGER NOT NULL DEFAULT 15
+            )
+        """)
+
+        // Insert default settings row
+        database.execSQL("""
+            INSERT OR IGNORE INTO player_settings (id) VALUES (1)
+        """)
+    }
+}

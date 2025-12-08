@@ -70,6 +70,7 @@ import androidx.leanback.widget.BaseGridView
 import com.test1.tv.ui.SmartRowScrollManager
 import com.test1.tv.ui.SmartScrollThrottler
 import android.transition.TransitionManager
+import com.test1.tv.ui.sources.SourcesActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -150,6 +151,10 @@ class DetailsFragment : Fragment() {
 
     // Trailer YouTube key
     private var trailerKey: String? = null
+
+    // Currently selected season/episode for Play button
+    private var currentSeasonNumber: Int = 1
+    private var currentEpisodeNumber: Int = 1
 
     private var isWatched = false
     private var isInCollection = false
@@ -305,7 +310,7 @@ class DetailsFragment : Fragment() {
         }
 
         buttonPlay.setOnClickListener {
-            Toast.makeText(requireContext(), "Play not wired yet", Toast.LENGTH_SHORT).show()
+            launchSources()
         }
 
         buttonTrailer.setOnClickListener {
@@ -937,11 +942,11 @@ class DetailsFragment : Fragment() {
                     watchedEpisodes = watchedEpisodes,
                     onEpisodeFocused = { episode -> updateEpisodeShelf(episode) },
                     onEpisodeClick = { episode ->
-                        Toast.makeText(
-                            requireContext(),
-                            "Play: S${episode.seasonNumber}E${episode.episodeNumber}",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        val season = episode.seasonNumber ?: return@EpisodeAdapter
+                        val ep = episode.episodeNumber ?: return@EpisodeAdapter
+                        contentItem?.let { item ->
+                            SourcesActivity.startForEpisode(requireContext(), item, season, ep)
+                        }
                     },
                     onEpisodeLongPress = { episode, isWatched ->
                         episodeContextMenuHelper?.showEpisodeContextMenu(
@@ -1020,11 +1025,20 @@ class DetailsFragment : Fragment() {
             buttonPlay.text = getString(R.string.details_play)
             return
         }
+        // Track current season/episode for Play button
+        currentSeasonNumber = seasonNumber
+        currentEpisodeNumber = episodeNumber
         buttonPlay.text = "${getString(R.string.details_play)} S$seasonNumber E$episodeNumber"
     }
 
     private fun updateEpisodeShelf(episode: TMDBEpisode?) {
         if (episode == null) return
+        // Update Play button with current episode
+        episode.seasonNumber?.let { s ->
+            episode.episodeNumber?.let { e ->
+                updatePlayButtonText(s, e)
+            }
+        }
         val seasonEpisode = buildSeasonEpisodeLabel(episode.seasonNumber, episode.episodeNumber)
         val airDateText = formatAirDate(episode.airDate)
         val runtimeText = formatRuntime(episode.runtime)
@@ -1185,6 +1199,24 @@ class DetailsFragment : Fragment() {
         trakt: String?
     ): String? = primary ?: external ?: trakt
 
+
+    private fun launchSources() {
+        val item = contentItem ?: return
+
+        when (item.type) {
+            ContentItem.ContentType.MOVIE -> {
+                SourcesActivity.startForMovie(requireContext(), item)
+            }
+            ContentItem.ContentType.TV_SHOW -> {
+                SourcesActivity.startForEpisode(
+                    requireContext(),
+                    item,
+                    currentSeasonNumber,
+                    currentEpisodeNumber
+                )
+            }
+        }
+    }
 
     private fun openTrailer() {
         val key = trailerKey

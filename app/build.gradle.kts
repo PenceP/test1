@@ -93,6 +93,9 @@ dependencies {
     // Shimmer effect for skeleton loading UI
     implementation("com.facebook.shimmer:shimmer:0.5.0")
 
+    // FlexboxLayout for flexible chip layouts
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
+
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
@@ -138,4 +141,12 @@ dependencies {
 
     // Material Icons
     implementation(libs.material)
+
+    // ExoPlayer (Media3)
+    implementation("androidx.media3:media3-exoplayer:1.2.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.2.1")
+    implementation("androidx.media3:media3-exoplayer-dash:1.2.1")
+    implementation("androidx.media3:media3-ui:1.2.1")
+    implementation("androidx.media3:media3-session:1.2.1")
+    implementation("androidx.media3:media3-extractor:1.2.1")
 }

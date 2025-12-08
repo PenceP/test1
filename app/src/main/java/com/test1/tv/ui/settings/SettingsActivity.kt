@@ -13,6 +13,8 @@ import androidx.leanback.widget.VerticalGridView
 import com.test1.tv.R
 import com.test1.tv.ui.settings.adapter.SubmenuAdapter
 import com.test1.tv.ui.settings.fragments.AccountsFragment
+import com.test1.tv.ui.settings.fragments.LinkFilteringFragment
+import com.test1.tv.ui.settings.fragments.LinkResolvingFragment
 import com.test1.tv.ui.settings.fragments.PlaybackFragment
 import com.test1.tv.ui.settings.fragments.RowCustomizationFragment
 import com.test1.tv.ui.settings.model.SubmenuItem
@@ -90,8 +92,8 @@ class SettingsActivity : FragmentActivity() {
         val fragment = when (item.id) {
             "accounts" -> AccountsFragment()
             "layout" -> RowCustomizationFragment()
-            "resolving" -> AccountsFragment() // Placeholder - create ResolvingFragment
-            "filtering" -> AccountsFragment() // Placeholder - create FilteringFragment
+            "resolving" -> LinkResolvingFragment()
+            "filtering" -> LinkFilteringFragment()
             "playback" -> PlaybackFragment()
             "display" -> AccountsFragment() // Placeholder - create DisplayFragment
             "about" -> AccountsFragment() // Placeholder - create AboutFragment

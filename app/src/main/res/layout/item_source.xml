@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/source_item_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:layout_marginBottom="4dp"
+    android:background="@drawable/selector_source_item"
+    android:focusable="true"
+    android:focusableInTouchMode="true">
+
+    <!-- Position number -->
+    <TextView
+        android:id="@+id/position_text"
+        android:layout_width="36dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="#888888"
+        android:textSize="14sp"
+        tools:text="1" />
+
+    <!-- Debrid badge (PM+, PM, RD+, RD) -->
+    <TextView
+        android:id="@+id/debrid_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_badge_debrid"
+        android:textColor="#CCCCCC"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        tools:text="PM+"
+        tools:visibility="visible" />
+
+    <!-- Quality badge (4K, 1080p, 720p, etc.) -->
+    <TextView
+        android:id="@+id/quality_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_badge_quality"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        tools:text="4K" />
+
+    <!-- File name (takes remaining space) -->
+    <TextView
+        android:id="@+id/filename_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="middle"
+        android:maxLines="1"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        tools:text="Movie.Name.2024.2160p.UHD.BluRay.x265.HEVC-GROUP" />
+
+    <!-- Size badge -->
+    <TextView
+        android:id="@+id/size_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/bg_badge_size"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp"
+        tools:text="11.2 GB" />
+
+</LinearLayout>

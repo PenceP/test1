@@ -72,6 +72,16 @@
             android:name=".PlaybackActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.sources.SourcesActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+        <activity
+            android:name=".ui.player.VideoPlayerActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        <activity
             android:name=".BrowseErrorActivity"
             android:exported="false" />
         <activity android:name="com.test1.tv.debug.DatabaseDebugActivity" />

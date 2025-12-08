@@ -9,16 +9,26 @@ import com.test1.tv.data.local.AppDatabase
 import com.test1.tv.data.local.MIGRATION_11_12
 import com.test1.tv.data.local.MIGRATION_12_13
 import com.test1.tv.data.local.MIGRATION_13_14
+import com.test1.tv.data.local.MIGRATION_14_15
+import com.test1.tv.data.local.MIGRATION_15_16
+import com.test1.tv.data.local.MIGRATION_16_17
 import com.test1.tv.data.remote.api.OMDbApiService
+import com.test1.tv.data.remote.api.PremiumizeApiService
 import com.test1.tv.data.remote.api.TMDBApiService
+import com.test1.tv.data.remote.api.TorrentioApiService
 import com.test1.tv.data.remote.api.TraktApiService
+import com.test1.tv.data.repository.TorrentioRepository
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
 import com.test1.tv.data.repository.HomeConfigRepository
 import com.test1.tv.data.repository.SyncMetadataRepository
+import com.test1.tv.data.repository.LinkFilterPreferences
+import com.test1.tv.data.repository.PremiumizeRepository
+import com.test1.tv.data.service.LinkFilterService
 import com.test1.tv.data.repository.TraktAccountRepository
 import com.test1.tv.data.repository.TraktMediaRepository
 import com.test1.tv.data.repository.WatchStatusRepository
+import com.test1.tv.data.repository.PlayerSettingsRepository
 import com.test1.tv.ui.AccentColorCache
 import com.google.gson.Gson
 import dagger.Module
@@ -48,6 +58,14 @@ annotation class TraktRetrofit
 @Retention(AnnotationRetention.BINARY)
 annotation class OmdbRetrofit
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class PremiumizeRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class TorrentioRetrofit
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -62,7 +80,7 @@ object AppModule {
             AppDatabase::class.java,
             "test1_tv_database"
         )
-            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -91,6 +109,12 @@ object AppModule {
     @Provides
     fun provideSyncMetadataDao(database: AppDatabase) = database.syncMetadataDao()
 
+    @Provides
+    fun providePremiumizeAccountDao(database: AppDatabase) = database.premiumizeAccountDao()
+
+    @Provides
+    fun providePlayerSettingsDao(database: AppDatabase) = database.playerSettingsDao()
+
     // Repository helpers
     @Provides
     @Singleton
@@ -112,6 +136,13 @@ object AppModule {
         traktApiService: TraktApiService,
         accountDao: com.test1.tv.data.local.dao.TraktAccountDao
     ) = TraktAccountRepository(traktApiService, accountDao)
+
+    @Provides
+    @Singleton
+    fun providePremiumizeRepository(
+        premiumizeApiService: PremiumizeApiService,
+        premiumizeAccountDao: com.test1.tv.data.local.dao.PremiumizeAccountDao
+    ) = PremiumizeRepository(premiumizeApiService, premiumizeAccountDao)
 
     @Provides
     @Singleton
@@ -160,6 +191,21 @@ object AppModule {
     @Provides
     @Singleton
     fun provideGson(): Gson = Gson()
+
+    @Provides
+    @Singleton
+    fun provideLinkFilterPreferences(@ApplicationContext context: Context): LinkFilterPreferences =
+        LinkFilterPreferences(context)
+
+    @Provides
+    @Singleton
+    fun provideLinkFilterService(linkFilterPreferences: LinkFilterPreferences): LinkFilterService =
+        LinkFilterService(linkFilterPreferences)
+
+    @Provides
+    @Singleton
+    fun providePlayerSettingsRepository(playerSettingsDao: com.test1.tv.data.local.dao.PlayerSettingsDao): PlayerSettingsRepository =
+        PlayerSettingsRepository(playerSettingsDao)
 
     // ==================== Network ====================
 
@@ -220,6 +266,28 @@ object AppModule {
 
     @Provides
     @Singleton
+    @PremiumizeRetrofit
+    fun providePremiumizeRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://www.premiumize.me/api/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @TorrentioRetrofit
+    fun provideTorrentioRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://torrentio.strem.fun/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideTmdbApiService(@TmdbRetrofit retrofit: Retrofit): TMDBApiService {
         return retrofit.create(TMDBApiService::class.java)
     }
@@ -235,6 +303,27 @@ object AppModule {
     fun provideOmdbApiService(@OmdbRetrofit retrofit: Retrofit): OMDbApiService {
         return retrofit.create(OMDbApiService::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun providePremiumizeApiService(@PremiumizeRetrofit retrofit: Retrofit): PremiumizeApiService {
+        return retrofit.create(PremiumizeApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTorrentioApiService(@TorrentioRetrofit retrofit: Retrofit): TorrentioApiService {
+        return retrofit.create(TorrentioApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTorrentioRepository(
+        torrentioApiService: TorrentioApiService,
+        premiumizeRepository: PremiumizeRepository,
+        linkFilterService: LinkFilterService
+    ): TorrentioRepository =
+        TorrentioRepository(torrentioApiService, premiumizeRepository, linkFilterService)
 
     // ==================== Utilities ====================
 

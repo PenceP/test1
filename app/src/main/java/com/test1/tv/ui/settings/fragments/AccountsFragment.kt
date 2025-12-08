@@ -13,7 +13,9 @@ import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.test1.tv.R
+import com.test1.tv.data.local.entity.PremiumizeAccount
 import com.test1.tv.data.local.entity.TraktAccount
+import com.test1.tv.data.repository.PremiumizeRepository
 import com.test1.tv.ui.settings.adapter.SettingsAdapter
 import com.test1.tv.ui.settings.model.AccountAction
 import com.test1.tv.ui.settings.model.SettingsItem
@@ -37,12 +39,16 @@ class AccountsFragment : Fragment() {
     @Inject lateinit var accountRepository: com.test1.tv.data.repository.TraktAccountRepository
     @Inject lateinit var traktUserItemDao: com.test1.tv.data.local.dao.TraktUserItemDao
     @Inject lateinit var traktApiService: com.test1.tv.data.remote.api.TraktApiService
+    @Inject lateinit var premiumizeRepository: PremiumizeRepository
 
     private var traktAccount: TraktAccount? = null
+    private var premiumizeAccount: PremiumizeAccount? = null
 
-    // Example state (in real app, use ViewModel)
+    // State
     private var traktConnected = false
     private var premiumizeConnected = false
+    private var premiumizeApiKeyInput = ""
+    private var premiumizeVerifying = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,9 +74,16 @@ class AccountsFragment : Fragment() {
 
     private fun loadAccountState() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val account = accountRepository.getAccount()
-            traktAccount = account
-            traktConnected = account != null
+            // Load Trakt account
+            val trakt = accountRepository.getAccount()
+            traktAccount = trakt
+            traktConnected = trakt != null
+
+            // Load Premiumize account
+            val premiumize = premiumizeRepository.getAccount()
+            premiumizeAccount = premiumize
+            premiumizeConnected = premiumize != null
+
             withContext(Dispatchers.Main) {
                 refreshItems()
             }
@@ -82,6 +95,12 @@ class AccountsFragment : Fragment() {
         val showsWatched = traktAccount?.statsShowsWatched
         val minutesWatched = traktAccount?.statsMinutesWatched
         val hoursWatched = minutesWatched?.div(60)
+
+        // Calculate Premiumize days remaining
+        val premiumizeDaysRemaining = premiumizeAccount?.let {
+            premiumizeRepository.getDaysRemaining(it)
+        }
+
         return listOf(
             // Trakt Account Card
             SettingsItem.AccountCard(
@@ -104,18 +123,26 @@ class AccountsFragment : Fragment() {
                 }
             ),
 
-            // Premiumize Account Card
-            SettingsItem.AccountCard(
+            // Premiumize Account Card (API Key based)
+            SettingsItem.AccountCardApiKey(
                 id = "premiumize",
                 serviceName = "Premiumize",
                 serviceDescription = "High-speed cloud downloader",
                 iconText = "P",
                 iconBackgroundColor = Color.parseColor("#2563EB"), // Blue
                 isConnected = premiumizeConnected,
-                userName = if (premiumizeConnected) "Premium (Yearly)" else null,
-                additionalInfo = if (premiumizeConnected) "142 Days" else null,
-                onAction = { action ->
-                    handlePremiumizeAction(action)
+                apiKey = premiumizeApiKeyInput,
+                isVerifying = premiumizeVerifying,
+                accountStatus = premiumizeAccount?.accountStatus?.replaceFirstChar { it.uppercase() },
+                daysRemaining = premiumizeDaysRemaining,
+                onApiKeyChange = { key ->
+                    premiumizeApiKeyInput = key
+                },
+                onVerify = { apiKey ->
+                    verifyPremiumizeApiKey(apiKey)
+                },
+                onDisconnect = {
+                    disconnectPremiumize()
                 }
             )
         )
@@ -261,20 +288,51 @@ class AccountsFragment : Fragment() {
         }
     }
 
-    private fun handlePremiumizeAction(action: AccountAction) {
-        when (action) {
-            AccountAction.AUTHENTICATE, AccountAction.CONNECT -> {
-                Toast.makeText(context, "Connecting to Premiumize...", Toast.LENGTH_SHORT).show()
-                // In real app: validate API key
+    private fun verifyPremiumizeApiKey(apiKey: String) {
+        if (apiKey.isBlank()) {
+            Toast.makeText(context, "Please enter an API key", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        premiumizeVerifying = true
+        refreshItems()
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                premiumizeRepository.verifyAndSaveApiKey(apiKey)
+            }
+
+            premiumizeVerifying = false
+
+            result.onSuccess { account ->
+                premiumizeAccount = account
                 premiumizeConnected = true
-                refreshItems()
+                premiumizeApiKeyInput = "" // Clear input after successful verification
+                Toast.makeText(context, "Premiumize connected!", Toast.LENGTH_SHORT).show()
+            }.onFailure { error ->
+                Toast.makeText(
+                    context,
+                    "Verification failed: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
-            AccountAction.DISCONNECT -> {
-                premiumizeConnected = false
-                refreshItems()
-                Toast.makeText(context, "Disconnected from Premiumize", Toast.LENGTH_SHORT).show()
+
+            refreshItems()
+        }
+    }
+
+    private fun disconnectPremiumize() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                premiumizeRepository.clearAccount()
             }
-            else -> {}
+
+            premiumizeAccount = null
+            premiumizeConnected = false
+            premiumizeApiKeyInput = ""
+
+            refreshItems()
+            Toast.makeText(context, "Disconnected from Premiumize", Toast.LENGTH_SHORT).show()
         }
     }
 

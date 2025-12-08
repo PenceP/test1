@@ -12,6 +12,8 @@ import com.test1.tv.data.local.dao.WatchStatusDao
 import com.test1.tv.data.local.dao.MediaDao
 import com.test1.tv.data.local.dao.RowConfigDao
 import com.test1.tv.data.local.dao.SyncMetadataDao
+import com.test1.tv.data.local.dao.PremiumizeAccountDao
+import com.test1.tv.data.local.dao.PlayerSettingsDao
 import com.test1.tv.data.local.entity.CachedContent
 import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.data.local.entity.TraktUserItem
@@ -20,6 +22,8 @@ import com.test1.tv.data.local.entity.WatchStatusEntity
 import com.test1.tv.data.local.entity.RowConfigEntity
 import com.test1.tv.data.local.entity.SyncMetadataEntity
 import com.test1.tv.data.local.entity.MediaEnrichmentEntity
+import com.test1.tv.data.local.entity.PremiumizeAccount
+import com.test1.tv.data.local.entity.PlayerSettings
 
 @Database(
     entities = [
@@ -34,9 +38,11 @@ import com.test1.tv.data.local.entity.MediaEnrichmentEntity
         WatchProgressEntity::class,
         RowConfigEntity::class,
         SyncMetadataEntity::class,
-        MediaEnrichmentEntity::class
+        MediaEnrichmentEntity::class,
+        PremiumizeAccount::class,
+        PlayerSettings::class
     ],
-    version = 15,
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -49,4 +55,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mediaDao(): MediaDao
     abstract fun rowConfigDao(): RowConfigDao
     abstract fun syncMetadataDao(): SyncMetadataDao
+    abstract fun premiumizeAccountDao(): PremiumizeAccountDao
+    abstract fun playerSettingsDao(): PlayerSettingsDao
 }
