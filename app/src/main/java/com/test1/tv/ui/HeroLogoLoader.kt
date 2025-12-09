@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.ImageView
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -40,7 +41,8 @@ class HeroLogoLoader(
         if (logoUrl.isNullOrBlank()) return
 
         // Convert drawable:// URLs to resource IDs for Glide
-        val loadTarget: Any = if (logoUrl.startsWith("drawable://")) {
+        val isDrawableResource = logoUrl.startsWith("drawable://")
+        val loadTarget: Any = if (isDrawableResource) {
             val drawableName = logoUrl.removePrefix("drawable://")
             val drawableId = fragment.requireContext().resources.getIdentifier(
                 drawableName,
@@ -73,11 +75,16 @@ class HeroLogoLoader(
             }
         }
 
+        // Disable disk caching for drawable resources to prevent VectorDrawable encoding crash
+        val diskCacheStrategy = if (isDrawableResource) DiskCacheStrategy.NONE else DiskCacheStrategy.AUTOMATIC
+
         Glide.with(fragment)
             .load(loadTarget)
+            .diskCacheStrategy(diskCacheStrategy)
             .thumbnail(
                 Glide.with(fragment)
                     .load(loadTarget)
+                    .diskCacheStrategy(diskCacheStrategy)
                     .override(300, 100)
             )
             .transition(DrawableTransitionOptions.withCrossFade(150))

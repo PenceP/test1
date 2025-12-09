@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
+import androidx.leanback.widget.BaseGridView
 import androidx.leanback.widget.VerticalGridView
 import com.test1.tv.R
 import com.test1.tv.ui.settings.adapter.SubmenuAdapter
@@ -80,6 +81,11 @@ class SettingsActivity : FragmentActivity() {
     }
 
     private fun setupSubmenu() {
+        // Fix VerticalGridView alignment - align to top edge instead of center
+        submenuList.windowAlignment = BaseGridView.WINDOW_ALIGN_LOW_EDGE
+        submenuList.windowAlignmentOffsetPercent = BaseGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED
+        submenuList.itemAlignmentOffsetPercent = BaseGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED
+
         submenuAdapter = SubmenuAdapter(submenuItems) { item ->
             loadFragment(item)
         }

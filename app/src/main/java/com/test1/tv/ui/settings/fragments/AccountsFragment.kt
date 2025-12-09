@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.leanback.widget.BaseGridView
 import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -67,6 +68,11 @@ class AccountsFragment : Fragment() {
     }
 
     private fun setupAccountsList() {
+        // Fix VerticalGridView alignment - align to top edge instead of center
+        accountsList.windowAlignment = BaseGridView.WINDOW_ALIGN_LOW_EDGE
+        accountsList.windowAlignmentOffsetPercent = BaseGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED
+        accountsList.itemAlignmentOffsetPercent = BaseGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED
+
         val items = buildAccountItems()
         adapter = SettingsAdapter(items)
         accountsList.adapter = adapter

@@ -29,6 +29,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -172,8 +173,10 @@ class PosterAdapter(
                     android.util.Log.d("PosterAdapter", "Drawable ID for '$drawableName': $drawableId")
                     if (drawableId != 0) {
                         // Use Glide to load drawable resources asynchronously to avoid blocking UI thread
+                        // CRITICAL: Disable disk caching to prevent VectorDrawable encoding crash
                         Glide.with(glideContext)
                             .load(drawableId)
+                            .diskCacheStrategy(DiskCacheStrategy.NONE)
                             .transition(DrawableTransitionOptions.withCrossFade(100))
                             .placeholder(PLACEHOLDER_DRAWABLE)
                             .override(overrideWidth, overrideHeight)

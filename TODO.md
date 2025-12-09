@@ -1629,23 +1629,23 @@ Use this checklist to track progress across all phases.
 ---
 
 ### Phase 1: Critical Stability & Security
-- [ ] **1.1** Fix hardcoded OMDB_API_KEY in build.gradle.kts
-- [ ] **1.2** Replace Timer with coroutines in MainFragment
-- [ ] **1.3** Replace Handler.postDelayed in BrowseErrorActivity
-- [ ] **1.4** Fix CardPresenter missing else block (wrong icons)
-- [ ] **1.5** Fix Glide VectorDrawable crash
-- [ ] **1.6** Fix HWUI image decoder errors
-- [ ] **1.7** Migrate kapt to KSP
+- [x] **1.1** Fix hardcoded OMDB_API_KEY in build.gradle.kts
+- [x] **1.2** Replace Timer with coroutines in MainFragment
+- [x] **1.3** Replace Handler.postDelayed in BrowseErrorActivity
+- [x] **1.4** Fix CardPresenter missing else block (wrong icons)
+- [x] **1.5** Fix Glide VectorDrawable crash
+- [x] **1.6** Fix HWUI image decoder errors
+- [x] **1.7** Migrate kapt to KSP
 
 ---
 
 ### Phase 2: UI/UX Refinements
-- [ ] **2.1** Fix Settings submenu spacing (VerticalGridView alignment)
-- [ ] **2.2** Fix long press context menu jitter
-- [ ] **2.3** Add horizontal scroll (marquee) for link titles
-- [ ] **2.4** Remove colored backdrop overlay on focus
-- [ ] **2.5** Fix Networks/Directors/Franchises backdrop updates
-- [ ] **2.6** Add clickable functionality to posters
+- [x] **2.1** Fix Settings submenu spacing (VerticalGridView alignment)
+- [x] **2.2** Fix long press context menu jitter
+- [x] **2.3** Add horizontal scroll (marquee) for link titles
+- [x] **2.4** Remove colored backdrop overlay on focus
+- [x] **2.5** Fix Networks/Directors/Franchises backdrop updates
+- [x] **2.6** Add clickable functionality to posters
 
 ---
 

@@ -9,7 +9,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
+import androidx.core.app.ActivityOptionsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.leanback.widget.VerticalGridView
@@ -19,6 +19,7 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.google.android.material.button.MaterialButton
+import com.test1.tv.DetailsActivity
 import com.test1.tv.MainActivity
 import com.test1.tv.R
 import com.test1.tv.data.model.ContentItem
@@ -222,12 +223,17 @@ class TvShowsFragment : Fragment() {
 
     private fun handleItemClick(item: ContentItem, posterView: ImageView) {
         Log.d(TAG, "Item clicked: ${item.title}")
-        Toast.makeText(
-            requireContext(),
-            "Details for: ${item.title}",
-            Toast.LENGTH_SHORT
-        ).show()
-        // TODO: Navigate to details screen
+
+        val intent = Intent(requireContext(), DetailsActivity::class.java).apply {
+            putExtra(DetailsActivity.CONTENT_ITEM, item)
+        }
+        posterView.transitionName = DetailsActivity.SHARED_ELEMENT_NAME
+        val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+            requireActivity(),
+            posterView,
+            DetailsActivity.SHARED_ELEMENT_NAME
+        )
+        startActivity(intent, options.toBundle())
     }
 
     private fun ensureHeroExtras(item: ContentItem) {

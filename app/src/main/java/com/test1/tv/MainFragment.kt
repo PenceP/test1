@@ -1,16 +1,16 @@
 package com.test1.tv
 
 import java.util.Collections
-import java.util.Timer
-import java.util.TimerTask
 
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import androidx.leanback.app.BackgroundManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.leanback.widget.HeaderItem
@@ -40,11 +40,10 @@ import com.bumptech.glide.request.transition.Transition
  */
 class MainFragment : BrowseSupportFragment() {
 
-    private val mHandler = Handler(Looper.myLooper()!!)
     private lateinit var mBackgroundManager: BackgroundManager
     private var mDefaultBackground: Drawable? = null
     private lateinit var mMetrics: DisplayMetrics
-    private var mBackgroundTimer: Timer? = null
+    private var mBackgroundJob: Job? = null
     private var mBackgroundUri: String? = null
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -60,10 +59,9 @@ class MainFragment : BrowseSupportFragment() {
         setupEventListeners()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d(TAG, "onDestroy: " + mBackgroundTimer?.toString())
-        mBackgroundTimer?.cancel()
+    override fun onDestroyView() {
+        mBackgroundJob?.cancel()
+        super.onDestroyView()
     }
 
     private fun prepareBackgroundManager() {
@@ -186,19 +184,13 @@ class MainFragment : BrowseSupportFragment() {
                         mBackgroundManager.drawable = drawable
                     }
                 })
-        mBackgroundTimer?.cancel()
     }
 
     private fun startBackgroundTimer() {
-        mBackgroundTimer?.cancel()
-        mBackgroundTimer = Timer()
-        mBackgroundTimer?.schedule(UpdateBackgroundTask(), BACKGROUND_UPDATE_DELAY.toLong())
-    }
-
-    private inner class UpdateBackgroundTask : TimerTask() {
-
-        override fun run() {
-            mHandler.post { updateBackground(mBackgroundUri) }
+        mBackgroundJob?.cancel()
+        mBackgroundJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(BACKGROUND_UPDATE_DELAY.toLong())
+            updateBackground(mBackgroundUri)
         }
     }
 

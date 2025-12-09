@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.leanback.widget.BaseGridView
 import androidx.leanback.widget.VerticalGridView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -141,6 +142,11 @@ class RowCustomizationFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
+        // Fix VerticalGridView alignment - align to top edge instead of center
+        rowsList.windowAlignment = BaseGridView.WINDOW_ALIGN_LOW_EDGE
+        rowsList.windowAlignmentOffsetPercent = BaseGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED
+        rowsList.itemAlignmentOffsetPercent = BaseGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED
+
         adapter = RowConfigAdapter(
             onToggleVisibility = { row -> viewModel.toggleRowVisibility(row) },
             onMoveUp = { row -> viewModel.moveRowUp(row) },

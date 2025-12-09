@@ -45,24 +45,34 @@ class CardPresenter : Presenter() {
         val cardView = viewHolder.view as ImageCardView
 
         Log.d(TAG, "onBindViewHolder")
-        if (movie.cardImageUrl != null) {
-            cardView.titleText = movie.title
-            cardView.contentText = movie.studio
-            cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT)
+        cardView.titleText = movie.title
+        cardView.contentText = movie.studio
+        cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT)
+
+        val imageView = cardView.mainImageView
+        if (movie.cardImageUrl != null && imageView != null) {
             Glide.with(viewHolder.view.context)
                 .load(movie.cardImageUrl)
                 .centerCrop()
                 .error(mDefaultCardImage)
-                .into(cardView.mainImageView)
+                .into(imageView)
+        } else if (imageView != null) {
+            // CRITICAL: Clear the image when recycling to prevent wrong icons
+            Glide.with(viewHolder.view.context).clear(imageView)
+            imageView.setImageDrawable(mDefaultCardImage)
         }
     }
 
     override fun onUnbindViewHolder(viewHolder: Presenter.ViewHolder) {
         Log.d(TAG, "onUnbindViewHolder")
         val cardView = viewHolder.view as ImageCardView
-        // Remove references to images so that the garbage collector can free up memory
+        val imageView = cardView.mainImageView
+        // Clear Glide request and remove references to images for garbage collection
+        if (imageView != null) {
+            Glide.with(cardView.context).clear(imageView)
+            imageView.setImageDrawable(null)
+        }
         cardView.badgeImage = null
-        cardView.mainImage = null
     }
 
     private fun updateCardBackgroundColor(view: ImageCardView, selected: Boolean) {

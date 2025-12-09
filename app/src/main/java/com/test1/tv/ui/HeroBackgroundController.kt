@@ -1,54 +1,53 @@
 package com.test1.tv.ui
 
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.TransitionDrawable
 import android.view.View
 import android.widget.ImageView
 import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
-import androidx.palette.graphics.Palette
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import kotlin.math.max
 
 /**
- * Handles backdrop loading + ambient gradient updates for hero sections.
+ * Handles backdrop loading for hero sections.
+ * Uses a simple transparent black overlay instead of palette extraction for performance.
  */
 class HeroBackgroundController(
     private val fragment: Fragment,
     private val backdropView: ImageView,
     private val ambientOverlay: View,
-    private val defaultAmbientColor: Int = Color.parseColor("#0A0F1F")
+    private val defaultAmbientColor: Int = Color.parseColor("#80000000") // Transparent black
 ) {
 
-    private val argbEvaluator = ArgbEvaluator()
-    private var ambientAnimator: ValueAnimator? = null
-    private var currentAmbientColor: Int = defaultAmbientColor
     private var requestVersion: Long = 0
     private var currentBackdropTarget: CustomTarget<Drawable>? = null
-    private var currentPaletteTarget: CustomTarget<Bitmap>? = null
+    private var overlayInitialized = false
 
     fun updateBackdrop(backdropUrl: String?, fallbackDrawable: Drawable?) {
         val version = ++requestVersion
 
         // Cancel previous Glide requests to save resources
         currentBackdropTarget?.let { Glide.with(fragment).clear(it) }
-        currentPaletteTarget?.let { Glide.with(fragment).clear(it) }
+
+        // Set up simple transparent black overlay once (no palette extraction needed)
+        if (!overlayInitialized) {
+            setupStaticOverlay()
+            overlayInitialized = true
+        }
 
         crossfadeBackdrop(fallbackDrawable)
 
         if (backdropUrl.isNullOrBlank()) {
-            animateAmbientToColor(defaultAmbientColor)
             return
         }
 
         // Convert drawable:// URLs to resource IDs for Glide
-        val loadTarget: Any = if (backdropUrl.startsWith("drawable://")) {
+        val isDrawableResource = backdropUrl.startsWith("drawable://")
+        val loadTarget: Any = if (isDrawableResource) {
             val drawableName = backdropUrl.removePrefix("drawable://")
             val drawableId = fragment.requireContext().resources.getIdentifier(
                 drawableName,
@@ -60,8 +59,12 @@ class HeroBackgroundController(
             backdropUrl
         }
 
+        // Disable disk caching for drawable resources to prevent VectorDrawable encoding crash
+        val diskCacheStrategy = if (isDrawableResource) DiskCacheStrategy.NONE else DiskCacheStrategy.AUTOMATIC
+
         val thumbnailRequest = Glide.with(fragment)
             .load(loadTarget)
+            .diskCacheStrategy(diskCacheStrategy)
             .override(320, 180)
 
         // Main backdrop - track target for cancellation
@@ -79,82 +82,21 @@ class HeroBackgroundController(
             override fun onLoadFailed(errorDrawable: Drawable?) {
                 if (version != requestVersion) return
                 crossfadeBackdrop(errorDrawable ?: fallbackDrawable)
-                animateAmbientToColor(defaultAmbientColor)
             }
         }
 
         Glide.with(fragment)
             .load(loadTarget)
+            .diskCacheStrategy(diskCacheStrategy)
             .thumbnail(thumbnailRequest)
             .into(currentBackdropTarget!!)
-
-        // Palette for ambient - track target for cancellation
-        currentPaletteTarget = object : CustomTarget<Bitmap>() {
-            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                if (version != requestVersion) return
-                extractPalette(resource)
-            }
-
-            override fun onLoadCleared(placeholder: Drawable?) = Unit
-            override fun onLoadFailed(errorDrawable: Drawable?) {
-                if (version != requestVersion) return
-                animateAmbientToColor(defaultAmbientColor)
-            }
-        }
-
-        Glide.with(fragment)
-            .asBitmap()
-            .load(loadTarget)
-            .override(150, 150)
-            .into(currentPaletteTarget!!)
     }
 
-    private fun extractPalette(bitmap: Bitmap) {
-        Palette.from(bitmap).generate { palette ->
-            val swatchColor = palette?.vibrantSwatch?.rgb
-                ?: palette?.darkVibrantSwatch?.rgb
-                ?: palette?.dominantSwatch?.rgb
-                ?: palette?.mutedSwatch?.rgb
-                ?: defaultAmbientColor
-            val deepColor = ColorUtils.blendARGB(swatchColor, Color.BLACK, 0.55f)
-            animateAmbientToColor(deepColor)
-        }
-    }
-
-    private fun animateAmbientToColor(targetColor: Int) {
-        if (!fragment.isAdded) return
-        ambientAnimator?.cancel()
-        val startColor = currentAmbientColor
-        if (startColor == targetColor) {
-            updateAmbientGradient(targetColor)
-            return
-        }
-
-        ambientAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 200L
-            addUpdateListener { animator ->
-                val blended = argbEvaluator.evaluate(
-                    animator.animatedFraction,
-                    startColor,
-                    targetColor
-                ) as Int
-                updateAmbientGradient(blended)
-            }
-            start()
-        }
-        fadeAmbientOverlayIn()
-    }
-
-    private fun fadeAmbientOverlayIn() {
-        ambientOverlay.animate().cancel()
-        ambientOverlay.animate()
-            .alpha(1f)
-            .setDuration(180L)
-            .start()
-    }
-
-    private fun updateAmbientGradient(color: Int) {
-        currentAmbientColor = color
+    /**
+     * Sets up a simple transparent black gradient overlay.
+     * No palette extraction - saves processing time.
+     */
+    private fun setupStaticOverlay() {
         val widthCandidates = listOf(
             backdropView.width,
             ambientOverlay.width,
@@ -170,18 +112,21 @@ class HeroBackgroundController(
         val height = heightCandidates.maxOrNull() ?: ambientOverlay.resources.displayMetrics.heightPixels
         val radius = max(width, height).toFloat() * 0.95f
 
+        // Simple transparent black gradient - no color changes
+        val transparentBlack = Color.parseColor("#000000")
         val gradient = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
             gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
             gradientRadius = radius
             setGradientCenter(0.32f, 0.28f)
             colors = intArrayOf(
-                ColorUtils.setAlphaComponent(color, 220),
-                ColorUtils.setAlphaComponent(color, 120),
-                ColorUtils.setAlphaComponent(color, 10)
+                ColorUtils.setAlphaComponent(transparentBlack, 180),
+                ColorUtils.setAlphaComponent(transparentBlack, 100),
+                ColorUtils.setAlphaComponent(transparentBlack, 10)
             )
         }
         ambientOverlay.background = gradient
+        ambientOverlay.alpha = 1f
     }
 
     private fun crossfadeBackdrop(newDrawable: Drawable?) {

@@ -43,7 +43,11 @@ class HeroSyncManager(
         scope.launch {
             _selectedContent
                 .debounce(150) // Wait 150ms after last scroll event
-                .distinctUntilChanged { old, new -> old.second?.tmdbId == new.second?.tmdbId }
+                .distinctUntilChanged { old, new ->
+                    // Compare by id (unique per item) instead of tmdbId to handle
+                    // Networks/Directors/Franchises which all have tmdbId = -1
+                    old.second?.id == new.second?.id
+                }
                 .collect { (sequence, content) ->
                     content?.let {
                         updateHeroInternal(sequence, it)

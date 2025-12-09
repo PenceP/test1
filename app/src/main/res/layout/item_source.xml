@@ -43,14 +43,18 @@
         android:textStyle="bold"
         tools:text="4K" />
 
-    <!-- File name (takes remaining space) -->
+    <!-- File name (takes remaining space, scrolls when focused) -->
     <TextView
         android:id="@+id/filename_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:ellipsize="middle"
-        android:maxLines="1"
+        android:singleLine="true"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:scrollHorizontally="true"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
         android:textColor="#FFFFFF"
         android:textSize="14sp"
         tools:text="Movie.Name.2024.2160p.UHD.BluRay.x265.HEVC-GROUP" />

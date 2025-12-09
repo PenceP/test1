@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    id("kotlin-kapt")
     id("kotlin-parcelize")
 }
 
@@ -33,7 +32,7 @@ android {
         buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${secrets.getProperty("TRAKT_CLIENT_SECRET", "")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${secrets.getProperty("TMDB_API_KEY", "")}\"")
         buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"${secrets.getProperty("TMDB_ACCESS_TOKEN", "")}\"")
-        buildConfigField("String", "OMDB_API_KEY", "\"${secrets.getProperty("OMDB_API_KEY", "a8787305")}\"")
+        // OMDB_API_KEY is set per build type below - no hardcoded fallback for security
     }
 
     buildTypes {
@@ -48,6 +47,8 @@ android {
                 "\"${secrets.getProperty("TRAKT_TEST_ACCESS_TOKEN", "")}\"")
             buildConfigField("String", "TRAKT_TEST_REFRESH_TOKEN",
                 "\"${secrets.getProperty("TRAKT_TEST_REFRESH_TOKEN", "")}\"")
+            // Allow empty OMDB key in debug builds
+            buildConfigField("String", "OMDB_API_KEY", "\"${secrets.getProperty("OMDB_API_KEY", "")}\"")
         }
         release {
             isMinifyEnabled = false     // Disabled temporarily until keep rules are validated
@@ -60,6 +61,17 @@ android {
             // Empty test tokens for release builds
             buildConfigField("String", "TRAKT_TEST_ACCESS_TOKEN", "\"\"")
             buildConfigField("String", "TRAKT_TEST_REFRESH_TOKEN", "\"\"")
+            // Require OMDB_API_KEY for release builds - fail if missing
+            val secretsFile = rootProject.file("secrets.properties")
+            val secrets = Properties()
+            if (secretsFile.exists()) {
+                secrets.load(secretsFile.inputStream())
+            }
+            val omdbKey = secrets.getProperty("OMDB_API_KEY", "")
+            if (omdbKey.isEmpty()) {
+                throw GradleException("OMDB_API_KEY not found in secrets.properties - required for release builds")
+            }
+            buildConfigField("String", "OMDB_API_KEY", "\"$omdbKey\"")
         }
     }
 
@@ -70,6 +82,11 @@ android {
 
     lint {
         abortOnError = false
+    }
+
+    // Disable PNG crunching to prevent HWUI image decoder errors with certain compressed resources
+    androidResources {
+        noCompress += listOf("png", "webp")
     }
 
     compileOptions {
@@ -88,7 +105,7 @@ dependencies {
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.palette)
     implementation(libs.glide)
-    kapt("com.github.bumptech.glide:compiler:4.16.0")
+    ksp(libs.glide.ksp)
 
     // Shimmer effect for skeleton loading UI
     implementation("com.facebook.shimmer:shimmer:0.5.0")
@@ -98,11 +115,11 @@ dependencies {
 
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
 
     // Hilt Testing
     testImplementation(libs.hilt.testing)
-    kaptTest(libs.hilt.compiler)
+    kspTest(libs.hilt.compiler)
 
     // Networking
     implementation(libs.retrofit)

@@ -66,6 +66,11 @@ class SourcesAdapter(
             // Set click listener
             itemView.setOnClickListener { onSourceClick(item) }
 
+            // Set focus listener to trigger marquee scrolling when focused
+            itemView.setOnFocusChangeListener { _, hasFocus ->
+                filenameText.isSelected = hasFocus  // Triggers marquee when selected
+            }
+
             // Debrid badge
             val debrid = item.debridBadge
             if (debrid != null) {

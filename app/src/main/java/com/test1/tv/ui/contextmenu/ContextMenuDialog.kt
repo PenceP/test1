@@ -15,6 +15,9 @@ import com.test1.tv.data.model.ContentItem
  * Custom dialog for context menu actions.
  * Styled to match the nav bar aesthetic with semi-transparent background.
  * Supports D-pad navigation for Android TV.
+ *
+ * Implements key debouncing to prevent accidental selection when the user
+ * is still holding the OK button from the long press that triggered this menu.
  */
 class ContextMenuDialog private constructor(
     context: Context,
@@ -33,6 +36,9 @@ class ContextMenuDialog private constructor(
 
     private var actionSelectedCallback: ((ContextMenuAction) -> Unit)? = null
 
+    // Track whether we've received the initial key up from the long press
+    private var keyUpReceived = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -41,6 +47,34 @@ class ContextMenuDialog private constructor(
         setupTitle()
         setupActionsList()
         setupDismissOnBackPress()
+    }
+
+    override fun show() {
+        super.show()
+        // Reset key state when dialog is shown
+        keyUpReceived = false
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                // Wait for key UP before allowing any selection
+                if (event.action == KeyEvent.ACTION_UP) {
+                    if (!keyUpReceived) {
+                        // This is the first key up - consume it (user releasing from long press)
+                        keyUpReceived = true
+                        return true
+                    }
+                }
+
+                // Only process DOWN after we've seen UP (user released and pressed again)
+                if (event.action == KeyEvent.ACTION_DOWN && !keyUpReceived) {
+                    // User is still holding from long press - consume this
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun setupTitle() {

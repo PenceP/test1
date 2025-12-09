@@ -1,8 +1,6 @@
 package com.test1.tv
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +9,9 @@ import android.widget.FrameLayout
 import android.widget.ProgressBar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * BrowseErrorActivity shows how to use ErrorFragment.
@@ -44,14 +45,14 @@ class BrowseErrorActivity : FragmentActivity() {
             .add(R.id.main_browse_fragment, mSpinnerFragment)
             .commit()
 
-        val handler = Handler(Looper.myLooper()!!)
-        handler.postDelayed({
+        lifecycleScope.launch {
+            delay(TIMER_DELAY)
             supportFragmentManager
                 .beginTransaction()
                 .remove(mSpinnerFragment)
                 .commit()
             mErrorFragment.setErrorContent()
-        }, TIMER_DELAY)
+        }
     }
 
     class SpinnerFragment : Fragment() {
