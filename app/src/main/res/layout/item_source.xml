@@ -13,16 +13,6 @@
     android:focusable="true"
     android:focusableInTouchMode="true">
 
-    <!-- Position number -->
-    <TextView
-        android:id="@+id/position_text"
-        android:layout_width="36dp"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textColor="#888888"
-        android:textSize="14sp"
-        tools:text="1" />
-
     <!-- Debrid badge (PM+, PM, RD+, RD) -->
     <TextView
         android:id="@+id/debrid_badge"

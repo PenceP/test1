@@ -57,7 +57,6 @@ class SourcesAdapter(
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val container: LinearLayout = itemView.findViewById(R.id.source_item_container)
-        private val positionText: TextView = itemView.findViewById(R.id.position_text)
         private val debridBadge: TextView = itemView.findViewById(R.id.debrid_badge)
         private val qualityBadge: TextView = itemView.findViewById(R.id.quality_badge)
         private val filenameText: TextView = itemView.findViewById(R.id.filename_text)
@@ -66,9 +65,6 @@ class SourcesAdapter(
         fun bind(item: SourceItem.Stream) {
             // Set click listener
             itemView.setOnClickListener { onSourceClick(item) }
-
-            // Position number
-            positionText.text = item.position.toString()
 
             // Debrid badge
             val debrid = item.debridBadge
