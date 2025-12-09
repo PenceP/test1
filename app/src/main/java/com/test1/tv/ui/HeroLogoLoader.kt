@@ -40,6 +40,12 @@ class HeroLogoLoader(
 
         if (logoUrl.isNullOrBlank()) return
 
+        // Skip SVG files - Glide can't decode them natively
+        if (logoUrl.lowercase().endsWith(".svg")) {
+            // Keep title visible, logo hidden - SVG not supported
+            return
+        }
+
         // Convert drawable:// URLs to resource IDs for Glide
         val isDrawableResource = logoUrl.startsWith("drawable://")
         val loadTarget: Any = if (isDrawableResource) {

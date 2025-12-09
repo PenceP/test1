@@ -105,6 +105,7 @@ dependencies {
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.palette)
     implementation(libs.glide)
+    implementation(libs.glide.transformations)
     ksp(libs.glide.ksp)
 
     // Shimmer effect for skeleton loading UI

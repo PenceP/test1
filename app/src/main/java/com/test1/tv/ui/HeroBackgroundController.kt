@@ -10,6 +10,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import jp.wasabeef.glide.transformations.BlurTransformation
 import kotlin.math.max
 
 /**
@@ -22,6 +23,12 @@ class HeroBackgroundController(
     private val ambientOverlay: View,
     private val defaultAmbientColor: Int = Color.parseColor("#80000000") // Transparent black
 ) {
+
+    companion object {
+        // Blur settings - radius 15-25 gives a nice cinematic effect
+        private const val BLUR_RADIUS = 8
+        private const val BLUR_SAMPLING = 3 // Downsampling for performance
+    }
 
     private var requestVersion: Long = 0
     private var currentBackdropTarget: CustomTarget<Drawable>? = null
@@ -62,9 +69,13 @@ class HeroBackgroundController(
         // Disable disk caching for drawable resources to prevent VectorDrawable encoding crash
         val diskCacheStrategy = if (isDrawableResource) DiskCacheStrategy.NONE else DiskCacheStrategy.AUTOMATIC
 
+        // Apply blur transformation for a softer, more cinematic look
+        val blurTransform = BlurTransformation(BLUR_RADIUS, BLUR_SAMPLING)
+
         val thumbnailRequest = Glide.with(fragment)
             .load(loadTarget)
             .diskCacheStrategy(diskCacheStrategy)
+            .transform(blurTransform)
             .override(320, 180)
 
         // Main backdrop - track target for cancellation
@@ -88,6 +99,7 @@ class HeroBackgroundController(
         Glide.with(fragment)
             .load(loadTarget)
             .diskCacheStrategy(diskCacheStrategy)
+            .transform(blurTransform)
             .thumbnail(thumbnailRequest)
             .into(currentBackdropTarget!!)
     }

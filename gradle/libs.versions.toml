@@ -34,6 +34,7 @@ androidx-cardview = { group = "androidx.cardview", name = "cardview", version.re
 androidx-palette = { group = "androidx.palette", name = "palette", version.ref = "palette" } # Added Palette library
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 glide-ksp = { group = "com.github.bumptech.glide", name = "ksp", version.ref = "glide" }
+glide-transformations = { group = "jp.wasabeef", name = "glide-transformations", version = "4.3.0" }
 
 # Networking
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
