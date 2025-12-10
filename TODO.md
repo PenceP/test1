@@ -1650,9 +1650,9 @@ Use this checklist to track progress across all phases.
 ---
 
 ### Phase 3: Details Page & Navigation
-- [ ] **3.1** Implement smart "Next Up" episode focus
-- [ ] **3.2** Add red progress bar to episode cards
-- [ ] **3.3** Redesign Details page buttons (Play, Trailer, Mark Watched, More)
+- [x] **3.1** Implement smart "Next Up" episode focus
+- [x] **3.2** Add red progress bar to episode cards
+- [x] **3.3** Redesign Details page buttons (Play, Trailer, Mark Watched, More)
 
 ---
 

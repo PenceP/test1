@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -15,6 +16,7 @@ class EpisodeAdapter(
     private val episodes: List<TMDBEpisode>,
     private val showTmdbId: Int,
     private val watchedEpisodes: Set<String> = emptySet(),
+    private val episodeProgress: Map<String, Float> = emptyMap(),
     private val onEpisodeFocused: (TMDBEpisode?) -> Unit,
     private val onEpisodeClick: ((TMDBEpisode) -> Unit)? = null,
     private val onEpisodeLongPress: ((TMDBEpisode, Boolean) -> Unit)? = null
@@ -22,12 +24,16 @@ class EpisodeAdapter(
 
     // Mutable set to track watched episodes for immediate UI updates
     private val mutableWatchedEpisodes = watchedEpisodes.toMutableSet()
+    // Mutable map to track episode progress for immediate UI updates
+    private val mutableEpisodeProgress = episodeProgress.toMutableMap()
 
     inner class EpisodeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val episodeCard: CardView = itemView.findViewById(R.id.episode_card)
         private val episodeImage: ImageView = itemView.findViewById(R.id.episode_image)
         private val episodeTitle: TextView = itemView.findViewById(R.id.episode_title)
         private val focusOverlay: View = itemView.findViewById(R.id.episode_focus_overlay)
         private val watchedBadge: ImageView = itemView.findViewById(R.id.episode_watched_badge)
+        private val progressBar: View = itemView.findViewById(R.id.episode_progress_bar)
 
         fun bind(episode: TMDBEpisode) {
             Glide.with(itemView.context)
@@ -40,10 +46,39 @@ class EpisodeAdapter(
             val seasonEpisode = buildSeasonEpisodeLabel(episode.seasonNumber, episode.episodeNumber)
             episodeTitle.text = seasonEpisode.ifBlank { "" }
 
-            // Show watched badge if episode is watched
             val episodeKey = "S${episode.seasonNumber}E${episode.episodeNumber}"
             val isWatched = mutableWatchedEpisodes.contains(episodeKey)
-            watchedBadge.visibility = if (isWatched) View.VISIBLE else View.GONE
+            val progress = mutableEpisodeProgress[episodeKey]
+
+            // Reset progress bar visibility
+            progressBar.visibility = View.GONE
+
+            // Show progress bar, watched badge, or nothing based on watch state
+            when {
+                // In-progress (5%-90%): show progress bar, hide badge
+                progress != null && progress >= 0.05f && progress < 0.90f -> {
+                    progressBar.visibility = View.VISIBLE
+                    // Set width based on progress (like Continue Watching row)
+                    progressBar.post {
+                        val cardWidth = episodeCard.width
+                        val params = progressBar.layoutParams
+                        params.width = (cardWidth * progress).toInt().coerceAtLeast(1)
+                        progressBar.layoutParams = params
+                    }
+                    watchedBadge.visibility = View.GONE
+                    itemView.alpha = 1.0f
+                }
+                // Fully watched (>= 90% or in watched set): show badge, hide progress bar
+                isWatched || (progress != null && progress >= 0.90f) -> {
+                    watchedBadge.visibility = View.VISIBLE
+                    itemView.alpha = 0.85f // Slightly dim watched episodes
+                }
+                // Unwatched: hide both
+                else -> {
+                    watchedBadge.visibility = View.GONE
+                    itemView.alpha = 1.0f
+                }
+            }
 
             itemView.setOnFocusChangeListener { _, hasFocus ->
                 focusOverlay.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
@@ -125,5 +160,13 @@ class EpisodeAdapter(
             }
         }
         notifyDataSetChanged()
+    }
+
+    /**
+     * Find the adapter position for a given episode number.
+     * Returns -1 if episode not found.
+     */
+    fun getPositionForEpisodeNumber(episodeNumber: Int): Int {
+        return episodes.indexOfFirst { it.episodeNumber == episodeNumber }
     }
 }

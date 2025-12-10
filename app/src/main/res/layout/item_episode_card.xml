@@ -55,6 +55,15 @@
             android:visibility="gone"
             android:contentDescription="@string/watched"
             tools:visibility="visible" />
+
+        <!-- Progress bar - bottom of card, clipped by card corners (matches Continue Watching row) -->
+        <View
+            android:id="@+id/episode_progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/progress_bar_round_red"
+            android:visibility="gone" />
     </androidx.cardview.widget.CardView>
 
     <View

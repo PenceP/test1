@@ -77,4 +77,12 @@ class SeasonAdapter(
     fun getSelectedSeason(): TMDBSeason? = seasons.getOrNull(selectedPosition)
 
     fun getSeason(position: Int): TMDBSeason? = seasons.getOrNull(position)
+
+    /**
+     * Find the adapter position for a given season number.
+     * Returns -1 if season not found.
+     */
+    fun getPositionForSeasonNumber(seasonNumber: Int): Int {
+        return seasons.indexOfFirst { it.seasonNumber == seasonNumber }
+    }
 }

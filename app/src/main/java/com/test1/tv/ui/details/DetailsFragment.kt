@@ -96,11 +96,10 @@ class DetailsFragment : Fragment() {
     private lateinit var ratingTrakt: View
     private lateinit var ratingTraktValue: TextView
 
-    private lateinit var buttonThumbsUp: MaterialButton
-    private lateinit var buttonThumbsDown: MaterialButton
     private lateinit var buttonPlay: MaterialButton
     private lateinit var buttonTrailer: MaterialButton
-    private lateinit var buttonWatchlist: MaterialButton
+    private lateinit var buttonWatched: MaterialButton
+    private lateinit var buttonMore: MaterialButton
 
     private lateinit var castSection: LinearLayout
     private lateinit var similarSection: LinearLayout
@@ -144,6 +143,8 @@ class DetailsFragment : Fragment() {
     private var currentShowTmdbId: Int? = null
     // Local set to track watched episodes (persists across season changes)
     private val localWatchedEpisodes = mutableSetOf<String>()
+    // Episode playback progress (in-progress episodes with 5%-90% watched)
+    private var episodePlaybackProgress: Map<String, Float> = emptyMap()
 
     private var showTitleOriginal: String? = null
     private var showMetadataOriginal: CharSequence? = null
@@ -255,11 +256,10 @@ class DetailsFragment : Fragment() {
         overview = view.findViewById(R.id.details_overview)
         detailsCast = view.findViewById(R.id.details_cast)
 
-        buttonThumbsUp = view.findViewById(R.id.button_thumbs_up)
-        buttonThumbsDown = view.findViewById(R.id.button_thumbs_down)
         buttonPlay = view.findViewById(R.id.button_play)
         buttonTrailer = view.findViewById(R.id.button_trailer)
-        buttonWatchlist = view.findViewById(R.id.button_watchlist)
+        buttonWatched = view.findViewById(R.id.button_watched)
+        buttonMore = view.findViewById(R.id.button_more)
         heroBackgroundController = HeroBackgroundController(
             fragment = this,
             backdropView = backdrop,
@@ -295,20 +295,6 @@ class DetailsFragment : Fragment() {
         shelfEpisodeTitle = view.findViewById(R.id.shelf_episode_title)
         shelfEpisodeOverview = view.findViewById(R.id.shelf_episode_overview)
 
-        buttonThumbsUp.setOnClickListener {
-            currentRating = if (currentRating == 1) 0 else 1
-            updateRatingButtons()
-            val message = if (currentRating == 1) "Rated thumbs up" else "Rating removed"
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-        }
-
-        buttonThumbsDown.setOnClickListener {
-            currentRating = if (currentRating == 2) 0 else 2
-            updateRatingButtons()
-            val message = if (currentRating == 2) "Rated thumbs down" else "Rating removed"
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-        }
-
         buttonPlay.setOnClickListener {
             launchSources()
         }
@@ -317,16 +303,18 @@ class DetailsFragment : Fragment() {
             openTrailer()
         }
 
-        buttonWatchlist.setOnClickListener {
-            isWatched = !isWatched
-            val message = if (isWatched) "Added to watchlist" else "Removed from watchlist"
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        buttonWatched.setOnClickListener {
+            toggleWatchedStatus()
+        }
+
+        buttonMore.setOnClickListener {
+            showMoreOptionsMenu()
         }
 
         // Setup button focus handlers
         setupButtons()
 
-        updateRatingButtons()
+        updateWatchedButton()
 
         // Request focus on Play button by default
         buttonPlay.post {
@@ -341,9 +329,8 @@ class DetailsFragment : Fragment() {
         // Setup secondary buttons with expanding pill animation
         val secondaryButtons = listOf(
             buttonTrailer to "Trailer",
-            buttonWatchlist to "Watchlist",
-            buttonThumbsUp to "Like",
-            buttonThumbsDown to "Dislike"
+            buttonWatched to if (isWatched) "Unwatched" else "Watched",
+            buttonMore to "More"
         )
 
         secondaryButtons.forEach { (button, labelText) ->
@@ -892,32 +879,75 @@ class DetailsFragment : Fragment() {
         }
         // No centering on season row focus; keep shelf hidden when moving away from episodes
 
-        val initialSeasonNumber = seasonAdapter?.getSelectedSeason()?.seasonNumber
-            ?: seasons.firstOrNull()?.seasonNumber
-
-        // Fetch show progress from Trakt, then load initial season
+        // Fetch show progress and playback data from Trakt, then determine "Next Up" episode
         viewLifecycleOwner.lifecycleScope.launch {
             Log.d(TAG, "Fetching show progress for TMDB ID: $tmdbShowId")
-            showProgress = withContext(Dispatchers.IO) {
+            // Fetch both show progress (watched status) and playback progress (partial progress) in parallel
+            val progressDeferred = async(Dispatchers.IO) {
                 traktSyncRepository.getShowProgress(tmdbShowId)
             }
+            val playbackDeferred = async(Dispatchers.IO) {
+                traktSyncRepository.getEpisodePlaybackProgress(tmdbShowId)
+            }
+
+            showProgress = progressDeferred.await()
+            episodePlaybackProgress = playbackDeferred.await()
+
             // Initialize local set with remote watched episodes
             val remoteWatched = showProgress?.getWatchedEpisodeKeys() ?: emptySet()
             Log.d(TAG, "Received ${remoteWatched.size} watched episodes from Trakt: $remoteWatched")
+            Log.d(TAG, "Received ${episodePlaybackProgress.size} in-progress episodes: $episodePlaybackProgress")
             localWatchedEpisodes.addAll(remoteWatched)
             Log.d(TAG, "Local watched episodes set now has ${localWatchedEpisodes.size} items")
-            // Now load episodes with the fetched progress
+
+            // Smart "Next Up" logic: use Trakt's next episode if available
+            val nextEpisode = showProgress?.nextEpisode
+            val nextUpSeasonNumber = nextEpisode?.season
+            val nextUpEpisodeNumber = nextEpisode?.number
+
+            // Determine initial season: use next up season if available, otherwise first season
+            val initialSeasonNumber = nextUpSeasonNumber
+                ?: seasonAdapter?.getSelectedSeason()?.seasonNumber
+                ?: seasons.firstOrNull()?.seasonNumber
+
+            if (nextEpisode != null) {
+                Log.d(TAG, "Smart Next Up: S${nextUpSeasonNumber}E${nextUpEpisodeNumber}")
+            } else {
+                Log.d(TAG, "No Trakt progress, defaulting to first season")
+            }
+
+            // Select the correct season in the adapter
+            if (nextUpSeasonNumber != null) {
+                val seasonPosition = seasonAdapter?.getPositionForSeasonNumber(nextUpSeasonNumber) ?: -1
+                if (seasonPosition >= 0) {
+                    seasonAdapter?.setSelectedPosition(seasonPosition)
+                    seasonRow.post {
+                        seasonRow.scrollToPosition(seasonPosition)
+                    }
+                }
+            }
+
+            // Now load episodes with the fetched progress and optional focus episode
             if (initialSeasonNumber != null) {
+                val selectedPosition = if (nextUpSeasonNumber != null) {
+                    seasonAdapter?.getPositionForSeasonNumber(nextUpSeasonNumber).takeIf { it != null && it >= 0 }
+                        ?: seasonAdapter?.selectedPosition
+                        ?: 0
+                } else {
+                    seasonAdapter?.selectedPosition ?: 0
+                }
+
                 loadEpisodesForSeason(
                     showId = tmdbShowId,
                     seasonNumber = initialSeasonNumber,
-                    selectedPosition = seasonAdapter?.selectedPosition ?: 0
+                    selectedPosition = selectedPosition,
+                    focusEpisodeNumber = nextUpEpisodeNumber
                 )
             }
         }
     }
 
-    private fun loadEpisodesForSeason(showId: Int, seasonNumber: Int, selectedPosition: Int) {
+    private fun loadEpisodesForSeason(showId: Int, seasonNumber: Int, selectedPosition: Int, focusEpisodeNumber: Int? = null) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val seasonDetails = withContext(Dispatchers.IO) {
@@ -935,11 +965,14 @@ class DetailsFragment : Fragment() {
 
                 // Use local watched episodes set (includes both remote and local changes)
                 val watchedEpisodes = localWatchedEpisodes.toSet()
+                // Use cached episode playback progress for red progress bars
+                val progress = episodePlaybackProgress
 
                 episodeAdapter = com.test1.tv.ui.details.EpisodeAdapter(
                     episodes = episodes,
                     showTmdbId = showId,
                     watchedEpisodes = watchedEpisodes,
+                    episodeProgress = progress,
                     onEpisodeFocused = { episode -> updateEpisodeShelf(episode) },
                     onEpisodeClick = { episode ->
                         val season = episode.seasonNumber ?: return@EpisodeAdapter
@@ -967,8 +1000,11 @@ class DetailsFragment : Fragment() {
                 episodeRow.setOnKeyInterceptListener(scrollThrottler)
 
                 episodeRow.visibility = if (episodes.isNotEmpty()) View.VISIBLE else View.GONE
-                val firstEpNumber = episodes.firstOrNull()?.episodeNumber
-                updatePlayButtonText(seasonNumber, firstEpNumber ?: 1)
+
+                // Determine which episode to focus: use focusEpisodeNumber if provided, otherwise first episode
+                val targetEpisodeNumber = focusEpisodeNumber ?: episodes.firstOrNull()?.episodeNumber ?: 1
+                updatePlayButtonText(seasonNumber, targetEpisodeNumber)
+
                 if (episodes.isEmpty()) {
                     restoreEpisodeShelf()
                 }
@@ -1010,6 +1046,22 @@ class DetailsFragment : Fragment() {
         episodeRow.windowAlignmentOffsetPercent = 1f
         episodeRow.itemAlignmentOffsetPercent = 0f
         episodeRow.isFocusSearchDisabled = false
+
+                // Smart scroll to focus episode if specified
+                if (focusEpisodeNumber != null && episodes.isNotEmpty()) {
+                    val focusPosition = episodeAdapter?.getPositionForEpisodeNumber(focusEpisodeNumber) ?: -1
+                    if (focusPosition >= 0) {
+                        episodeRow.post {
+                            episodeRow.scrollToPosition(focusPosition)
+                            // Update episode shelf with focused episode info
+                            val focusedEpisode = episodeAdapter?.getEpisode(focusPosition)
+                            if (focusedEpisode != null) {
+                                updateEpisodeShelf(focusedEpisode)
+                            }
+                        }
+                        Log.d(TAG, "Smart focus: scrolling to episode $focusEpisodeNumber at position $focusPosition")
+                    }
+                }
 
                 seasonRow.post {
                     seasonRow.layoutManager?.findViewByPosition(selectedPosition)?.requestFocus()
@@ -1272,25 +1324,68 @@ class DetailsFragment : Fragment() {
         )
     }
 
-    private fun updateRatingButtons() {
-        // Reset all buttons to outline icons
-        buttonThumbsUp.icon = resources.getDrawable(R.drawable.ic_thumb_up_outline, null)
-        buttonThumbsDown.icon = resources.getDrawable(R.drawable.ic_thumb_down_outline, null)
+    /**
+     * Toggle watched/unwatched status for the current item
+     */
+    private fun toggleWatchedStatus() {
+        val item = contentItem ?: return
 
-        buttonThumbsUp.isSelected = false
-        buttonThumbsDown.isSelected = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            isWatched = !isWatched
+            updateWatchedButton()
 
-        // Set the selected button to filled icon and mark as selected
-        when (currentRating) {
-            1 -> {
-                buttonThumbsUp.icon = resources.getDrawable(R.drawable.ic_thumb_up, null)
-                buttonThumbsUp.isSelected = true
+            val message = if (isWatched) "Marked as watched" else "Marked as unwatched"
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+
+            // Sync with Trakt if authenticated
+            val account = withContext(Dispatchers.IO) {
+                traktAccountRepository.getAccount()
             }
-            2 -> {
-                buttonThumbsDown.icon = resources.getDrawable(R.drawable.ic_thumb_down, null)
-                buttonThumbsDown.isSelected = true
+            if (account != null) {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val success = if (item.type == ContentItem.ContentType.MOVIE) {
+                            if (isWatched) {
+                                traktSyncRepository.markMovieWatched(item.tmdbId)
+                            } else {
+                                traktSyncRepository.markMovieUnwatched(item.tmdbId)
+                            }
+                        } else {
+                            if (isWatched) {
+                                traktSyncRepository.markShowWatched(item.tmdbId)
+                            } else {
+                                traktSyncRepository.markShowUnwatched(item.tmdbId)
+                            }
+                        }
+                        if (success) {
+                            // Notify badge manager
+                            watchedBadgeManager.notifyWatchedStateChanged(item.tmdbId, item.type, isWatched)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to sync watched status with Trakt", e)
+                    }
+                }
             }
         }
+    }
+
+    /**
+     * Update the watched button icon and content description based on current state
+     */
+    private fun updateWatchedButton() {
+        val iconRes = if (isWatched) R.drawable.ic_check_circle_24 else R.drawable.ic_check_circle_outline_24
+        buttonWatched.icon = resources.getDrawable(iconRes, null)
+        buttonWatched.contentDescription = if (isWatched) "Mark Unwatched" else "Mark Watched"
+    }
+
+    /**
+     * Show the "More" options popup menu
+     */
+    private fun showMoreOptionsMenu() {
+        val item = contentItem ?: return
+
+        // Use the existing context menu system
+        contextMenuHelper.showContextMenu(item)
     }
 
     companion object {

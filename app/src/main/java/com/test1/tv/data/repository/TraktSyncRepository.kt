@@ -891,6 +891,46 @@ class TraktSyncRepository @Inject constructor(
         }
     }
 
+    /**
+     * Get in-progress episode playback data for a specific show.
+     * Returns a map of "S{season}E{episode}" to progress (0.0 - 1.0).
+     * Only returns episodes with progress between 5% and 90% (in progress, not completed).
+     */
+    suspend fun getEpisodePlaybackProgress(showTmdbId: Int): Map<String, Float> {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return emptyMap()
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val playbackItems = traktApiService.getPlaybackEpisodes(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                limit = 100
+            )
+
+            // Filter by show and convert to map
+            playbackItems
+                .filter { item ->
+                    item.type == "episode" && item.show?.ids?.tmdb == showTmdbId
+                }
+                .mapNotNull { item ->
+                    val episode = item.episode ?: return@mapNotNull null
+                    val season = episode.season ?: return@mapNotNull null
+                    val epNum = episode.number ?: return@mapNotNull null
+                    val progress = ((item.progress ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
+                    // Only include in-progress episodes (5% - 90%)
+                    if (progress >= 0.05f && progress < 0.90f) {
+                        "S${season}E${epNum}" to progress
+                    } else {
+                        null
+                    }
+                }
+                .toMap()
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to get episode playback for TMDB $showTmdbId", e)
+            emptyMap()
+        }
+    }
+
     companion object {
         private const val LIST_WATCHLIST = "WATCHLIST"
         private const val LIST_COLLECTION = "COLLECTION"
