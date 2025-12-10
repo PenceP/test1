@@ -72,8 +72,22 @@
                 android:focusable="true"
                 android:focusableInTouchMode="true"
                 android:nextFocusLeft="@+id/btn_move_up"
-                android:nextFocusRight="@+id/visibility_switch"
+                android:nextFocusRight="@+id/btn_orientation"
                 android:src="@android:drawable/arrow_down_float" />
+
+            <!-- Orientation Toggle Button -->
+            <ImageButton
+                android:id="@+id/btn_orientation"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Change orientation"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:nextFocusLeft="@+id/btn_move_down"
+                android:nextFocusRight="@+id/visibility_switch"
+                android:src="@drawable/ic_orientation_landscape" />
 
             <!-- Visibility Toggle -->
             <com.google.android.material.switchmaterial.SwitchMaterial
@@ -82,7 +96,7 @@
                 android:layout_height="wrap_content"
                 android:focusable="true"
                 android:focusableInTouchMode="true"
-                android:nextFocusLeft="@+id/btn_move_down"
+                android:nextFocusLeft="@+id/btn_orientation"
                 tools:checked="true" />
         </LinearLayout>
 

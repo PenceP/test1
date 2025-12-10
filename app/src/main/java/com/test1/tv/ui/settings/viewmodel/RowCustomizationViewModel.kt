@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -97,6 +98,64 @@ class RowCustomizationViewModel @Inject constructor(
                 screenConfigRepository.resetScreenToDefaults(currentScreen)
             } catch (e: Exception) {
                 _error.value = "Failed to reset to defaults: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Cycle the row's orientation/presentation between landscape -> portrait -> square -> landscape.
+     * @param row The row to update
+     */
+    fun cycleRowOrientation(row: RowConfigEntity) {
+        viewModelScope.launch {
+            try {
+                val nextPresentation = when (row.presentation) {
+                    "landscape" -> "portrait"
+                    "portrait" -> "square"
+                    "square" -> "landscape"
+                    else -> "portrait" // Default cycle from unknown
+                }
+                screenConfigRepository.updateRowPresentation(row.id, nextPresentation)
+            } catch (e: Exception) {
+                _error.value = "Failed to change orientation: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Add a Trakt list as a new row on the current screen.
+     * @param title The display title for the row
+     * @param username The Trakt username who owns the list
+     * @param listSlug The list slug identifier
+     * @param screenType The screen to add the row to
+     */
+    fun addTraktListRow(
+        title: String,
+        username: String,
+        listSlug: String,
+        screenType: ScreenConfigRepository.ScreenType
+    ) {
+        viewModelScope.launch {
+            try {
+                val nextPosition = screenConfigRepository.getNextPosition(screenType)
+                val newRow = RowConfigEntity(
+                    id = UUID.randomUUID().toString(),
+                    screenType = screenType.key,
+                    title = title,
+                    rowType = "trakt_list",
+                    contentType = null, // Mixed content
+                    presentation = "landscape",
+                    dataSourceUrl = "trakt_list:$username:$listSlug",
+                    defaultPosition = nextPosition,
+                    position = nextPosition,
+                    enabled = true,
+                    requiresAuth = true,
+                    pageSize = 20,
+                    isSystemRow = false
+                )
+                screenConfigRepository.insertRow(newRow)
+            } catch (e: Exception) {
+                _error.value = "Failed to add list: ${e.message}"
             }
         }
     }

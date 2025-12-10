@@ -149,7 +149,8 @@ abstract class BaseContentViewModel(
                 rowType = state.rowType,
                 contentType = state.contentType,
                 page = 1,
-                forceRefresh = forceRefresh
+                forceRefresh = forceRefresh,
+                dataSourceUrl = state.dataSourceUrl
             )
 
             state.items.clear()
@@ -192,7 +193,8 @@ abstract class BaseContentViewModel(
                     rowType = state.rowType,
                     contentType = state.contentType,
                     page = nextPage,
-                    forceRefresh = false
+                    forceRefresh = false,
+                    dataSourceUrl = state.dataSourceUrl
                 )
 
                 if (newItems.isNotEmpty()) {

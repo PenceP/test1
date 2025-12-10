@@ -5,6 +5,9 @@ import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.repository.ContentRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
 import com.test1.tv.data.repository.MediaRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,7 +21,8 @@ class ContentLoaderUseCase @Inject constructor(
     private val mediaRepository: MediaRepository,
     private val continueWatchingRepository: ContinueWatchingRepository,
     private val traktApiService: com.test1.tv.data.remote.api.TraktApiService,
-    private val traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository
+    private val traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository,
+    private val tmdbApiService: com.test1.tv.data.remote.api.TMDBApiService
 ) {
 
     /**
@@ -33,7 +37,8 @@ class ContentLoaderUseCase @Inject constructor(
         rowType: String,
         contentType: String?,
         page: Int,
-        forceRefresh: Boolean
+        forceRefresh: Boolean,
+        dataSourceUrl: String? = null
     ): List<ContentItem> {
         return when (rowType) {
             "trending" -> loadTrending(contentType, page, forceRefresh)
@@ -44,6 +49,7 @@ class ContentLoaderUseCase @Inject constructor(
             "collections" -> loadCollections()
             "directors" -> loadDirectors()
             "my_trakt" -> loadMyTraktLists()
+            "trakt_list" -> loadTraktList(dataSourceUrl)
             else -> emptyList()
         }
     }
@@ -343,6 +349,141 @@ class ContentLoaderUseCase @Inject constructor(
         } catch (e: Exception) {
             emptyList()
         }
+    }
+
+    /**
+     * Load content from a Trakt list.
+     * @param dataSourceUrl Format: "trakt_list:username:listSlug"
+     */
+    private suspend fun loadTraktList(dataSourceUrl: String?): List<ContentItem> {
+        if (dataSourceUrl.isNullOrBlank()) return emptyList()
+
+        // Parse the dataSourceUrl format: "trakt_list:username:listSlug"
+        val parts = dataSourceUrl.split(":")
+        if (parts.size < 3 || parts[0] != "trakt_list") return emptyList()
+
+        val username = parts[1]
+        val listSlug = parts[2]
+
+        return try {
+            // Try loading items from the list (movies first, then shows)
+            val movieItems = loadTraktListMovies(username, listSlug)
+            val showItems = loadTraktListShows(username, listSlug)
+
+            movieItems + showItems
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private suspend fun loadTraktListMovies(username: String, listSlug: String): List<ContentItem> {
+        return try {
+            val traktItems = traktApiService.getListMovies(
+                user = username,
+                list = listSlug,
+                clientId = com.test1.tv.BuildConfig.TRAKT_CLIENT_ID
+            )
+
+            coroutineScope {
+                traktItems.take(20).mapNotNull { traktItem ->
+                    traktItem.movie?.ids?.tmdb?.let { tmdbId ->
+                        async {
+                            fetchMovieDetails(tmdbId, traktItem.movie.title, traktItem.movie.year)
+                        }
+                    }
+                }.awaitAll().filterNotNull()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private suspend fun loadTraktListShows(username: String, listSlug: String): List<ContentItem> {
+        return try {
+            val traktItems = traktApiService.getListShows(
+                user = username,
+                list = listSlug,
+                clientId = com.test1.tv.BuildConfig.TRAKT_CLIENT_ID
+            )
+
+            coroutineScope {
+                traktItems.take(20).mapNotNull { traktItem ->
+                    traktItem.show?.ids?.tmdb?.let { tmdbId ->
+                        async {
+                            fetchShowDetails(tmdbId, traktItem.show.title, traktItem.show.year)
+                        }
+                    }
+                }.awaitAll().filterNotNull()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private suspend fun fetchMovieDetails(tmdbId: Int, title: String?, year: Int?): ContentItem? {
+        return runCatching {
+            tmdbApiService.getMovieDetails(
+                movieId = tmdbId,
+                apiKey = com.test1.tv.BuildConfig.TMDB_API_KEY,
+                appendToResponse = "images,credits,external_ids"
+            )
+        }.getOrNull()?.let { details ->
+            ContentItem(
+                id = tmdbId,
+                tmdbId = tmdbId,
+                imdbId = details.imdbId,
+                title = details.title ?: title.orEmpty(),
+                overview = details.overview,
+                posterUrl = details.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+                backdropUrl = details.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
+                logoUrl = details.images?.logos?.firstOrNull()?.filePath?.let { "https://image.tmdb.org/t/p/w500$it" },
+                year = details.releaseDate?.take(4) ?: year?.toString(),
+                rating = details.voteAverage,
+                ratingPercentage = details.getRatingPercentage(),
+                genres = details.genres?.joinToString(",") { it.name ?: "" },
+                type = ContentItem.ContentType.MOVIE,
+                runtime = details.runtime?.toString(),
+                cast = details.credits?.cast?.joinToString(", ") { it.name ?: "" },
+                certification = details.getCertification(),
+                imdbRating = details.imdbId,
+                rottenTomatoesRating = null,
+                traktRating = null,
+                watchProgress = null
+            )
+        }
+    }
+
+    private suspend fun fetchShowDetails(tmdbId: Int, title: String?, year: Int?): ContentItem? {
+        val showDetails = runCatching {
+            tmdbApiService.getShowDetails(
+                showId = tmdbId,
+                apiKey = com.test1.tv.BuildConfig.TMDB_API_KEY,
+                appendToResponse = "images,external_ids,credits"
+            )
+        }.getOrNull() ?: return null
+
+        return ContentItem(
+            id = tmdbId,
+            tmdbId = tmdbId,
+            imdbId = showDetails.externalIds?.imdbId,
+            title = showDetails.name ?: title.orEmpty(),
+            overview = showDetails.overview,
+            posterUrl = showDetails.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+            backdropUrl = showDetails.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" },
+            logoUrl = showDetails.images?.logos?.firstOrNull()?.filePath?.let { "https://image.tmdb.org/t/p/w500$it" },
+            year = showDetails.firstAirDate?.take(4) ?: year?.toString(),
+            rating = showDetails.voteAverage,
+            ratingPercentage = showDetails.getRatingPercentage(),
+            genres = showDetails.genres?.joinToString(",") { it.name ?: "" },
+            type = ContentItem.ContentType.TV_SHOW,
+            runtime = showDetails.episodeRunTime?.firstOrNull()?.toString(),
+            cast = showDetails.credits?.cast?.joinToString(", ") { it.name ?: "" },
+            certification = showDetails.getCertification(),
+            imdbRating = showDetails.externalIds?.imdbId,
+            rottenTomatoesRating = null,
+            traktRating = null,
+            watchProgress = null
+        )
     }
 
     /**

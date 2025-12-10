@@ -19,6 +19,22 @@
         app:hide_on_touch="true"
         app:show_timeout="5000" />
 
+    <!-- Skip time indicator overlay -->
+    <TextView
+        android:id="@+id/skip_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/skip_indicator_background"
+        android:paddingHorizontal="32dp"
+        android:paddingVertical="16dp"
+        android:textColor="@android:color/white"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:alpha="0"
+        android:elevation="10dp" />
+
     <!-- Loading overlay with logo -->
     <FrameLayout
         android:id="@+id/loading_overlay"

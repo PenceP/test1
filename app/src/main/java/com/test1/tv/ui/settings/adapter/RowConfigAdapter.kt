@@ -17,6 +17,7 @@ class RowConfigAdapter(
     private val onToggleVisibility: (RowConfigEntity) -> Unit,
     private val onMoveUp: (RowConfigEntity) -> Unit,
     private val onMoveDown: (RowConfigEntity) -> Unit,
+    private val onOrientationToggle: (RowConfigEntity) -> Unit,
     private val onNavigateUpFromFirst: () -> Unit = {},
     private val onNavigateDownFromLast: () -> Unit = {}
 ) : ListAdapter<RowConfigEntity, RowConfigAdapter.RowConfigViewHolder>(RowConfigDiffCallback()) {
@@ -51,6 +52,7 @@ class RowConfigAdapter(
         //private val systemRowIndicator: TextView = itemView.findViewById(R.id.system_row_indicator)
         private val btnMoveUp: ImageButton = itemView.findViewById(R.id.btn_move_up)
         private val btnMoveDown: ImageButton = itemView.findViewById(R.id.btn_move_down)
+        private val btnOrientation: ImageButton = itemView.findViewById(R.id.btn_orientation)
         private val visibilitySwitch: SwitchMaterial = itemView.findViewById(R.id.visibility_switch)
 
         fun bind(row: RowConfigEntity, position: Int, totalItems: Int) {
@@ -96,6 +98,18 @@ class RowConfigAdapter(
                 onToggleVisibility(row)
             }
 
+            // Set orientation icon based on current presentation
+            val orientationIcon = when (row.presentation) {
+                "portrait" -> R.drawable.ic_orientation_portrait
+                "square" -> R.drawable.ic_orientation_square
+                else -> R.drawable.ic_orientation_landscape // Default to landscape
+            }
+            btnOrientation.setImageResource(orientationIcon)
+
+            btnOrientation.setOnClickListener {
+                onOrientationToggle(row)
+            }
+
             // TV-friendly: Set up focus handling
             // Make the card item focusable for vertical navigation
             itemView.isFocusable = true
@@ -105,6 +119,7 @@ class RowConfigAdapter(
             if (position == 0 && activeTabId != -1) {
                 btnMoveUp.nextFocusUpId = activeTabId
                 btnMoveDown.nextFocusUpId = activeTabId
+                btnOrientation.nextFocusUpId = activeTabId
                 visibilitySwitch.nextFocusUpId = activeTabId
                 // Also set on the itemView itself for better navigation
                 itemView.nextFocusUpId = activeTabId
@@ -112,25 +127,19 @@ class RowConfigAdapter(
                 // Clear nextFocusUp for non-first items to allow default navigation
                 btnMoveUp.nextFocusUpId = View.NO_ID
                 btnMoveDown.nextFocusUpId = View.NO_ID
+                btnOrientation.nextFocusUpId = View.NO_ID
                 visibilitySwitch.nextFocusUpId = View.NO_ID
                 itemView.nextFocusUpId = View.NO_ID
             }
 
-            // For the last item, set nextFocusDown on all interactive elements to go to the reset button
-            if (position == totalItems - 1) {
-                val resetButtonId = com.test1.tv.R.id.btn_reset_defaults
-                btnMoveUp.nextFocusDownId = resetButtonId
-                btnMoveDown.nextFocusDownId = resetButtonId
-                visibilitySwitch.nextFocusDownId = resetButtonId
-                // Also set on the itemView itself for better navigation
-                itemView.nextFocusDownId = resetButtonId
-            } else {
-                // Clear nextFocusDown for non-last items
-                btnMoveUp.nextFocusDownId = View.NO_ID
-                btnMoveDown.nextFocusDownId = View.NO_ID
-                visibilitySwitch.nextFocusDownId = View.NO_ID
-                itemView.nextFocusDownId = View.NO_ID
-            }
+            // Don't manually set nextFocusDownId - let the VerticalGridView handle it
+            // The onNavigateDownFromLast callback will handle navigation from the last item
+            // Clear any previous focus settings to avoid stale navigation
+            btnMoveUp.nextFocusDownId = View.NO_ID
+            btnMoveDown.nextFocusDownId = View.NO_ID
+            btnOrientation.nextFocusDownId = View.NO_ID
+            visibilitySwitch.nextFocusDownId = View.NO_ID
+            itemView.nextFocusDownId = View.NO_ID
 
             // When the card item gets focus, automatically focus the first interactive button
             itemView.setOnFocusChangeListener { _, hasFocus ->
@@ -149,15 +158,17 @@ class RowConfigAdapter(
                 }
             }
 
-            // Set up key listeners for boundary navigation (similar to PosterAdapter pattern)
-            // Create a combined key listener that handles both UP (for first) and DOWN (for last)
+            // Set up key listeners for boundary navigation
+            // The key listener needs to check the CURRENT adapter state, not the bind-time state
             val boundaryKeyListener = View.OnKeyListener { _, keyCode, event ->
                 if (event.action != KeyEvent.ACTION_DOWN) return@OnKeyListener false
-                
+
                 val currentPosition = bindingAdapterPosition
+                val currentItemCount = itemCount
+
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_UP -> {
-                        if (currentPosition == 0 && position == 0) {
+                        if (currentPosition == 0) {
                             onNavigateUpFromFirst()
                             true
                         } else {
@@ -165,7 +176,8 @@ class RowConfigAdapter(
                         }
                     }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        if (currentPosition == totalItems - 1 && position == totalItems - 1) {
+                        // Check if this is currently the last item in the adapter
+                        if (currentPosition == currentItemCount - 1) {
                             onNavigateDownFromLast()
                             true
                         } else {
@@ -176,19 +188,12 @@ class RowConfigAdapter(
                 }
             }
 
-            // Apply key listener to all interactive elements if this is a boundary item
-            if (position == 0 || position == totalItems - 1) {
-                itemView.setOnKeyListener(boundaryKeyListener)
-                btnMoveUp.setOnKeyListener(boundaryKeyListener)
-                btnMoveDown.setOnKeyListener(boundaryKeyListener)
-                visibilitySwitch.setOnKeyListener(boundaryKeyListener)
-            } else {
-                // Clear key listeners for non-boundary items
-                itemView.setOnKeyListener(null)
-                btnMoveUp.setOnKeyListener(null)
-                btnMoveDown.setOnKeyListener(null)
-                visibilitySwitch.setOnKeyListener(null)
-            }
+            // Apply key listener to ALL items - let the listener check if it's at boundary
+            itemView.setOnKeyListener(boundaryKeyListener)
+            btnMoveUp.setOnKeyListener(boundaryKeyListener)
+            btnMoveDown.setOnKeyListener(boundaryKeyListener)
+            btnOrientation.setOnKeyListener(boundaryKeyListener)
+            visibilitySwitch.setOnKeyListener(boundaryKeyListener)
         }
     }
 

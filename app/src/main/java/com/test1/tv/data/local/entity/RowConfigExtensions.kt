@@ -13,6 +13,7 @@ fun RowConfigEntity.toRowState(): ContentRowState {
         title = title,
         rowType = rowType,
         contentType = contentType,
+        dataSourceUrl = dataSourceUrl,
         presentation = when (presentation) {
             "landscape" -> RowPresentation.LANDSCAPE_16_9
             else -> RowPresentation.PORTRAIT

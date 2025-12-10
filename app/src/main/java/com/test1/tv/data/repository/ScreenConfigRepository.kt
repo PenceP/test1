@@ -136,4 +136,33 @@ class ScreenConfigRepository @Inject constructor(
         rowConfigDao.updateRowPosition(row1.id, row2.position)
         rowConfigDao.updateRowPosition(row2.id, tempPosition)
     }
+
+    /**
+     * Insert a new row (e.g., a Trakt liked list).
+     * Position is set to the end of the current rows.
+     * @param row The row entity to insert
+     */
+    suspend fun insertRow(row: RowConfigEntity) {
+        rowConfigDao.insert(row)
+    }
+
+    /**
+     * Get the next available position for a new row on a screen.
+     * @param screen The screen type
+     * @return The next position number
+     */
+    suspend fun getNextPosition(screen: ScreenType): Int {
+        val rows = rowConfigDao.getAllRowsForScreen(screen.key).first()
+        return (rows.maxOfOrNull { it.position } ?: -1) + 1
+    }
+
+    /**
+     * Update the presentation/orientation of a row.
+     * @param rowId The unique identifier of the row
+     * @param presentation The new presentation value ("landscape", "portrait", "square")
+     */
+    suspend fun updateRowPresentation(rowId: String, presentation: String) {
+        val row = rowConfigDao.getRowById(rowId) ?: return
+        rowConfigDao.updateRow(row.copy(presentation = presentation))
+    }
 }

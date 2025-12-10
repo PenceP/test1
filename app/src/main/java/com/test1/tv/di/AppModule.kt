@@ -160,9 +160,10 @@ object AppModule {
         mediaRepository: com.test1.tv.data.repository.MediaRepository,
         continueWatchingRepository: ContinueWatchingRepository,
         traktApiService: TraktApiService,
-        traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository
+        traktAccountRepository: com.test1.tv.data.repository.TraktAccountRepository,
+        tmdbApiService: TMDBApiService
     ): com.test1.tv.domain.ContentLoaderUseCase =
-        com.test1.tv.domain.ContentLoaderUseCase(contentRepository, mediaRepository, continueWatchingRepository, traktApiService, traktAccountRepository)
+        com.test1.tv.domain.ContentLoaderUseCase(contentRepository, mediaRepository, continueWatchingRepository, traktApiService, traktAccountRepository, tmdbApiService)
 
     @Provides
     @Singleton

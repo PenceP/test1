@@ -1657,10 +1657,10 @@ Use this checklist to track progress across all phases.
 ---
 
 ### Phase 4: Settings Enhancements
-- [ ] **4.1** Add "Add From Liked Lists" button
-- [ ] **4.2** Add row orientation toggle (Landscape/Portrait/Square)
-- [ ] **4.3** Add Incremental vs Traditional skip settings
-- [ ] **4.4** Create About page
+- [x] **4.1** Add "Add From Liked Lists" button (Layout & Rows)
+- [x] **4.2** Add row orientation toggle (Landscape/Portrait/Square) (Layout & Rows)
+- [x] **4.3** Add Incremental vs Traditional skip settings (Playback Submenu)
+- [x] **4.4** Create About page
 
 ---
 

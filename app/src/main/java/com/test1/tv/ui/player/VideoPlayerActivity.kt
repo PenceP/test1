@@ -77,6 +77,7 @@ class VideoPlayerActivity : FragmentActivity() {
     private lateinit var loadingText: TextView
     private lateinit var errorOverlay: FrameLayout
     private lateinit var errorMessage: TextView
+    private lateinit var skipIndicator: TextView
 
     private var player: ExoPlayer? = null
     private var playerSettings: PlayerSettings = PlayerSettings.default()
@@ -91,6 +92,12 @@ class VideoPlayerActivity : FragmentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var logoAnimator: AnimatorSet? = null
     private var isLogoAnimationRunning = false
+
+    // Adaptive skip tracking
+    private var lastSkipTime: Long = 0
+    private var currentSkipIndex: Int = 0
+    private val adaptiveSkipAmounts = listOf(5_000L, 10_000L, 30_000L, 60_000L, 300_000L, 600_000L)
+    private val skipResetDelay = 2000L // Reset after 2 seconds of no skipping
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,6 +151,7 @@ class VideoPlayerActivity : FragmentActivity() {
         loadingText = findViewById(R.id.loading_text)
         errorOverlay = findViewById(R.id.error_overlay)
         errorMessage = findViewById(R.id.error_message)
+        skipIndicator = findViewById(R.id.skip_indicator)
 
         // Set title in loading text
         loadingText.text = "Loading $title..."
@@ -305,24 +313,74 @@ class VideoPlayerActivity : FragmentActivity() {
 
     private fun seekForward() {
         player?.let {
-            val seekAmount = getSeekAmount(true)
+            val seekAmount = getSeekAmount(forward = true)
             val newPosition = (it.currentPosition + seekAmount).coerceAtMost(it.duration)
             it.seekTo(newPosition)
+            showSkipIndicator("+${formatSkipTime(seekAmount)}")
         }
     }
 
     private fun seekBackward() {
         player?.let {
-            val seekAmount = getSeekAmount(false)
+            val seekAmount = getSeekAmount(forward = false)
             val newPosition = (it.currentPosition - seekAmount).coerceAtLeast(0)
             it.seekTo(newPosition)
+            showSkipIndicator("-${formatSkipTime(seekAmount)}")
         }
     }
 
     private fun getSeekAmount(forward: Boolean): Long {
-        // For now, use instant skip (10 seconds)
-        // Adaptive skip will be implemented in a later sprint
-        return 10_000L
+        return if (playerSettings.isAdaptiveSkip()) {
+            getAdaptiveSkipAmount()
+        } else {
+            10_000L // Traditional 10 second skip
+        }
+    }
+
+    private fun getAdaptiveSkipAmount(): Long {
+        val currentTime = System.currentTimeMillis()
+
+        // If more than skipResetDelay has passed since last skip, reset to first index
+        if (currentTime - lastSkipTime > skipResetDelay) {
+            currentSkipIndex = 0
+        } else {
+            // Increment to next skip amount (if not at max)
+            if (currentSkipIndex < adaptiveSkipAmounts.size - 1) {
+                currentSkipIndex++
+            }
+        }
+
+        lastSkipTime = currentTime
+        return adaptiveSkipAmounts[currentSkipIndex]
+    }
+
+    private fun showSkipIndicator(text: String) {
+        // Cancel any pending hide animation
+        handler.removeCallbacksAndMessages(null)
+
+        skipIndicator.text = text
+        skipIndicator.alpha = 1f
+        skipIndicator.visibility = View.VISIBLE
+
+        // Fade out after 1 second
+        handler.postDelayed({
+            skipIndicator.animate()
+                .alpha(0f)
+                .setDuration(300)
+                .withEndAction {
+                    skipIndicator.visibility = View.GONE
+                }
+                .start()
+        }, 1000)
+    }
+
+    private fun formatSkipTime(millis: Long): String {
+        val seconds = millis / 1000
+        return when {
+            seconds < 60 -> "${seconds}s"
+            seconds < 3600 -> "${seconds / 60}m"
+            else -> "${seconds / 3600}h"
+        }
     }
 
     private fun togglePlayPause() {

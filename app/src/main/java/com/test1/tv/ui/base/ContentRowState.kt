@@ -12,6 +12,7 @@ data class ContentRowState(
     val title: String,
     val rowType: String,
     val contentType: String? = null,
+    val dataSourceUrl: String? = null,
     val presentation: RowPresentation = RowPresentation.PORTRAIT,
     val pageSize: Int = 20,
     val items: MutableList<ContentItem> = mutableListOf(),

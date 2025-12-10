@@ -9,16 +9,29 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.leanback.widget.BaseGridView
 import androidx.leanback.widget.VerticalGridView
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.test1.tv.BuildConfig
+import com.test1.tv.ui.common.ListSelectionDialog
 import com.test1.tv.R
+import com.test1.tv.data.model.trakt.TraktUserList
+import com.test1.tv.data.remote.api.TraktApiService
 import com.test1.tv.data.repository.ScreenConfigRepository
+import com.test1.tv.data.repository.TraktAccountRepository
 import com.test1.tv.ui.settings.adapter.RowConfigAdapter
 import com.test1.tv.ui.settings.viewmodel.RowCustomizationViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class RowCustomizationFragment : Fragment() {
+
+    @Inject lateinit var traktAccountRepository: TraktAccountRepository
+    @Inject lateinit var traktApiService: TraktApiService
 
     private val viewModel: RowCustomizationViewModel by viewModels()
     private lateinit var adapter: RowConfigAdapter
@@ -27,6 +40,7 @@ class RowCustomizationFragment : Fragment() {
     private lateinit var tabMovies: MaterialButton
     private lateinit var tabTvShows: MaterialButton
     private lateinit var rowsList: VerticalGridView
+    private lateinit var btnAddLikedList: MaterialButton
     private lateinit var btnResetDefaults: MaterialButton
 
     private var currentScreen = ScreenConfigRepository.ScreenType.HOME
@@ -57,6 +71,7 @@ class RowCustomizationFragment : Fragment() {
         initializeViews(view)
         setupTabs()
         setupRecyclerView()
+        setupAddLikedListButton()
         setupResetButton()
         observeViewModel()
 
@@ -90,6 +105,7 @@ class RowCustomizationFragment : Fragment() {
         tabMovies = view.findViewById(R.id.tab_movies)
         tabTvShows = view.findViewById(R.id.tab_tv_shows)
         rowsList = view.findViewById(R.id.rows_list)
+        btnAddLikedList = view.findViewById(R.id.btn_add_liked_list)
         btnResetDefaults = view.findViewById(R.id.btn_reset_defaults)
     }
 
@@ -151,6 +167,7 @@ class RowCustomizationFragment : Fragment() {
             onToggleVisibility = { row -> viewModel.toggleRowVisibility(row) },
             onMoveUp = { row -> viewModel.moveRowUp(row) },
             onMoveDown = { row -> viewModel.moveRowDown(row) },
+            onOrientationToggle = { row -> viewModel.cycleRowOrientation(row) },
             onNavigateUpFromFirst = {
                 // When UP is pressed on the first item, move focus to the active tab
                 getActiveTab().requestFocus()
@@ -236,5 +253,117 @@ class RowCustomizationFragment : Fragment() {
                 Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun setupAddLikedListButton() {
+        btnAddLikedList.setOnClickListener {
+            showAddFromLikedListsDialog()
+        }
+
+        // Set up focus navigation
+        btnAddLikedList.nextFocusUpId = R.id.rows_list
+
+        // Set up focus effect (matching reset button)
+        btnAddLikedList.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) {
+                view.animate()
+                    .scaleX(1.15f)
+                    .scaleY(1.15f)
+                    .setDuration(150)
+                    .start()
+            } else {
+                view.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(150)
+                    .start()
+            }
+        }
+    }
+
+    private fun showAddFromLikedListsDialog() {
+        // Check if user is authenticated with Trakt
+        lifecycleScope.launch {
+            val account = withContext(Dispatchers.IO) {
+                traktAccountRepository.getAccount()
+            }
+
+            if (account == null) {
+                Toast.makeText(
+                    requireContext(),
+                    "Please authenticate with Trakt first",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+
+            // Show loading toast
+            Toast.makeText(requireContext(), "Loading liked lists...", Toast.LENGTH_SHORT).show()
+
+            try {
+                val authHeader = "Bearer ${account.accessToken}"
+                val likedListsResponse = withContext(Dispatchers.IO) {
+                    traktApiService.getLikedLists(
+                        authHeader = authHeader,
+                        clientId = BuildConfig.TRAKT_CLIENT_ID
+                    )
+                }
+
+                // Extract actual lists from the wrapper
+                val lists = likedListsResponse.mapNotNull { it.list }
+
+                if (lists.isEmpty()) {
+                    Toast.makeText(
+                        requireContext(),
+                        "No liked lists found",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
+
+                // Show selection dialog
+                showLikedListsSelectionDialog(lists)
+            } catch (e: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to load liked lists: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun showLikedListsSelectionDialog(lists: List<TraktUserList>) {
+        ListSelectionDialog.show(
+            context = requireContext(),
+            title = "Add from Liked Lists",
+            items = lists,
+            itemLabelProvider = { list ->
+                val owner = list.user?.username ?: "Unknown"
+                "${list.name} (by $owner)"
+            },
+            onItemSelected = { selectedList ->
+                addListAsRow(selectedList)
+            }
+        )
+    }
+
+    private fun addListAsRow(list: TraktUserList) {
+        // Use user's slug (not username) for Trakt API calls
+        val userSlug = list.user?.ids?.slug ?: list.user?.username ?: "me"
+        val listSlug = list.ids?.slug ?: return
+
+        viewModel.addTraktListRow(
+            title = list.name,
+            username = userSlug,
+            listSlug = listSlug,
+            screenType = currentScreen
+        )
+
+        Toast.makeText(
+            requireContext(),
+            "Added '${list.name}' row",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
