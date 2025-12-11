@@ -8,16 +8,19 @@
     android:background="@android:color/black"
     android:keepScreenOn="true">
 
-    <!-- ExoPlayer view -->
+    <!-- ExoPlayer view - no default controller -->
     <androidx.media3.ui.PlayerView
         android:id="@+id/player_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:show_buffering="never"
-        app:use_controller="true"
-        app:surface_type="surface_view"
-        app:hide_on_touch="true"
-        app:show_timeout="5000" />
+        app:use_controller="false"
+        app:surface_type="surface_view" />
+
+    <!-- Custom player controls overlay -->
+    <include
+        android:id="@+id/player_controls"
+        layout="@layout/layout_player_controls" />
 
     <!-- Skip time indicator overlay -->
     <TextView
@@ -34,6 +37,16 @@
         android:visibility="gone"
         android:alpha="0"
         android:elevation="10dp" />
+
+    <!-- Buffering indicator -->
+    <ProgressBar
+        android:id="@+id/buffering_indicator"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="center"
+        android:indeterminateTint="@android:color/white"
+        android:visibility="gone"
+        android:elevation="5dp" />
 
     <!-- Loading overlay with logo -->
     <FrameLayout

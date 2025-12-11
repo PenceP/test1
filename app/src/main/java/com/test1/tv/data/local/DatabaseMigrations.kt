@@ -118,3 +118,15 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
         """)
     }
 }
+
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Add decoder mode, tunneling, and buffer settings to player_settings
+        database.execSQL("ALTER TABLE player_settings ADD COLUMN decoderMode TEXT NOT NULL DEFAULT 'auto'")
+        database.execSQL("ALTER TABLE player_settings ADD COLUMN tunnelingEnabled INTEGER NOT NULL DEFAULT 1")
+        database.execSQL("ALTER TABLE player_settings ADD COLUMN minBufferMs INTEGER NOT NULL DEFAULT 30000")
+        database.execSQL("ALTER TABLE player_settings ADD COLUMN maxBufferMs INTEGER NOT NULL DEFAULT 60000")
+        database.execSQL("ALTER TABLE player_settings ADD COLUMN bufferForPlaybackMs INTEGER NOT NULL DEFAULT 2500")
+        database.execSQL("ALTER TABLE player_settings ADD COLUMN bufferForPlaybackAfterRebufferMs INTEGER NOT NULL DEFAULT 5000")
+    }
+}

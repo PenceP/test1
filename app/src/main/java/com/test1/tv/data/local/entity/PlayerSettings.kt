@@ -34,11 +34,27 @@ data class PlayerSettings(
     val rememberPosition: Boolean = true,
 
     // Autoplay countdown duration in seconds
-    val autoplayCountdownSeconds: Int = 15
+    val autoplayCountdownSeconds: Int = 15,
+
+    // Decoder mode: "auto", "hw_only", "sw_prefer"
+    val decoderMode: String = DECODER_MODE_AUTO,
+
+    // Enable tunneled playback for 4K/HDR (better performance on supported devices)
+    val tunnelingEnabled: Boolean = true,
+
+    // Buffer settings
+    val minBufferMs: Int = 30_000,
+    val maxBufferMs: Int = 60_000,
+    val bufferForPlaybackMs: Int = 2_500,
+    val bufferForPlaybackAfterRebufferMs: Int = 5_000
 ) {
     companion object {
         const val SKIP_MODE_INSTANT = "instant"
         const val SKIP_MODE_ADAPTIVE = "adaptive"
+
+        const val DECODER_MODE_AUTO = "auto"
+        const val DECODER_MODE_HW_ONLY = "hw_only"
+        const val DECODER_MODE_SW_PREFER = "sw_prefer"
 
         // Delay adjustment step in milliseconds (0.1 seconds)
         const val DELAY_STEP_MS = 100L
@@ -51,4 +67,7 @@ data class PlayerSettings(
 
     fun isInstantSkip(): Boolean = skipMode == SKIP_MODE_INSTANT
     fun isAdaptiveSkip(): Boolean = skipMode == SKIP_MODE_ADAPTIVE
+
+    fun isHardwareOnly(): Boolean = decoderMode == DECODER_MODE_HW_ONLY
+    fun isSoftwarePreferred(): Boolean = decoderMode == DECODER_MODE_SW_PREFER
 }

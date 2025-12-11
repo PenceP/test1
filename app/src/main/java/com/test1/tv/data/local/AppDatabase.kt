@@ -42,7 +42,7 @@ import com.test1.tv.data.local.entity.PlayerSettings
         PremiumizeAccount::class,
         PlayerSettings::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
