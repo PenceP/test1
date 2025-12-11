@@ -32,6 +32,8 @@ class PlaybackFragment : Fragment() {
     lateinit var playerSettingsRepository: PlayerSettingsRepository
 
     private var currentSkipMode: String = PlayerSettings.SKIP_MODE_INSTANT
+    private var currentDecoderMode: String = PlayerSettings.DECODER_MODE_AUTO
+    private var currentTunnelingEnabled: Boolean = true
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -54,10 +56,12 @@ class PlaybackFragment : Fragment() {
         settingsList.windowAlignmentOffsetPercent = BaseGridView.WINDOW_ALIGN_OFFSET_PERCENT_DISABLED
         settingsList.itemAlignmentOffsetPercent = BaseGridView.ITEM_ALIGN_OFFSET_PERCENT_DISABLED
 
-        // Load current skip mode before building items
+        // Load current settings before building items
         lifecycleScope.launch {
             val settings = playerSettingsRepository.getSettings()
             currentSkipMode = settings.skipMode
+            currentDecoderMode = settings.decoderMode
+            currentTunnelingEnabled = settings.tunnelingEnabled
 
             val items = buildSettingsItems()
             adapter = SettingsAdapter(items)
@@ -120,6 +124,41 @@ class PlaybackFragment : Fragment() {
                 onSelect = { value ->
                     preferencesRepository.videoPlayerEngine = PreferencesRepository.VideoPlayerEngine.fromValue(value)
                     refreshItems()
+                }
+            ),
+
+            // Hardware Decoder Section
+            SettingsItem.Header(
+                id = "header_decoder",
+                title = "Decoder Settings"
+            ),
+            SettingsItem.Select(
+                id = "decoder_mode",
+                label = "Decoder Mode",
+                value = currentDecoderMode,
+                options = listOf(
+                    SelectOption(PlayerSettings.DECODER_MODE_AUTO, "Auto (Recommended)"),
+                    SelectOption(PlayerSettings.DECODER_MODE_HW_ONLY, "Hardware Only"),
+                    SelectOption(PlayerSettings.DECODER_MODE_SW_PREFER, "Software Preferred")
+                ),
+                onSelect = { value ->
+                    lifecycleScope.launch {
+                        playerSettingsRepository.updateDecoderMode(value)
+                        currentDecoderMode = value
+                        refreshItems()
+                    }
+                }
+            ),
+            SettingsItem.Toggle(
+                id = "tunneled_playback",
+                label = "Tunneled Playback",
+                isEnabled = currentTunnelingEnabled,
+                onToggle = { enabled ->
+                    lifecycleScope.launch {
+                        playerSettingsRepository.updateTunnelingEnabled(enabled)
+                        currentTunnelingEnabled = enabled
+                        refreshItems()
+                    }
                 }
             )
         )

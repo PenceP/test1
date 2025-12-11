@@ -1667,10 +1667,10 @@ Use this checklist to track progress across all phases.
 ### Phase 5: ExoPlayer Modernization
 - [x] **5.1** Implement modern player UI (bottom controls)
 - [x] **5.2** Implement progressive seek handler (Kodi-style)
-- [ ] **5.3** Add hardware/software decoder settings
-- [ ] **5.4** Add tunneled playback toggle
-- [ ] **5.5** Configure ExoPlayer buffering
-- [ ] **5.6** Implement media cache singleton
+- [x] **5.3** Add hardware/software decoder settings
+- [x] **5.4** Add tunneled playback toggle
+- [x] **5.5** Configure ExoPlayer buffering
+- [x] **5.6** Implement media cache singleton
 
 ---
 

@@ -70,6 +70,18 @@ class PlayerSettingsRepository @Inject constructor(
         cachedSettings = cachedSettings?.copy(autoplayCountdownSeconds = clampedSeconds)
     }
 
+    suspend fun updateDecoderMode(mode: String) = withContext(Dispatchers.IO) {
+        ensureSettingsExist()
+        playerSettingsDao.updateDecoderMode(mode)
+        cachedSettings = cachedSettings?.copy(decoderMode = mode)
+    }
+
+    suspend fun updateTunnelingEnabled(enabled: Boolean) = withContext(Dispatchers.IO) {
+        ensureSettingsExist()
+        playerSettingsDao.updateTunnelingEnabled(enabled)
+        cachedSettings = cachedSettings?.copy(tunnelingEnabled = enabled)
+    }
+
     suspend fun updateSettings(settings: PlayerSettings) = withContext(Dispatchers.IO) {
         playerSettingsDao.insert(settings)
         cachedSettings = settings

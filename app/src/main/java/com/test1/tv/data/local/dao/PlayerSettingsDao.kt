@@ -43,4 +43,10 @@ interface PlayerSettingsDao {
 
     @Query("UPDATE player_settings SET autoplayCountdownSeconds = :seconds WHERE id = 1")
     suspend fun updateAutoplayCountdown(seconds: Int)
+
+    @Query("UPDATE player_settings SET decoderMode = :mode WHERE id = 1")
+    suspend fun updateDecoderMode(mode: String)
+
+    @Query("UPDATE player_settings SET tunnelingEnabled = :enabled WHERE id = 1")
+    suspend fun updateTunnelingEnabled(enabled: Boolean)
 }
