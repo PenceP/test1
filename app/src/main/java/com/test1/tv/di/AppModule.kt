@@ -13,6 +13,7 @@ import com.test1.tv.data.local.MIGRATION_14_15
 import com.test1.tv.data.local.MIGRATION_15_16
 import com.test1.tv.data.local.MIGRATION_16_17
 import com.test1.tv.data.local.MIGRATION_17_18
+import com.test1.tv.data.local.MIGRATION_18_19
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.PremiumizeApiService
 import com.test1.tv.data.remote.api.TMDBApiService
@@ -81,7 +82,7 @@ object AppModule {
             AppDatabase::class.java,
             "test1_tv_database"
         )
-            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -115,6 +116,9 @@ object AppModule {
 
     @Provides
     fun providePlayerSettingsDao(database: AppDatabase) = database.playerSettingsDao()
+
+    @Provides
+    fun providePlaybackProgressDao(database: AppDatabase) = database.playbackProgressDao()
 
     // Repository helpers
     @Provides

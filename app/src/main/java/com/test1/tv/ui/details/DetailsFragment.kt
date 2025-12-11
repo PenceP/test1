@@ -153,6 +153,10 @@ class DetailsFragment : Fragment() {
     // Trailer YouTube key
     private var trailerKey: String? = null
 
+    // Movie playback progress for resume functionality
+    private var moviePlaybackProgress: com.test1.tv.data.repository.MoviePlaybackProgress? = null
+    private var movieRuntimeMinutes: Int? = null
+
     // Currently selected season/episode for Play button
     private var currentSeasonNumber: Int = 1
     private var currentEpisodeNumber: Int = 1
@@ -488,6 +492,9 @@ class DetailsFragment : Fragment() {
                 apiKey = BuildConfig.TMDB_API_KEY
             )
 
+            // Store runtime for progress calculation
+            movieRuntimeMinutes = movieDetails.runtime
+
             val relatedItems = fetchRelatedMovies(
                 resolveImdbId(
                     primary = movieDetails.imdbId,
@@ -505,7 +512,16 @@ class DetailsFragment : Fragment() {
                 )
             }
 
+            // Fetch playback progress from Trakt (for resume functionality)
+            val playbackProgress = traktSyncRepository.getMoviePlaybackProgress(tmdbId)
+
             withContext(Dispatchers.Main) {
+                // Store playback progress
+                moviePlaybackProgress = playbackProgress
+
+                // Update Play button if we have progress
+                updatePlayButtonForMovie()
+
                 // Extract trailer key
                 trailerKey = movieDetails.getTrailerKey()
                 Log.d(TAG, "Movie trailer key: $trailerKey")
@@ -1083,6 +1099,24 @@ class DetailsFragment : Fragment() {
         buttonPlay.text = "${getString(R.string.details_play)} S$seasonNumber E$episodeNumber"
     }
 
+    /**
+     * Update Play button for movies - shows "Continue from XX:XX" if there's progress
+     */
+    private fun updatePlayButtonForMovie() {
+        val progress = moviePlaybackProgress
+        val runtime = movieRuntimeMinutes
+
+        if (progress != null && runtime != null && runtime > 0) {
+            // Calculate position from progress and runtime
+            val durationMs = runtime * 60 * 1000L
+            val formattedTime = progress.formatPosition(durationMs)
+            buttonPlay.text = "Continue from $formattedTime"
+            Log.d(TAG, "Movie has playback progress: ${(progress.progress * 100).toInt()}% ($formattedTime)")
+        } else {
+            buttonPlay.text = getString(R.string.details_play)
+        }
+    }
+
     private fun updateEpisodeShelf(episode: TMDBEpisode?) {
         if (episode == null) return
         // Update Play button with current episode
@@ -1257,9 +1291,19 @@ class DetailsFragment : Fragment() {
 
         when (item.type) {
             ContentItem.ContentType.MOVIE -> {
-                SourcesActivity.startForMovie(requireContext(), item)
+                // Calculate resume position from playback progress
+                val resumePositionMs = moviePlaybackProgress?.let { progress ->
+                    movieRuntimeMinutes?.let { runtime ->
+                        if (runtime > 0) {
+                            progress.getPositionMs(runtime * 60 * 1000L)
+                        } else 0L
+                    }
+                } ?: 0L
+
+                SourcesActivity.startForMovie(requireContext(), item, resumePositionMs)
             }
             ContentItem.ContentType.TV_SHOW -> {
+                // TODO: Add episode playback progress support
                 SourcesActivity.startForEpisode(
                     requireContext(),
                     item,

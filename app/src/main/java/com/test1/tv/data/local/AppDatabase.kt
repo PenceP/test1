@@ -14,6 +14,7 @@ import com.test1.tv.data.local.dao.RowConfigDao
 import com.test1.tv.data.local.dao.SyncMetadataDao
 import com.test1.tv.data.local.dao.PremiumizeAccountDao
 import com.test1.tv.data.local.dao.PlayerSettingsDao
+import com.test1.tv.data.local.dao.PlaybackProgressDao
 import com.test1.tv.data.local.entity.CachedContent
 import com.test1.tv.data.local.entity.TraktAccount
 import com.test1.tv.data.local.entity.TraktUserItem
@@ -24,6 +25,7 @@ import com.test1.tv.data.local.entity.SyncMetadataEntity
 import com.test1.tv.data.local.entity.MediaEnrichmentEntity
 import com.test1.tv.data.local.entity.PremiumizeAccount
 import com.test1.tv.data.local.entity.PlayerSettings
+import com.test1.tv.data.local.entity.PlaybackProgress
 
 @Database(
     entities = [
@@ -40,9 +42,10 @@ import com.test1.tv.data.local.entity.PlayerSettings
         SyncMetadataEntity::class,
         MediaEnrichmentEntity::class,
         PremiumizeAccount::class,
-        PlayerSettings::class
+        PlayerSettings::class,
+        PlaybackProgress::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -57,4 +60,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun syncMetadataDao(): SyncMetadataDao
     abstract fun premiumizeAccountDao(): PremiumizeAccountDao
     abstract fun playerSettingsDao(): PlayerSettingsDao
+    abstract fun playbackProgressDao(): PlaybackProgressDao
 }

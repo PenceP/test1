@@ -43,7 +43,10 @@ import com.test1.tv.R
 import com.test1.tv.data.local.entity.PlayerSettings
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.repository.PlayerSettingsRepository
+import com.test1.tv.data.repository.TraktScrobbleRepository
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -60,6 +63,7 @@ class VideoPlayerActivity : FragmentActivity() {
         const val EXTRA_CONTENT_ITEM = "content_item"
         const val EXTRA_SEASON = "season"
         const val EXTRA_EPISODE = "episode"
+        const val EXTRA_RESUME_POSITION_MS = "resume_position_ms"
 
         private const val LOGO_FADE_DURATION = 1500L
         private const val LOGO_DISPLAY_DURATION = 2000L
@@ -73,7 +77,8 @@ class VideoPlayerActivity : FragmentActivity() {
             logoUrl: String? = null,
             contentItem: ContentItem? = null,
             season: Int = -1,
-            episode: Int = -1
+            episode: Int = -1,
+            resumePositionMs: Long = 0L
         ) {
             val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                 putExtra(EXTRA_VIDEO_URL, videoUrl)
@@ -82,6 +87,7 @@ class VideoPlayerActivity : FragmentActivity() {
                 putExtra(EXTRA_CONTENT_ITEM, contentItem)
                 putExtra(EXTRA_SEASON, season)
                 putExtra(EXTRA_EPISODE, episode)
+                putExtra(EXTRA_RESUME_POSITION_MS, resumePositionMs)
             }
             context.startActivity(intent)
         }
@@ -89,6 +95,9 @@ class VideoPlayerActivity : FragmentActivity() {
 
     @Inject
     lateinit var playerSettingsRepository: PlayerSettingsRepository
+
+    @Inject
+    lateinit var traktScrobbleRepository: TraktScrobbleRepository
 
     // Core views
     private lateinit var playerView: PlayerView
@@ -124,6 +133,8 @@ class VideoPlayerActivity : FragmentActivity() {
     private var contentItem: ContentItem? = null
     private var season: Int = -1
     private var episode: Int = -1
+    private var resumePositionMs: Long = 0L
+    private var hasResumed: Boolean = false
 
     private val handler = Handler(Looper.getMainLooper())
     private var logoAnimator: AnimatorSet? = null
@@ -136,6 +147,11 @@ class VideoPlayerActivity : FragmentActivity() {
 
     // Seeking state
     private var isSeeking = false
+
+    // Scrobbling
+    private var scrobbleJob: Job? = null
+    private var hasStartedScrobble = false
+    private val scrobbleUpdateIntervalMs = 30_000L  // Update every 30 seconds
 
     // Adaptive skip tracking
     private var lastSkipTime: Long = 0
@@ -187,6 +203,7 @@ class VideoPlayerActivity : FragmentActivity() {
         }
         season = intent.getIntExtra(EXTRA_SEASON, -1)
         episode = intent.getIntExtra(EXTRA_EPISODE, -1)
+        resumePositionMs = intent.getLongExtra(EXTRA_RESUME_POSITION_MS, 0L)
     }
 
     private fun initializeViews() {
@@ -418,6 +435,18 @@ class VideoPlayerActivity : FragmentActivity() {
                                 bufferingIndicator.visibility = View.GONE
                                 updateDuration()
                                 startProgressUpdates()
+
+                                // Seek to resume position if specified
+                                if (!hasResumed && resumePositionMs > 0) {
+                                    exoPlayer.seekTo(resumePositionMs)
+                                    hasResumed = true
+                                    android.util.Log.d("VideoPlayerActivity", "Resumed playback at ${resumePositionMs}ms")
+                                }
+
+                                // Start scrobbling when ready to play
+                                if (exoPlayer.playWhenReady && !hasStartedScrobble) {
+                                    startScrobbling()
+                                }
                             }
                             Player.STATE_BUFFERING -> {
                                 if (loadingOverlay.visibility != View.VISIBLE) {
@@ -435,6 +464,15 @@ class VideoPlayerActivity : FragmentActivity() {
 
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         updatePlayPauseButton(isPlaying)
+
+                        // Handle pause/resume for scrobbling
+                        if (!isPlaying && exoPlayer.playbackState == Player.STATE_READY) {
+                            // Paused - report to Trakt
+                            reportScrobblePause()
+                        } else if (isPlaying && hasStartedScrobble) {
+                            // Resumed - restart scrobble updates
+                            startScrobbleUpdates()
+                        }
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
@@ -660,8 +698,112 @@ class VideoPlayerActivity : FragmentActivity() {
     }
 
     private fun onPlaybackEnded() {
+        // Stop scrobbling and save final progress
+        stopScrobbling()
+
         // TODO: Handle playback ended - show autoplay next episode if TV show
         finish()
+    }
+
+    // ==================== Scrobbling & Progress Tracking ====================
+
+    /**
+     * Start scrobbling to Trakt when playback begins
+     */
+    private fun startScrobbling() {
+        val item = contentItem ?: return
+        hasStartedScrobble = true
+
+        lifecycleScope.launch {
+            traktScrobbleRepository.startWatching(
+                contentItem = item,
+                season = season.takeIf { it > 0 },
+                episode = episode.takeIf { it > 0 }
+            )
+        }
+
+        // Start periodic scrobble updates
+        startScrobbleUpdates()
+    }
+
+    /**
+     * Start periodic scrobble updates (every 30 seconds)
+     */
+    private fun startScrobbleUpdates() {
+        scrobbleJob?.cancel()
+        scrobbleJob = lifecycleScope.launch {
+            while (isActive) {
+                delay(scrobbleUpdateIntervalMs)
+                reportScrobbleProgress()
+            }
+        }
+    }
+
+    /**
+     * Report current progress to Trakt
+     */
+    private fun reportScrobbleProgress() {
+        val item = contentItem ?: return
+        val p = player ?: return
+
+        lifecycleScope.launch {
+            traktScrobbleRepository.updateProgress(
+                contentItem = item,
+                currentPositionMs = p.currentPosition,
+                durationMs = p.duration,
+                isPaused = false,
+                season = season.takeIf { it > 0 },
+                episode = episode.takeIf { it > 0 }
+            )
+        }
+    }
+
+    /**
+     * Report pause to Trakt
+     */
+    private fun reportScrobblePause() {
+        val item = contentItem ?: return
+        val p = player ?: return
+
+        // Cancel ongoing updates
+        scrobbleJob?.cancel()
+
+        lifecycleScope.launch {
+            traktScrobbleRepository.updateProgress(
+                contentItem = item,
+                currentPositionMs = p.currentPosition,
+                durationMs = p.duration,
+                isPaused = true,
+                season = season.takeIf { it > 0 },
+                episode = episode.takeIf { it > 0 }
+            )
+        }
+    }
+
+    /**
+     * Stop scrobbling when playback ends or user exits
+     */
+    private fun stopScrobbling() {
+        scrobbleJob?.cancel()
+
+        val item = contentItem ?: return
+        val p = player ?: return
+
+        // Capture position on main thread before launching background coroutine
+        // ExoPlayer MUST be accessed from main thread only
+        val currentPosition = p.currentPosition
+        val duration = p.duration
+
+        // Fire and forget - don't block exit
+        CoroutineScope(Dispatchers.IO).launch {
+            traktScrobbleRepository.stopWatching(
+                contentItem = item,
+                currentPositionMs = currentPosition,
+                durationMs = duration,
+                season = season.takeIf { it > 0 },
+                episode = episode.takeIf { it > 0 }
+            )
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -981,6 +1123,12 @@ class VideoPlayerActivity : FragmentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopLogoAnimation()
+
+        // Stop scrobbling before releasing player
+        if (hasStartedScrobble) {
+            stopScrobbling()
+        }
+
         releasePlayer()
         handler.removeCallbacksAndMessages(null)
     }

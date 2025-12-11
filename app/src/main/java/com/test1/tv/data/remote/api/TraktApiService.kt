@@ -23,6 +23,8 @@ import com.test1.tv.data.model.trakt.RemovePlaybackRequest
 import com.test1.tv.data.model.trakt.TraktSyncRequest
 import com.test1.tv.data.model.trakt.TraktSyncResponse
 import com.test1.tv.data.model.trakt.TraktRatingRequest
+import com.test1.tv.data.model.trakt.TraktScrobbleRequest
+import com.test1.tv.data.model.trakt.TraktScrobbleResponse
 import com.test1.tv.data.model.trakt.TraktSearchResult
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -407,4 +409,41 @@ interface TraktApiService {
         @Header("trakt-api-key") clientId: String,
         @Query("type") type: String = "show"
     ): List<TraktSearchResult>
+
+    // ==================== SCROBBLE API ====================
+
+    /**
+     * Start watching - call when playback begins
+     * Tells Trakt what the user is currently watching
+     */
+    @POST("scrobble/start")
+    suspend fun startScrobble(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktScrobbleRequest
+    ): TraktScrobbleResponse
+
+    /**
+     * Pause watching - call when playback is paused
+     */
+    @POST("scrobble/pause")
+    suspend fun pauseScrobble(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktScrobbleRequest
+    ): TraktScrobbleResponse
+
+    /**
+     * Stop watching - call when playback ends or user exits
+     * If progress >= 80%, Trakt will auto-mark as watched (scrobble)
+     */
+    @POST("scrobble/stop")
+    suspend fun stopScrobble(
+        @Header("Authorization") authHeader: String,
+        @Header("trakt-api-version") apiVersion: String = "2",
+        @Header("trakt-api-key") clientId: String,
+        @Body body: TraktScrobbleRequest
+    ): TraktScrobbleResponse
 }

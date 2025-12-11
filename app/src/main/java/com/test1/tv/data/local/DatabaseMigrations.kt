@@ -130,3 +130,40 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
         database.execSQL("ALTER TABLE player_settings ADD COLUMN bufferForPlaybackAfterRebufferMs INTEGER NOT NULL DEFAULT 5000")
     }
 }
+
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create playback_progress table for local playback tracking
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS playback_progress (
+                id TEXT PRIMARY KEY NOT NULL,
+                tmdbId INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                posterUrl TEXT,
+                showTitle TEXT,
+                season INTEGER,
+                episode INTEGER,
+                positionMs INTEGER NOT NULL,
+                durationMs INTEGER NOT NULL,
+                percent REAL NOT NULL,
+                lastWatchedAt INTEGER NOT NULL,
+                syncedToTrakt INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+
+        // Create indices for efficient queries
+        database.execSQL("""
+            CREATE INDEX IF NOT EXISTS index_playback_progress_tmdbId_type
+            ON playback_progress (tmdbId, type)
+        """)
+        database.execSQL("""
+            CREATE INDEX IF NOT EXISTS index_playback_progress_lastWatchedAt
+            ON playback_progress (lastWatchedAt)
+        """)
+        database.execSQL("""
+            CREATE INDEX IF NOT EXISTS index_playback_progress_syncedToTrakt
+            ON playback_progress (syncedToTrakt)
+        """)
+    }
+}

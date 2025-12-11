@@ -36,13 +36,15 @@ class SourcesActivity : FragmentActivity() {
         const val EXTRA_CONTENT_ITEM = "content_item"
         const val EXTRA_SEASON = "season"
         const val EXTRA_EPISODE = "episode"
+        const val EXTRA_RESUME_POSITION_MS = "resume_position_ms"
 
         /**
          * Start SourcesActivity for a movie
          */
-        fun startForMovie(context: Context, contentItem: ContentItem) {
+        fun startForMovie(context: Context, contentItem: ContentItem, resumePositionMs: Long = 0L) {
             val intent = Intent(context, SourcesActivity::class.java).apply {
                 putExtra(EXTRA_CONTENT_ITEM, contentItem)
+                putExtra(EXTRA_RESUME_POSITION_MS, resumePositionMs)
             }
             context.startActivity(intent)
         }
@@ -50,11 +52,12 @@ class SourcesActivity : FragmentActivity() {
         /**
          * Start SourcesActivity for a TV episode
          */
-        fun startForEpisode(context: Context, contentItem: ContentItem, season: Int, episode: Int) {
+        fun startForEpisode(context: Context, contentItem: ContentItem, season: Int, episode: Int, resumePositionMs: Long = 0L) {
             val intent = Intent(context, SourcesActivity::class.java).apply {
                 putExtra(EXTRA_CONTENT_ITEM, contentItem)
                 putExtra(EXTRA_SEASON, season)
                 putExtra(EXTRA_EPISODE, episode)
+                putExtra(EXTRA_RESUME_POSITION_MS, resumePositionMs)
             }
             context.startActivity(intent)
         }
@@ -77,6 +80,7 @@ class SourcesActivity : FragmentActivity() {
     private var contentItem: ContentItem? = null
     private var season: Int = -1
     private var episode: Int = -1
+    private var resumePositionMs: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,6 +114,7 @@ class SourcesActivity : FragmentActivity() {
         }
         season = intent.getIntExtra(EXTRA_SEASON, -1)
         episode = intent.getIntExtra(EXTRA_EPISODE, -1)
+        resumePositionMs = intent.getLongExtra(EXTRA_RESUME_POSITION_MS, 0L)
     }
 
     private fun setupAdapter() {
@@ -282,7 +287,8 @@ class SourcesActivity : FragmentActivity() {
             logoUrl = item.logoUrl,
             contentItem = item,
             season = season,
-            episode = episode
+            episode = episode,
+            resumePositionMs = resumePositionMs
         )
     }
 

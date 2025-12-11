@@ -892,6 +892,43 @@ class TraktSyncRepository @Inject constructor(
     }
 
     /**
+     * Get movie playback progress from Trakt.
+     * Returns progress data if the movie is in the user's playback (partially watched).
+     * Used for "Continue from XX:XX" functionality.
+     */
+    suspend fun getMoviePlaybackProgress(movieTmdbId: Int): MoviePlaybackProgress? {
+        val account = accountRepository.refreshTokenIfNeeded() ?: return null
+        val authHeader = accountRepository.buildAuthHeader(account.accessToken)
+
+        return try {
+            val playbackItems = traktApiService.getPlaybackMovies(
+                authHeader = authHeader,
+                clientId = BuildConfig.TRAKT_CLIENT_ID,
+                limit = 100
+            )
+
+            playbackItems
+                .firstOrNull { it.type == "movie" && it.movie?.ids?.tmdb == movieTmdbId }
+                ?.let { item ->
+                    val progress = ((item.progress ?: 0.0) / 100.0).toFloat().coerceIn(0f, 1f)
+                    // Only return if in progress (5% - 90%)
+                    if (progress >= 0.05f && progress < 0.90f) {
+                        MoviePlaybackProgress(
+                            playbackId = item.id,
+                            progress = progress,
+                            pausedAt = item.pausedAt
+                        )
+                    } else {
+                        null
+                    }
+                }
+        } catch (e: Exception) {
+            android.util.Log.e("TraktSync", "Failed to get movie playback for TMDB $movieTmdbId", e)
+            null
+        }
+    }
+
+    /**
      * Get in-progress episode playback data for a specific show.
      * Returns a map of "S{season}E{episode}" to progress (0.0 - 1.0).
      * Only returns episodes with progress between 5% and 90% (in progress, not completed).
@@ -937,5 +974,37 @@ class TraktSyncRepository @Inject constructor(
         private const val LIST_HISTORY = "HISTORY"
         private const val ITEM_MOVIE = "MOVIE"
         private const val ITEM_SHOW = "SHOW"
+    }
+}
+
+/**
+ * Data class for movie playback progress.
+ * Used for "Continue from XX:XX" functionality.
+ */
+data class MoviePlaybackProgress(
+    val playbackId: Long?,
+    val progress: Float,  // 0.0 to 1.0
+    val pausedAt: String?
+) {
+    /**
+     * Calculate position in milliseconds from progress and duration.
+     */
+    fun getPositionMs(durationMs: Long): Long = (progress * durationMs).toLong()
+
+    /**
+     * Format the position as HH:MM:SS or MM:SS
+     */
+    fun formatPosition(durationMs: Long): String {
+        val positionMs = getPositionMs(durationMs)
+        val totalSeconds = positionMs / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+
+        return if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format("%d:%02d", minutes, seconds)
+        }
     }
 }

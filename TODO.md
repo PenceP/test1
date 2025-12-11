@@ -1675,8 +1675,8 @@ Use this checklist to track progress across all phases.
 ---
 
 ### Phase 6: Trakt Player Integration
-- [ ] **6.1** Implement Trakt scrobbling (start/pause/stop/auto-scrobble)
-- [ ] **6.2** Create local PlaybackProgress database
+- [x] **6.1** Implement Trakt scrobbling (start/pause/stop/auto-scrobble)
+- [x] **6.2** Create local PlaybackProgress database
 
 ---
 
@@ -1688,9 +1688,11 @@ Use this checklist to track progress across all phases.
 ---
 
 ### Phase 8: Rebranding & Polish
+- [ ] **8.0** Change PM login to oauth/random code login like trakt, verify it works with Torrentio and playback.
 - [ ] **8.1** Rename app to STRMR
-- [ ] **8.2** Add Real-Debrid support
-- [ ] **8.3** Add AllDebrid support
+- [ ] **8.2** Add Real-Debrid support (OAuth)
+- [ ] **8.3** Add AllDebrid support (OAuth)
+
 
 ---
 
