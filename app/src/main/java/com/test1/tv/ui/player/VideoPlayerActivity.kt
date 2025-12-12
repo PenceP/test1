@@ -44,6 +44,8 @@ import com.test1.tv.data.local.entity.PlayerSettings
 import com.test1.tv.data.model.ContentItem
 import com.test1.tv.data.repository.PlayerSettingsRepository
 import com.test1.tv.data.repository.TraktScrobbleRepository
+import com.test1.tv.data.subtitle.SubtitleManager
+import com.test1.tv.data.subtitle.SubtitleOption
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -98,6 +100,9 @@ class VideoPlayerActivity : FragmentActivity() {
 
     @Inject
     lateinit var traktScrobbleRepository: TraktScrobbleRepository
+
+    @Inject
+    lateinit var subtitleManager: SubtitleManager
 
     // Core views
     private lateinit var playerView: PlayerView
@@ -158,6 +163,12 @@ class VideoPlayerActivity : FragmentActivity() {
     private var currentSkipIndex: Int = 0
     private val adaptiveSkipAmounts = listOf(5_000L, 10_000L, 30_000L, 60_000L, 300_000L, 600_000L)
     private val skipResetDelay = 2000L
+
+    // Subtitle state
+    private var availableSubtitles: List<SubtitleOption> = emptyList()
+    private var currentSubtitleSelection: SubtitleOption? = null
+    private var subtitleSearchJob: Job? = null
+    private var isLoadingSubtitles = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -978,7 +989,179 @@ class VideoPlayerActivity : FragmentActivity() {
 
     // Track Selection Dialogs
 
+    // Active subtitle dialog reference for updates
+    private var activeSubtitleDialog: SubtitleSelectionDialog? = null
+
+    /**
+     * Show enhanced subtitle selection dialog with embedded and external subtitles
+     */
     private fun showSubtitleSelectionDialog() {
+        val player = this.player ?: return
+
+        // If we haven't loaded subtitles yet or need to refresh, load them
+        if (availableSubtitles.isEmpty() && !isLoadingSubtitles) {
+            loadAvailableSubtitles()
+        }
+
+        // Show the dialog with current data (may be loading)
+        val dialog = SubtitleSelectionDialog(
+            context = this,
+            subtitleOptions = availableSubtitles,
+            currentSelection = currentSubtitleSelection,
+            isLoading = isLoadingSubtitles,
+            onSubtitleSelected = { option ->
+                applySubtitleSelection(option)
+            }
+        )
+        activeSubtitleDialog = dialog
+        dialog.setOnDismissListener { activeSubtitleDialog = null }
+        dialog.show()
+    }
+
+    /**
+     * Load available subtitles (embedded + external from OpenSubtitles)
+     */
+    private fun loadAvailableSubtitles() {
+        val player = this.player ?: return
+
+        subtitleSearchJob?.cancel()
+        isLoadingSubtitles = true
+
+        subtitleSearchJob = lifecycleScope.launch {
+            val tracks = player.currentTracks
+
+            availableSubtitles = subtitleManager.getAvailableSubtitles(
+                tracks = tracks,
+                contentItem = contentItem,
+                season = season.takeIf { it > 0 },
+                episode = episode.takeIf { it > 0 }
+            )
+
+            isLoadingSubtitles = false
+
+            android.util.Log.d("VideoPlayerActivity", "Loaded ${availableSubtitles.size} subtitle options")
+
+            // If dialog is still showing, dismiss it and show updated one
+            activeSubtitleDialog?.let { dialog ->
+                if (dialog.isShowing) {
+                    dialog.dismiss()
+                    showSubtitleSelectionDialog()
+                }
+            }
+        }
+    }
+
+    /**
+     * Apply the selected subtitle option
+     */
+    private fun applySubtitleSelection(option: SubtitleOption) {
+        val player = this.player ?: return
+        currentSubtitleSelection = option
+
+        when (option) {
+            is SubtitleOption.Off -> {
+                // Disable all text tracks
+                val params = player.trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                    .build()
+                player.trackSelectionParameters = params
+                android.util.Log.d("VideoPlayerActivity", "Subtitles disabled")
+            }
+
+            is SubtitleOption.Embedded -> {
+                // Enable embedded subtitle track
+                val tracks = player.currentTracks
+                val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+
+                if (option.groupIndex < textGroups.size) {
+                    val group = textGroups[option.groupIndex]
+                    val override = TrackSelectionOverride(group.mediaTrackGroup, option.trackIndex)
+
+                    val params = player.trackSelectionParameters.buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .setOverrideForType(override)
+                        .build()
+                    player.trackSelectionParameters = params
+                    android.util.Log.d("VideoPlayerActivity", "Selected embedded subtitle: ${option.label}")
+                }
+            }
+
+            is SubtitleOption.External -> {
+                // Download and apply external subtitle
+                applyExternalSubtitle(option.subtitle)
+            }
+        }
+    }
+
+    /**
+     * Download and apply an external subtitle file
+     */
+    private fun applyExternalSubtitle(subtitle: com.test1.tv.data.subtitle.SubtitleResult) {
+        val player = this.player ?: return
+
+        lifecycleScope.launch {
+            // Show loading toast
+            android.widget.Toast.makeText(
+                this@VideoPlayerActivity,
+                "Loading subtitle...",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+
+            subtitleManager.downloadSubtitle(subtitle)
+                .onSuccess { file ->
+                    // Create subtitle configuration
+                    val subtitleConfig = subtitleManager.createSubtitleConfiguration(
+                        subtitleFile = file,
+                        language = subtitle.languageCode,
+                        label = subtitle.language
+                    )
+
+                    // Rebuild media item with external subtitle
+                    val currentPosition = player.currentPosition
+                    val wasPlaying = player.isPlaying
+
+                    val currentMediaItem = player.currentMediaItem ?: return@launch
+                    val newMediaItem = currentMediaItem.buildUpon()
+                        .setSubtitleConfigurations(listOf(subtitleConfig))
+                        .build()
+
+                    player.setMediaItem(newMediaItem)
+                    player.prepare()
+                    player.seekTo(currentPosition)
+                    if (wasPlaying) player.play()
+
+                    // Enable the subtitle track
+                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .setPreferredTextLanguage(subtitle.languageCode)
+                        .build()
+
+                    android.util.Log.d("VideoPlayerActivity", "Applied external subtitle: ${subtitle.fileName}")
+                }
+                .onFailure { error ->
+                    // Provide user-friendly error message for common cases
+                    val errorMessage = when {
+                        error.message?.contains("503") == true ||
+                        error.message?.contains("Service") == true ->
+                            "OpenSubtitles is temporarily unavailable. Please try again later."
+                        error.message?.contains("429") == true ->
+                            "Too many requests. Please wait a moment and try again."
+                        else -> "Failed to load subtitle: ${error.message}"
+                    }
+                    android.widget.Toast.makeText(
+                        this@VideoPlayerActivity,
+                        errorMessage,
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    android.util.Log.e("VideoPlayerActivity", "Failed to apply subtitle", error)
+                }
+        }
+    }
+
+    /**
+     * Legacy method for simple track selection (used by audio and quality)
+     */
+    private fun showSubtitleSelectionDialogLegacy() {
         val player = this.player ?: return
         val tracks = player.currentTracks
 
@@ -1123,6 +1306,9 @@ class VideoPlayerActivity : FragmentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopLogoAnimation()
+
+        // Cancel subtitle search if running
+        subtitleSearchJob?.cancel()
 
         // Stop scrobbling before releasing player
         if (hasStartedScrobble) {

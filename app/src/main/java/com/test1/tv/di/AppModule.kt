@@ -19,6 +19,7 @@ import com.test1.tv.data.remote.api.PremiumizeApiService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TorrentioApiService
 import com.test1.tv.data.remote.api.TraktApiService
+import com.test1.tv.data.remote.api.OpenSubtitlesApiService
 import com.test1.tv.data.repository.TorrentioRepository
 import com.test1.tv.data.repository.CacheRepository
 import com.test1.tv.data.repository.ContinueWatchingRepository
@@ -67,6 +68,10 @@ annotation class PremiumizeRetrofit
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class TorrentioRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class OpenSubtitlesRetrofit
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -294,6 +299,17 @@ object AppModule {
 
     @Provides
     @Singleton
+    @OpenSubtitlesRetrofit
+    fun provideOpenSubtitlesRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenSubtitlesApiService.BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideTmdbApiService(@TmdbRetrofit retrofit: Retrofit): TMDBApiService {
         return retrofit.create(TMDBApiService::class.java)
     }
@@ -320,6 +336,12 @@ object AppModule {
     @Singleton
     fun provideTorrentioApiService(@TorrentioRetrofit retrofit: Retrofit): TorrentioApiService {
         return retrofit.create(TorrentioApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenSubtitlesApiService(@OpenSubtitlesRetrofit retrofit: Retrofit): OpenSubtitlesApiService {
+        return retrofit.create(OpenSubtitlesApiService::class.java)
     }
 
     @Provides

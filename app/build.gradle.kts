@@ -32,6 +32,8 @@ android {
         buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${secrets.getProperty("TRAKT_CLIENT_SECRET", "")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${secrets.getProperty("TMDB_API_KEY", "")}\"")
         buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"${secrets.getProperty("TMDB_ACCESS_TOKEN", "")}\"")
+        // OpenSubtitles API key for external subtitles
+        buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${secrets.getProperty("OPENSUBTITLES_API_KEY", "")}\"")
         // OMDB_API_KEY is set per build type below - no hardcoded fallback for security
     }
 

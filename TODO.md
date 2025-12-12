@@ -1681,9 +1681,9 @@ Use this checklist to track progress across all phases.
 ---
 
 ### Phase 7: Subtitle System
-- [ ] **7.1** Implement a4kSubtitles integration
-- [ ] **7.2** Show embedded subtitles at top of list
-- [ ] **7.3** Create subtitle selection dialog
+- [x] **7.1** Implement OpenSubtitles integration (SubtitleManager, OpenSubtitlesProvider)
+- [x] **7.2** Show embedded subtitles at top of list
+- [x] **7.3** Create subtitle selection dialog (SubtitleSelectionDialog)
 
 ---
 
@@ -1697,6 +1697,9 @@ Use this checklist to track progress across all phases.
 ### Phase 9: Movie & TV Show Pages 
 - [ ] **9.1** Rows on these 2 pages do not "page". They need continuous scrolling just like everything on HOME page.
 - [ ] **9.2** Rows added to pages from trakt liked lists in settings menu also DO NOT have paging, fix this.
+
+### Phase 10: Unify Context Menus
+- [ ] **10.1** Presently all context menus do not looks the same (different colors, font sizes,etc). Need to make the long-press context menu and "More" button on details page, and anywhere else (should be using some form of constants or inheritance on all these items so they look the same) look like the "Subtitles" Dialog in ExoPlayer. 
 
 ---
 
