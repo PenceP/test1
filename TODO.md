@@ -1694,6 +1694,10 @@ Use this checklist to track progress across all phases.
 - [ ] **8.3** Add AllDebrid support (OAuth)
 
 
+### Phase 9: Movie & TV Show Pages 
+- [ ] **9.1** Rows on these 2 pages do not "page". They need continuous scrolling just like everything on HOME page.
+- [ ] **9.2** Rows added to pages from trakt liked lists in settings menu also DO NOT have paging, fix this.
+
 ---
 
 ## 🔗 External Resources
