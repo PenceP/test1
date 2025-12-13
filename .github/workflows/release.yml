@@ -1,0 +1,139 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tags like v1.0.0, v1.2.3-beta, etc.
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for version info
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Extract version from tag (remove 'v' prefix)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Decode Keystore
+        run: |
+          mkdir -p app/keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/keystore/release.jks
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        env:
+          # Signing configuration
+          KEYSTORE_PATH: keystore/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          # API Keys
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+          PREMIUMIZE_CLIENT_ID: ${{ secrets.PREMIUMIZE_CLIENT_ID }}
+          PREMIUMIZE_CLIENT_SECRET: ${{ secrets.PREMIUMIZE_CLIENT_SECRET }}
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+        run: |
+          ./gradlew assembleRelease \
+            -PVERSION_NAME=${{ steps.version.outputs.VERSION }}
+
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/STRMR-${{ steps.version.outputs.VERSION }}.apk
+
+      - name: Generate version.json
+        run: |
+          # Calculate version code using the same formula as build.gradle.kts
+          VERSION="${{ steps.version.outputs.VERSION }}"
+
+          # Extract major, minor, patch, and prerelease
+          if [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-([a-zA-Z]+))?$ ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            PATCH="${BASH_REMATCH[3]}"
+            PRERELEASE="${BASH_REMATCH[5]}"
+
+            # Calculate prerelease code
+            case "${PRERELEASE,,}" in
+              alpha) PRERELEASE_CODE=0 ;;
+              beta) PRERELEASE_CODE=1 ;;
+              *) PRERELEASE_CODE=2 ;;
+            esac
+
+            # Calculate version code: MMNNPPPR
+            VERSION_CODE=$((MAJOR * 1000000 + MINOR * 10000 + PATCH * 10 + PRERELEASE_CODE))
+          else
+            VERSION_CODE=0
+          fi
+
+          cat > app/build/outputs/apk/release/version.json << EOF
+          {
+            "version": "$VERSION",
+            "versionCode": $VERSION_CODE,
+            "releaseDate": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "apkUrl": "https://github.com/${{ github.repository }}/releases/download/v$VERSION/STRMR-$VERSION.apk",
+            "releaseNotes": "https://github.com/${{ github.repository }}/releases/tag/v$VERSION",
+            "minAndroidSdk": 30
+          }
+          EOF
+          cat app/build/outputs/apk/release/version.json
+
+      - name: Verify APK signature
+        run: |
+          # Find the build-tools version
+          BUILD_TOOLS_VERSION=$(ls $ANDROID_SDK_ROOT/build-tools/ | sort -V | tail -1)
+          $ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS_VERSION/apksigner verify --verbose \
+            app/build/outputs/apk/release/STRMR-${{ steps.version.outputs.VERSION }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: STRMR ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## STRMR ${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+            1. Download `STRMR-${{ steps.version.outputs.VERSION }}.apk`
+            2. Enable "Install from unknown sources" in your Android TV settings
+            3. Install the APK
+
+            ### Changelog
+            See commit history for changes.
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, 'alpha') || contains(steps.version.outputs.VERSION, 'beta') }}
+          files: |
+            app/build/outputs/apk/release/STRMR-${{ steps.version.outputs.VERSION }}.apk
+            app/build/outputs/apk/release/version.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup keystore
+        if: always()
+        run: rm -f app/keystore/release.jks

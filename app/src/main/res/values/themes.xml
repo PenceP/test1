@@ -24,4 +24,12 @@
         <item name="android:windowEnterAnimation">@anim/context_menu_enter</item>
         <item name="android:windowExitAnimation">@anim/context_menu_exit</item>
     </style>
+
+    <!-- Update dialog theme - centered dialog with dimmed background -->
+    <style name="Theme.Strmr.Dialog.Fullscreen" parent="Theme.MaterialComponents.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.8</item>
+    </style>
 </resources>

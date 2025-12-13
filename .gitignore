@@ -14,5 +14,7 @@
 .cxx
 local.properties
 secrets.properties
+TODO_autoupdate.md
+strmr-key.jks
 /.idea
 /app/release

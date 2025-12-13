@@ -3,6 +3,7 @@ package com.strmr.tv.ui.splash
 import android.content.Intent
 import android.graphics.drawable.Animatable
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
@@ -12,8 +13,13 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.strmr.tv.MainActivity
 import com.strmr.tv.R
+import com.strmr.tv.data.model.UpdateCheckResult
+import com.strmr.tv.data.model.UpdateInfo
 import com.strmr.tv.data.repository.TraktAccountRepository
+import com.strmr.tv.data.repository.UpdateRepository
 import com.strmr.tv.data.sync.TraktSyncManager
+import com.strmr.tv.ui.update.UpdateDialog
+import com.strmr.tv.update.UpdateDownloadManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -27,8 +33,14 @@ import kotlin.coroutines.coroutineContext
 @AndroidEntryPoint
 class SyncSplashActivity : FragmentActivity() {
 
+    companion object {
+        private const val TAG = "SyncSplashActivity"
+    }
+
     @Inject lateinit var traktSyncManager: TraktSyncManager
     @Inject lateinit var traktAccountRepository: TraktAccountRepository
+    @Inject lateinit var updateRepository: UpdateRepository
+    @Inject lateinit var downloadManager: UpdateDownloadManager
 
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
@@ -50,6 +62,8 @@ class SyncSplashActivity : FragmentActivity() {
         "Polishing the posters..."
     )
 
+    private var updateDialog: UpdateDialog? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sync_splash)
@@ -70,6 +84,18 @@ class SyncSplashActivity : FragmentActivity() {
         lifecycleScope.launch {
             val messageJob = launch { rotateFunMessages() }
 
+            // Check for updates first
+            statusText.text = getString(R.string.checking_for_updates)
+            val updateResult = checkForUpdates()
+
+            if (updateResult != null) {
+                // Update available - show dialog and stop here
+                messageJob.cancel()
+                showUpdateDialog(updateResult)
+                return@launch
+            }
+
+            // No update - continue with normal sync
             val hasAccount = withContext(Dispatchers.IO) { traktAccountRepository.getAccount() != null }
 
             if (!hasAccount) {
@@ -96,6 +122,55 @@ class SyncSplashActivity : FragmentActivity() {
             LaunchGate.homeReady.first { it }
             finish()
         }
+    }
+
+    private suspend fun checkForUpdates(): UpdateInfo? {
+        return try {
+            Log.d(TAG, "Checking for updates...")
+            when (val result = updateRepository.checkForUpdate()) {
+                is UpdateCheckResult.UpdateAvailable -> {
+                    Log.i(TAG, "Update available: ${result.updateInfo.version}")
+                    result.updateInfo
+                }
+                is UpdateCheckResult.NoUpdateAvailable -> {
+                    Log.d(TAG, "No update available")
+                    null
+                }
+                is UpdateCheckResult.Error -> {
+                    Log.w(TAG, "Update check failed: ${result.message}")
+                    // Don't block on update check failure - proceed with app
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error during update check", e)
+            null
+        }
+    }
+
+    private fun showUpdateDialog(updateInfo: UpdateInfo) {
+        updateDialog = UpdateDialog(
+            context = this,
+            updateInfo = updateInfo,
+            downloadManager = downloadManager,
+            lifecycleOwner = this,
+            onExitApp = {
+                finishAffinity()
+            }
+        ).also { dialog ->
+            dialog.show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateDialog?.onResume()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        updateDialog?.dismiss()
+        updateDialog = null
     }
 
     private fun startLogoAnimations() {

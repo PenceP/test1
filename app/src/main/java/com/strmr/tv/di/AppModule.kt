@@ -26,7 +26,10 @@ import com.strmr.tv.data.remote.api.TMDBApiService
 import com.strmr.tv.data.remote.api.TorrentioApiService
 import com.strmr.tv.data.remote.api.TraktApiService
 import com.strmr.tv.data.remote.api.OpenSubtitlesApiService
+import com.strmr.tv.data.remote.api.GitHubApiService
 import com.strmr.tv.data.repository.TorrentioRepository
+import com.strmr.tv.data.repository.UpdateRepository
+import com.strmr.tv.update.UpdateDownloadManager
 import com.strmr.tv.data.repository.CacheRepository
 import com.strmr.tv.data.repository.ContinueWatchingRepository
 import com.strmr.tv.data.repository.HomeConfigRepository
@@ -96,6 +99,10 @@ annotation class RealDebridAuthRetrofit
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class AllDebridRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class GitHubRetrofit
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -400,6 +407,27 @@ object AppModule {
 
     @Provides
     @Singleton
+    @GitHubRetrofit
+    fun provideGitHubRetrofit(client: OkHttpClient): Retrofit {
+        val gitHubClient = client.newBuilder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .addHeader("Accept", "application/vnd.github.v3+json")
+                    .addHeader("User-Agent", "STRMR-App/${BuildConfig.VERSION_NAME}")
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl("https://api.github.com/")
+            .client(gitHubClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideTmdbApiService(@TmdbRetrofit retrofit: Retrofit): TMDBApiService {
         return retrofit.create(TMDBApiService::class.java)
     }
@@ -456,6 +484,27 @@ object AppModule {
     @Singleton
     fun provideAllDebridApiService(@AllDebridRetrofit retrofit: Retrofit): AllDebridApiService {
         return retrofit.create(AllDebridApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGitHubApiService(@GitHubRetrofit retrofit: Retrofit): GitHubApiService {
+        return retrofit.create(GitHubApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUpdateRepository(gitHubApiService: GitHubApiService): UpdateRepository {
+        return UpdateRepository(gitHubApiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUpdateDownloadManager(
+        @ApplicationContext context: Context,
+        okHttpClient: OkHttpClient
+    ): UpdateDownloadManager {
+        return UpdateDownloadManager(context, okHttpClient)
     }
 
     @Provides

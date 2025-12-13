@@ -15,4 +15,8 @@
     <color name="white_50">#80FFFFFF</color>
     <color name="black">#000000</color>
     <color name="accent_color">#FF5722</color>
+    <color name="text_secondary">#B3FFFFFF</color>
+    <color name="text_tertiary">#80FFFFFF</color>
+    <color name="warning_color">#FFC107</color>
+    <color name="error_color">#F44336</color>
 </resources>

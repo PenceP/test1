@@ -8,6 +8,34 @@ plugins {
     id("kotlin-parcelize")
 }
 
+// Version configuration - can be overridden by CI with -PVERSION_NAME=x.x.x
+val appVersionName: String = project.findProperty("VERSION_NAME")?.toString() ?: "1.0.0-alpha"
+val appVersionCode: Int = generateVersionCode(appVersionName)
+
+fun generateVersionCode(versionName: String): Int {
+    // Parse version: "1.2.3-beta" -> major=1, minor=2, patch=3, prerelease=1
+    val regex = """(\d+)\.(\d+)\.(\d+)(?:-(\w+))?""".toRegex()
+    val match = regex.matchEntire(versionName)
+        ?: throw GradleException("Invalid version format: $versionName. Expected: MAJOR.MINOR.PATCH[-PRERELEASE]")
+
+    val (major, minor, patch, prerelease) = match.destructured
+
+    // Pre-release suffix: alpha=0, beta=1, (none)=2
+    val prereleaseCode = when (prerelease.lowercase()) {
+        "alpha" -> 0
+        "beta" -> 1
+        "" -> 2
+        else -> 2
+    }
+
+    // Format: MMNNPPPR (Major, Minor, Patch, Prerelease)
+    // Example: 1.2.3-beta = 1 * 1000000 + 2 * 10000 + 3 * 10 + 1 = 1020031
+    return major.toInt() * 1_000_000 +
+           minor.toInt() * 10_000 +
+           patch.toInt() * 10 +
+           prereleaseCode
+}
+
 android {
     namespace = "com.strmr.tv"
     compileSdk {
@@ -18,26 +46,53 @@ android {
         applicationId = "com.strmr.tv"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
-        // Load API keys from secrets.properties
+        // Load API keys from secrets.properties OR environment variables (CI)
         val secretsFile = rootProject.file("secrets.properties")
         val secrets = Properties()
         if (secretsFile.exists()) {
             secrets.load(secretsFile.inputStream())
         }
 
-        buildConfigField("String", "TRAKT_CLIENT_ID", "\"${secrets.getProperty("TRAKT_CLIENT_ID", "")}\"")
-        buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${secrets.getProperty("TRAKT_CLIENT_SECRET", "")}\"")
-        buildConfigField("String", "TMDB_API_KEY", "\"${secrets.getProperty("TMDB_API_KEY", "")}\"")
-        buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"${secrets.getProperty("TMDB_ACCESS_TOKEN", "")}\"")
+        // Helper function: prefer environment variable, fallback to secrets.properties
+        fun getSecret(key: String, allowEmpty: Boolean = false): String {
+            val value = System.getenv(key) ?: secrets.getProperty(key, "")
+            if (value.isEmpty() && !allowEmpty) {
+                logger.warn("Warning: $key not found in environment or secrets.properties")
+            }
+            return value
+        }
+
+        buildConfigField("String", "TRAKT_CLIENT_ID", "\"${getSecret("TRAKT_CLIENT_ID")}\"")
+        buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${getSecret("TRAKT_CLIENT_SECRET")}\"")
+        buildConfigField("String", "TMDB_API_KEY", "\"${getSecret("TMDB_API_KEY")}\"")
+        buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"${getSecret("TMDB_ACCESS_TOKEN")}\"")
         // OpenSubtitles API key for external subtitles
-        buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${secrets.getProperty("OPENSUBTITLES_API_KEY", "")}\"")
+        buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${getSecret("OPENSUBTITLES_API_KEY", allowEmpty = true)}\"")
         // Premiumize OAuth credentials
-        buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${secrets.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
-        buildConfigField("String", "PREMIUMIZE_CLIENT_SECRET", "\"${secrets.getProperty("PREMIUMIZE_CLIENT_SECRET", "")}\"")
-        // OMDB_API_KEY is set per build type below - no hardcoded fallback for security
+        buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${getSecret("PREMIUMIZE_CLIENT_ID")}\"")
+        buildConfigField("String", "PREMIUMIZE_CLIENT_SECRET", "\"${getSecret("PREMIUMIZE_CLIENT_SECRET")}\"")
+
+        // Update checker configuration
+        buildConfigField("String", "GITHUB_REPO", "\"PenceP/strmr\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            // For CI: keystore is decoded from base64 and placed at this path
+            // For local: you can configure your own keystore path
+            val keystorePath = System.getenv("KEYSTORE_PATH") ?: "keystore/release.jks"
+            val keystoreFile = file(keystorePath)
+
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+            }
+        }
     }
 
     buildTypes {
@@ -53,28 +108,41 @@ android {
             buildConfigField("String", "TRAKT_TEST_REFRESH_TOKEN",
                 "\"${secrets.getProperty("TRAKT_TEST_REFRESH_TOKEN", "")}\"")
             // Allow empty OMDB key in debug builds
-            buildConfigField("String", "OMDB_API_KEY", "\"${secrets.getProperty("OMDB_API_KEY", "")}\"")
+            buildConfigField("String", "OMDB_API_KEY",
+                "\"${System.getenv("OMDB_API_KEY") ?: secrets.getProperty("OMDB_API_KEY", "")}\"")
+
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
         release {
-            isMinifyEnabled = false     // Disabled temporarily until keep rules are validated
-            isShrinkResources = false   // Keep resources intact while we analyze what shrinking needs
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+
+            // Use release signing config if available, fallback to debug for local builds
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            signingConfig = if (releaseSigningConfig?.storeFile?.exists() == true) {
+                releaseSigningConfig
+            } else {
+                signingConfigs.getByName("debug")
+            }
+
             // Empty test tokens for release builds
             buildConfigField("String", "TRAKT_TEST_ACCESS_TOKEN", "\"\"")
             buildConfigField("String", "TRAKT_TEST_REFRESH_TOKEN", "\"\"")
-            // Require OMDB_API_KEY for release builds - fail if missing
+
+            // OMDB_API_KEY - prefer environment variable, fallback to secrets.properties
             val secretsFile = rootProject.file("secrets.properties")
             val secrets = Properties()
             if (secretsFile.exists()) {
                 secrets.load(secretsFile.inputStream())
             }
-            val omdbKey = secrets.getProperty("OMDB_API_KEY", "")
+            val omdbKey = System.getenv("OMDB_API_KEY") ?: secrets.getProperty("OMDB_API_KEY", "")
             if (omdbKey.isEmpty()) {
-                throw GradleException("OMDB_API_KEY not found in secrets.properties - required for release builds")
+                logger.warn("Warning: OMDB_API_KEY not found - some features may not work")
             }
             buildConfigField("String", "OMDB_API_KEY", "\"$omdbKey\"")
         }

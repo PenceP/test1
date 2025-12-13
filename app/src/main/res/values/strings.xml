@@ -68,4 +68,25 @@
     <string name="action_mark_episode_unwatched">Mark Episode Unwatched</string>
     <string name="watched_indicator">Watched indicator</string>
     <string name="watched">Watched</string>
+
+    <!-- Update Dialog -->
+    <string name="update_available_title">Update Available</string>
+    <string name="update_version_info">Current: %1$s\nNew: %2$s</string>
+    <string name="download_and_install">Download &amp; Install</string>
+    <string name="exit_app">Exit App</string>
+    <string name="preparing_download">Preparing download\u2026</string>
+    <string name="downloading_progress">Downloading: %1$d%% (%2$d MB / %3$d MB)</string>
+    <string name="downloading_size">Downloading: %1$d MB</string>
+    <string name="download_complete">Download complete. Installing\u2026</string>
+    <string name="retry_download">Retry Download</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="unknown_sources_required">Please enable \"Install from unknown sources\" to continue</string>
+    <string name="checking_for_updates">Checking for updates\u2026</string>
+    <string name="update_check_failed">Failed to check for updates</string>
+    <string name="no_update_available">You have the latest version</string>
+    <string name="force_check_update">Check for Updates</string>
+    <string name="version_format">Version %1$s</string>
+    <string name="build_format">Build %1$d</string>
+    <string name="about_footer">Made for Android TV</string>
+    <string name="splash_syncing">Syncing\u2026</string>
 </resources>
