@@ -3,31 +3,56 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
-    android:clickable="true"
-    android:focusable="true"
+    android:background="@drawable/item_focusable_background"
     android:gravity="center_vertical"
-    android:minHeight="52dp"
+    android:minHeight="56dp"
     android:orientation="horizontal"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="12dp">
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="8dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true">
 
+    <!-- Action icon -->
     <ImageView
         android:id="@+id/action_icon"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:importantForAccessibility="no"
-        android:tint="@android:color/white"
-        tools:src="@drawable/ic_play_24" />
+        android:layout_marginEnd="12dp"
+        android:tint="@color/white_70"
+        tools:src="@drawable/ic_play_24"
+        tools:ignore="ContentDescription" />
 
-    <TextView
-        android:id="@+id/action_label"
+    <!-- Text container -->
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
         android:layout_weight="1"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        tools:text="Play" />
+        android:orientation="vertical">
+
+        <!-- Main label -->
+        <TextView
+            android:id="@+id/action_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            tools:text="Mark as Watched" />
+
+        <!-- Detail text (optional, for future use) -->
+        <TextView
+            android:id="@+id/action_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/white_50"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="Sync with Trakt"
+            tools:visibility="visible" />
+    </LinearLayout>
 
 </LinearLayout>

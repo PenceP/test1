@@ -1699,7 +1699,7 @@ Use this checklist to track progress across all phases.
 - [x] **9.2** Rows added to pages from trakt liked lists in settings menu also DO NOT have paging, fix this.
 
 ### Phase 10: Unify Context Menus
-- [ ] **10.1** Presently all context menus do not looks the same (different colors, font sizes,etc). Need to make the long-press context menu and "More" button on details page, and anywhere else (should be using some form of constants or inheritance on all these items so they look the same) look like the "Subtitles" Dialog in ExoPlayer. 
+- [x] **10.1** Presently all context menus do not looks the same (different colors, font sizes,etc). Need to make the long-press context menu and "More" button on details page, and anywhere else (should be using some form of constants or inheritance on all these items so they look the same) look like the "Subtitles" Dialog in ExoPlayer. 
 
 ---
 

@@ -1,20 +1,18 @@
 package com.strmr.tv.ui.contextmenu
 
-import android.graphics.Color
 import android.view.KeyEvent
 import android.view.LayoutInflater
-import android.view.SoundEffectConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.strmr.tv.R
 
 /**
  * Adapter for context menu action items.
  * Supports D-pad navigation and focus handling for TV.
+ * Uses unified styling matching the SubtitleSelectionDialog.
  */
 class ContextMenuAdapter(
     private val actions: List<ContextMenuAction>,
@@ -26,27 +24,36 @@ class ContextMenuAdapter(
         private val icon: ImageView = itemView.findViewById(R.id.action_icon)
         private val label: TextView = itemView.findViewById(R.id.action_label)
 
+        init {
+            itemView.isFocusable = true
+            itemView.isFocusableInTouchMode = true
+        }
+
         fun bind(action: ContextMenuAction, position: Int) {
             icon.setImageResource(action.iconRes)
             label.setText(action.labelRes)
 
-            // Focus handling for TV
-            itemView.setOnFocusChangeListener { view, hasFocus ->
-                if (hasFocus) {
-                    view.setBackgroundColor(Color.parseColor("#33FFFFFF"))
-                    view.scaleX = 1.02f
-                    view.scaleY = 1.02f
-                    view.playSoundEffect(SoundEffectConstants.CLICK)
-                } else {
-                    view.setBackgroundColor(Color.TRANSPARENT)
-                    view.scaleX = 1.0f
-                    view.scaleY = 1.0f
-                }
-            }
-
             // Click handling
             itemView.setOnClickListener {
                 onActionSelected(action)
+            }
+
+            // Focus change styling - matches SubtitleSelectionDialog
+            itemView.setOnFocusChangeListener { view, hasFocus ->
+                view.isSelected = hasFocus
+                if (hasFocus) {
+                    view.animate()
+                        .scaleX(1.02f)
+                        .scaleY(1.02f)
+                        .setDuration(100)
+                        .start()
+                } else {
+                    view.animate()
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .setDuration(100)
+                        .start()
+                }
             }
 
             // Key handling for TV remote
