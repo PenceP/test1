@@ -49,7 +49,7 @@ class ContentLoaderUseCase @Inject constructor(
             "collections" -> loadCollections()
             "directors" -> loadDirectors()
             "my_trakt" -> loadMyTraktLists()
-            "trakt_list" -> loadTraktList(dataSourceUrl)
+            "trakt_list" -> loadTraktList(dataSourceUrl, page)
             else -> emptyList()
         }
     }
@@ -354,8 +354,9 @@ class ContentLoaderUseCase @Inject constructor(
     /**
      * Load content from a Trakt list.
      * @param dataSourceUrl Format: "trakt_list:username:listSlug"
+     * @param page The page number (1-indexed)
      */
-    private suspend fun loadTraktList(dataSourceUrl: String?): List<ContentItem> {
+    private suspend fun loadTraktList(dataSourceUrl: String?, page: Int): List<ContentItem> {
         if (dataSourceUrl.isNullOrBlank()) return emptyList()
 
         // Parse the dataSourceUrl format: "trakt_list:username:listSlug"
@@ -367,8 +368,8 @@ class ContentLoaderUseCase @Inject constructor(
 
         return try {
             // Try loading items from the list (movies first, then shows)
-            val movieItems = loadTraktListMovies(username, listSlug)
-            val showItems = loadTraktListShows(username, listSlug)
+            val movieItems = loadTraktListMovies(username, listSlug, page)
+            val showItems = loadTraktListShows(username, listSlug, page)
 
             movieItems + showItems
         } catch (e: Exception) {
@@ -376,16 +377,18 @@ class ContentLoaderUseCase @Inject constructor(
         }
     }
 
-    private suspend fun loadTraktListMovies(username: String, listSlug: String): List<ContentItem> {
+    private suspend fun loadTraktListMovies(username: String, listSlug: String, page: Int): List<ContentItem> {
         return try {
             val traktItems = traktApiService.getListMovies(
                 user = username,
                 list = listSlug,
-                clientId = com.strmr.tv.BuildConfig.TRAKT_CLIENT_ID
+                clientId = com.strmr.tv.BuildConfig.TRAKT_CLIENT_ID,
+                page = page,
+                limit = 20
             )
 
             coroutineScope {
-                traktItems.take(20).mapNotNull { traktItem ->
+                traktItems.mapNotNull { traktItem ->
                     traktItem.movie?.ids?.tmdb?.let { tmdbId ->
                         async {
                             fetchMovieDetails(tmdbId, traktItem.movie.title, traktItem.movie.year)
@@ -398,16 +401,18 @@ class ContentLoaderUseCase @Inject constructor(
         }
     }
 
-    private suspend fun loadTraktListShows(username: String, listSlug: String): List<ContentItem> {
+    private suspend fun loadTraktListShows(username: String, listSlug: String, page: Int): List<ContentItem> {
         return try {
             val traktItems = traktApiService.getListShows(
                 user = username,
                 list = listSlug,
-                clientId = com.strmr.tv.BuildConfig.TRAKT_CLIENT_ID
+                clientId = com.strmr.tv.BuildConfig.TRAKT_CLIENT_ID,
+                page = page,
+                limit = 20
             )
 
             coroutineScope {
-                traktItems.take(20).mapNotNull { traktItem ->
+                traktItems.mapNotNull { traktItem ->
                     traktItem.show?.ids?.tmdb?.let { tmdbId ->
                         async {
                             fetchShowDetails(tmdbId, traktItem.show.title, traktItem.show.year)

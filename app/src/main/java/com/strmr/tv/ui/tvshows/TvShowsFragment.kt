@@ -156,7 +156,7 @@ class TvShowsFragment : Fragment() {
         )
         rowsDelegate.bind(
             contentRows = viewModel.contentRows,
-            rowAppendEvents = null,
+            rowAppendEvents = viewModel.rowAppendEvents,
             isLoading = viewModel.isLoading,
             error = viewModel.error,
             heroContent = viewModel.heroContent

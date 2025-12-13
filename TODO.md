@@ -1690,13 +1690,13 @@ Use this checklist to track progress across all phases.
 ### Phase 8: Rebranding & Polish
 - [x] **8.0** Change PM login to oauth/random code login like trakt, verify it works with Torrentio and playback.
 - [x] **8.1** Rename app to STRMR
-- [ ] **8.2** Add Real-Debrid support (OAuth)
-- [ ] **8.3** Add AllDebrid support (OAuth)
+- [x] **8.2** Add Real-Debrid support (OAuth)
+- [x] **8.3** Add AllDebrid support (OAuth)
 
 
 ### Phase 9: Movie & TV Show Pages 
-- [ ] **9.1** Rows on these 2 pages do not "page". They need continuous scrolling just like everything on HOME page.
-- [ ] **9.2** Rows added to pages from trakt liked lists in settings menu also DO NOT have paging, fix this.
+- [x] **9.1** Rows on these 2 pages do not "page". They need continuous scrolling just like everything on HOME page.
+- [x] **9.2** Rows added to pages from trakt liked lists in settings menu also DO NOT have paging, fix this.
 
 ### Phase 10: Unify Context Menus
 - [ ] **10.1** Presently all context menus do not looks the same (different colors, font sizes,etc). Need to make the long-press context menu and "More" button on details page, and anywhere else (should be using some form of constants or inheritance on all these items so they look the same) look like the "Subtitles" Dialog in ExoPlayer. 
