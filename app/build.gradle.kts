@@ -9,13 +9,13 @@ plugins {
 }
 
 android {
-    namespace = "com.test1.tv"
+    namespace = "com.strmr.tv"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.test1.tv"
+        applicationId = "com.strmr.tv"
         minSdk = 30
         targetSdk = 36
         versionCode = 1

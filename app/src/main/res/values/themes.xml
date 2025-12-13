@@ -1,6 +1,6 @@
 <resources>
 
-    <style name="Theme.Test1" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.Strmr" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Leanback overlay for TV -->
         <item name="android:windowIsTranslucent">false</item>
         <item name="android:windowBackground">@android:color/black</item>
