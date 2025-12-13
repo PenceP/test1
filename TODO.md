@@ -1688,7 +1688,7 @@ Use this checklist to track progress across all phases.
 ---
 
 ### Phase 8: Rebranding & Polish
-- [ ] **8.0** Change PM login to oauth/random code login like trakt, verify it works with Torrentio and playback.
+- [x] **8.0** Change PM login to oauth/random code login like trakt, verify it works with Torrentio and playback.
 - [ ] **8.1** Rename app to STRMR
 - [ ] **8.2** Add Real-Debrid support (OAuth)
 - [ ] **8.3** Add AllDebrid support (OAuth)
