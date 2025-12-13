@@ -1,5 +1,6 @@
 package com.strmr.tv.ui.settings.fragments
 
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -8,15 +9,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.leanback.widget.BaseGridView
 import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.strmr.tv.R
+import com.strmr.tv.data.local.entity.AllDebridAccount
 import com.strmr.tv.data.local.entity.PremiumizeAccount
+import com.strmr.tv.data.local.entity.RealDebridAccount
 import com.strmr.tv.data.local.entity.TraktAccount
+import com.strmr.tv.data.repository.AllDebridRepository
 import com.strmr.tv.data.repository.PremiumizeRepository
+import com.strmr.tv.data.repository.RealDebridRepository
 import com.strmr.tv.ui.settings.adapter.SettingsAdapter
 import com.strmr.tv.ui.settings.model.AccountAction
 import com.strmr.tv.ui.settings.model.SettingsItem
@@ -41,13 +47,22 @@ class AccountsFragment : Fragment() {
     @Inject lateinit var traktUserItemDao: com.strmr.tv.data.local.dao.TraktUserItemDao
     @Inject lateinit var traktApiService: com.strmr.tv.data.remote.api.TraktApiService
     @Inject lateinit var premiumizeRepository: PremiumizeRepository
+    @Inject lateinit var realDebridRepository: RealDebridRepository
+    @Inject lateinit var allDebridRepository: AllDebridRepository
 
     private var traktAccount: TraktAccount? = null
     private var premiumizeAccount: PremiumizeAccount? = null
+    private var realDebridAccount: RealDebridAccount? = null
+    private var allDebridAccount: AllDebridAccount? = null
 
     // State
     private var traktConnected = false
     private var premiumizeConnected = false
+    private var realDebridConnected = false
+    private var allDebridConnected = false
+
+    // Active authorization dialogs (to dismiss on success)
+    private var activeAuthDialog: AlertDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -88,6 +103,16 @@ class AccountsFragment : Fragment() {
             premiumizeAccount = premiumize
             premiumizeConnected = premiumize != null
 
+            // Load Real-Debrid account
+            val realDebrid = realDebridRepository.getAccount()
+            realDebridAccount = realDebrid
+            realDebridConnected = realDebrid != null
+
+            // Load AllDebrid account
+            val allDebrid = allDebridRepository.getAccount()
+            allDebridAccount = allDebrid
+            allDebridConnected = allDebrid != null
+
             withContext(Dispatchers.Main) {
                 refreshItems()
             }
@@ -100,9 +125,15 @@ class AccountsFragment : Fragment() {
         val minutesWatched = traktAccount?.statsMinutesWatched
         val hoursWatched = minutesWatched?.div(60)
 
-        // Calculate Premiumize days remaining
+        // Calculate days remaining for debrid services
         val premiumizeDaysRemaining = premiumizeAccount?.let {
             premiumizeRepository.getDaysRemaining(it)
+        }
+        val realDebridDaysRemaining = realDebridAccount?.let {
+            realDebridRepository.getDaysRemaining(it)
+        }
+        val allDebridDaysRemaining = allDebridAccount?.let {
+            allDebridRepository.getDaysRemaining(it)
         }
 
         return listOf(
@@ -127,7 +158,7 @@ class AccountsFragment : Fragment() {
                 }
             ),
 
-            // Premiumize Account Card (OAuth device code flow)
+            // Premiumize Account Card
             SettingsItem.AccountCard(
                 id = "premiumize",
                 serviceName = "Premiumize",
@@ -139,6 +170,36 @@ class AccountsFragment : Fragment() {
                 additionalInfo = premiumizeDaysRemaining?.let { "$it days remaining" },
                 onAction = { action ->
                     handlePremiumizeAction(action)
+                }
+            ),
+
+            // Real-Debrid Account Card
+            SettingsItem.AccountCard(
+                id = "realdebrid",
+                serviceName = "Real-Debrid",
+                serviceDescription = "Premium link generator",
+                iconText = "RD",
+                iconBackgroundColor = Color.parseColor("#16A34A"), // Green
+                isConnected = realDebridConnected,
+                userName = realDebridAccount?.username,
+                additionalInfo = realDebridDaysRemaining?.let { "$it days remaining" },
+                onAction = { action ->
+                    handleRealDebridAction(action)
+                }
+            ),
+
+            // AllDebrid Account Card
+            SettingsItem.AccountCard(
+                id = "alldebrid",
+                serviceName = "AllDebrid",
+                serviceDescription = "Universal link unlocker",
+                iconText = "AD",
+                iconBackgroundColor = Color.parseColor("#9333EA"), // Purple
+                isConnected = allDebridConnected,
+                userName = allDebridAccount?.username,
+                additionalInfo = allDebridDaysRemaining?.let { "$it days remaining" },
+                onAction = { action ->
+                    handleAllDebridAction(action)
                 }
             )
         )
@@ -210,7 +271,8 @@ class AccountsFragment : Fragment() {
             minutes
         )
 
-        MaterialAlertDialogBuilder(requireContext())
+        activeAuthDialog?.dismiss()
+        activeAuthDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.trakt_authorize_title))
             .setMessage(message)
             .setPositiveButton(R.string.trakt_authorize_open) { _, _ ->
@@ -221,6 +283,7 @@ class AccountsFragment : Fragment() {
                 startActivity(intent)
             }
             .setNegativeButton(R.string.trakt_authorize_close, null)
+            .setOnDismissListener { activeAuthDialog = null }
             .show()
     }
 
@@ -274,6 +337,7 @@ class AccountsFragment : Fragment() {
         traktConnected = true
 
         withContext(Dispatchers.Main) {
+            activeAuthDialog?.dismiss()
             refreshItems()
             Toast.makeText(requireContext(), "Trakt authorized!", Toast.LENGTH_SHORT).show()
             startActivity(
@@ -335,7 +399,8 @@ class AccountsFragment : Fragment() {
             This code expires in $minutes minutes.
         """.trimIndent()
 
-        MaterialAlertDialogBuilder(requireContext())
+        activeAuthDialog?.dismiss()
+        activeAuthDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Authorize Premiumize")
             .setMessage(message)
             .setPositiveButton("Open Browser") { _, _ ->
@@ -343,6 +408,7 @@ class AccountsFragment : Fragment() {
                 startActivity(intent)
             }
             .setNegativeButton("Close", null)
+            .setOnDismissListener { activeAuthDialog = null }
             .show()
     }
 
@@ -396,6 +462,7 @@ class AccountsFragment : Fragment() {
             premiumizeConnected = true
 
             withContext(Dispatchers.Main) {
+                activeAuthDialog?.dismiss()
                 refreshItems()
                 Toast.makeText(requireContext(), "Premiumize connected!", Toast.LENGTH_SHORT).show()
             }
@@ -421,6 +488,287 @@ class AccountsFragment : Fragment() {
 
             refreshItems()
             Toast.makeText(context, "Disconnected from Premiumize", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ==================== Real-Debrid OAuth Device Code Flow ====================
+
+    private fun handleRealDebridAction(action: AccountAction) {
+        when (action) {
+            AccountAction.AUTHENTICATE -> {
+                requestRealDebridDeviceCode()
+            }
+            AccountAction.LOGOUT -> {
+                disconnectRealDebrid()
+            }
+            else -> {}
+        }
+    }
+
+    private fun requestRealDebridDeviceCode() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Authorize Real-Debrid")
+                .setMessage("Requesting authorization code...")
+                .setCancelable(false)
+                .show()
+
+            val result = withContext(Dispatchers.IO) {
+                realDebridRepository.requestDeviceCode()
+            }
+
+            dialog.dismiss()
+
+            result.onSuccess { code ->
+                showRealDebridActivationDialog(code.userCode, code.verificationUrl, code.expiresIn)
+                pollForRealDebridCredentials(code.deviceCode, code.interval, code.expiresIn)
+            }.onFailure { error ->
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to get authorization code: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun showRealDebridActivationDialog(userCode: String, verificationUrl: String, expiresIn: Int) {
+        val minutes = (expiresIn / 60).coerceAtLeast(1)
+        val message = """
+            Go to: $verificationUrl
+
+            Enter code: ${userCode.uppercase(Locale.US)}
+
+            This code expires in $minutes minutes.
+        """.trimIndent()
+
+        activeAuthDialog?.dismiss()
+        activeAuthDialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Authorize Real-Debrid")
+            .setMessage(message)
+            .setPositiveButton("Open Browser") { _, _ ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(verificationUrl))
+                startActivity(intent)
+            }
+            .setNegativeButton("Close", null)
+            .setOnDismissListener { activeAuthDialog = null }
+            .show()
+    }
+
+    private fun pollForRealDebridCredentials(deviceCode: String, intervalSeconds: Int, expiresIn: Int) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            val expiresAt = startTime + expiresIn * 1000L
+            val pollDelay = (intervalSeconds.coerceAtLeast(5)) * 1000L
+
+            while (isActive && System.currentTimeMillis() < expiresAt) {
+                val credentialsResult = realDebridRepository.pollForCredentials(deviceCode)
+
+                credentialsResult.onSuccess { credentials ->
+                    if (credentials != null) {
+                        // Credentials received - now get the token
+                        // credentials is Pair<clientId, clientSecret>
+                        val tokenResult = realDebridRepository.exchangeCredentialsForToken(
+                            deviceCode = deviceCode,
+                            clientId = credentials.first,
+                            clientSecret = credentials.second
+                        )
+
+                        tokenResult.onSuccess { account ->
+                            realDebridAccount = account
+                            realDebridConnected = true
+
+                            withContext(Dispatchers.Main) {
+                                activeAuthDialog?.dismiss()
+                                refreshItems()
+                                Toast.makeText(requireContext(), "Real-Debrid connected!", Toast.LENGTH_SHORT).show()
+                            }
+                        }.onFailure { error ->
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Failed to get token: ${error.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                        return@launch
+                    }
+                    // null credentials means still pending - continue polling
+                }.onFailure { error ->
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Authorization failed: ${error.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    return@launch
+                }
+
+                delay(pollDelay)
+            }
+
+            // Expired
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    requireContext(),
+                    "Real-Debrid code expired. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun disconnectRealDebrid() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                realDebridRepository.clearAccount()
+            }
+
+            realDebridAccount = null
+            realDebridConnected = false
+
+            refreshItems()
+            Toast.makeText(context, "Disconnected from Real-Debrid", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ==================== AllDebrid PIN Authentication Flow ====================
+
+    private fun handleAllDebridAction(action: AccountAction) {
+        when (action) {
+            AccountAction.AUTHENTICATE -> {
+                requestAllDebridPinCode()
+            }
+            AccountAction.LOGOUT -> {
+                disconnectAllDebrid()
+            }
+            else -> {}
+        }
+    }
+
+    private fun requestAllDebridPinCode() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Authorize AllDebrid")
+                .setMessage("Requesting authorization PIN...")
+                .setCancelable(false)
+                .show()
+
+            val result = withContext(Dispatchers.IO) {
+                allDebridRepository.requestPinCode()
+            }
+
+            dialog.dismiss()
+
+            result.onSuccess { pinData ->
+                showAllDebridActivationDialog(pinData.pin, pinData.userUrl, pinData.expiresIn)
+                pollForAllDebridApiKey(pinData.pin, pinData.check, pinData.expiresIn)
+            }.onFailure { error ->
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to get authorization PIN: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun showAllDebridActivationDialog(pin: String, userUrl: String, expiresIn: Int) {
+        val minutes = (expiresIn / 60).coerceAtLeast(1)
+        val message = """
+            Go to: $userUrl
+
+            Enter PIN: $pin
+
+            This PIN expires in $minutes minutes.
+        """.trimIndent()
+
+        activeAuthDialog?.dismiss()
+        activeAuthDialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Authorize AllDebrid")
+            .setMessage(message)
+            .setPositiveButton("Open Browser") { _, _ ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(userUrl))
+                startActivity(intent)
+            }
+            .setNegativeButton("Close", null)
+            .setOnDismissListener { activeAuthDialog = null }
+            .show()
+    }
+
+    private fun pollForAllDebridApiKey(pin: String, check: String, expiresIn: Int) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            val expiresAt = startTime + expiresIn * 1000L
+            val pollDelay = 5000L // AllDebrid recommends 5 second intervals
+
+            while (isActive && System.currentTimeMillis() < expiresAt) {
+                val apiKeyResult = allDebridRepository.pollForApiKey(pin, check)
+
+                apiKeyResult.onSuccess { apiKey ->
+                    if (apiKey != null) {
+                        // API key received - save it and get account info
+                        val saveResult = allDebridRepository.saveApiKey(apiKey)
+
+                        saveResult.onSuccess { account ->
+                            allDebridAccount = account
+                            allDebridConnected = true
+
+                            withContext(Dispatchers.Main) {
+                                activeAuthDialog?.dismiss()
+                                refreshItems()
+                                Toast.makeText(requireContext(), "AllDebrid connected!", Toast.LENGTH_SHORT).show()
+                            }
+                        }.onFailure { error ->
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Failed to save account: ${error.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                        return@launch
+                    }
+                    // null apiKey means still pending - continue polling
+                }.onFailure { error ->
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Authorization failed: ${error.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    return@launch
+                }
+
+                delay(pollDelay)
+            }
+
+            // Expired
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    requireContext(),
+                    "AllDebrid PIN expired. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun disconnectAllDebrid() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                allDebridRepository.clearAccount()
+            }
+
+            allDebridAccount = null
+            allDebridConnected = false
+
+            refreshItems()
+            Toast.makeText(context, "Disconnected from AllDebrid", Toast.LENGTH_SHORT).show()
         }
     }
 

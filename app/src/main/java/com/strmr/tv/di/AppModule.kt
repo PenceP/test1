@@ -15,7 +15,11 @@ import com.strmr.tv.data.local.MIGRATION_16_17
 import com.strmr.tv.data.local.MIGRATION_17_18
 import com.strmr.tv.data.local.MIGRATION_18_19
 import com.strmr.tv.data.local.MIGRATION_19_20
+import com.strmr.tv.data.local.MIGRATION_20_21
 import com.strmr.tv.data.remote.api.OMDbApiService
+import com.strmr.tv.data.remote.api.RealDebridApiService
+import com.strmr.tv.data.remote.api.RealDebridAuthService
+import com.strmr.tv.data.remote.api.AllDebridApiService
 import com.strmr.tv.data.remote.api.PremiumizeApiService
 import com.strmr.tv.data.remote.api.PremiumizeAuthService
 import com.strmr.tv.data.remote.api.TMDBApiService
@@ -29,6 +33,8 @@ import com.strmr.tv.data.repository.HomeConfigRepository
 import com.strmr.tv.data.repository.SyncMetadataRepository
 import com.strmr.tv.data.repository.LinkFilterPreferences
 import com.strmr.tv.data.repository.PremiumizeRepository
+import com.strmr.tv.data.repository.RealDebridRepository
+import com.strmr.tv.data.repository.AllDebridRepository
 import com.strmr.tv.data.service.LinkFilterService
 import com.strmr.tv.data.repository.TraktAccountRepository
 import com.strmr.tv.data.repository.TraktMediaRepository
@@ -79,6 +85,18 @@ annotation class TorrentioRetrofit
 @Retention(AnnotationRetention.BINARY)
 annotation class OpenSubtitlesRetrofit
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class RealDebridRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class RealDebridAuthRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AllDebridRetrofit
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -93,7 +111,7 @@ object AppModule {
             AppDatabase::class.java,
             "strmr_tv_database"
         )
-            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -131,6 +149,12 @@ object AppModule {
     @Provides
     fun providePlaybackProgressDao(database: AppDatabase) = database.playbackProgressDao()
 
+    @Provides
+    fun provideRealDebridAccountDao(database: AppDatabase) = database.realDebridAccountDao()
+
+    @Provides
+    fun provideAllDebridAccountDao(database: AppDatabase) = database.allDebridAccountDao()
+
     // Repository helpers
     @Provides
     @Singleton
@@ -160,6 +184,21 @@ object AppModule {
         premiumizeAuthService: PremiumizeAuthService,
         premiumizeAccountDao: com.strmr.tv.data.local.dao.PremiumizeAccountDao
     ) = PremiumizeRepository(premiumizeApiService, premiumizeAuthService, premiumizeAccountDao)
+
+    @Provides
+    @Singleton
+    fun provideRealDebridRepository(
+        realDebridApiService: RealDebridApiService,
+        realDebridAuthService: RealDebridAuthService,
+        realDebridAccountDao: com.strmr.tv.data.local.dao.RealDebridAccountDao
+    ) = RealDebridRepository(realDebridApiService, realDebridAuthService, realDebridAccountDao)
+
+    @Provides
+    @Singleton
+    fun provideAllDebridRepository(
+        allDebridApiService: AllDebridApiService,
+        allDebridAccountDao: com.strmr.tv.data.local.dao.AllDebridAccountDao
+    ) = AllDebridRepository(allDebridApiService, allDebridAccountDao)
 
     @Provides
     @Singleton
@@ -328,6 +367,39 @@ object AppModule {
 
     @Provides
     @Singleton
+    @RealDebridRetrofit
+    fun provideRealDebridRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://api.real-debrid.com/rest/1.0/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @RealDebridAuthRetrofit
+    fun provideRealDebridAuthRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://api.real-debrid.com/oauth/v2/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @AllDebridRetrofit
+    fun provideAllDebridRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://api.alldebrid.com/v4/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideTmdbApiService(@TmdbRetrofit retrofit: Retrofit): TMDBApiService {
         return retrofit.create(TMDBApiService::class.java)
     }
@@ -370,12 +442,38 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideRealDebridApiService(@RealDebridRetrofit retrofit: Retrofit): RealDebridApiService {
+        return retrofit.create(RealDebridApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideRealDebridAuthService(@RealDebridAuthRetrofit retrofit: Retrofit): RealDebridAuthService {
+        return retrofit.create(RealDebridAuthService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAllDebridApiService(@AllDebridRetrofit retrofit: Retrofit): AllDebridApiService {
+        return retrofit.create(AllDebridApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
     fun provideTorrentioRepository(
         torrentioApiService: TorrentioApiService,
         premiumizeRepository: PremiumizeRepository,
+        realDebridRepository: RealDebridRepository,
+        allDebridRepository: AllDebridRepository,
         linkFilterService: LinkFilterService
     ): TorrentioRepository =
-        TorrentioRepository(torrentioApiService, premiumizeRepository, linkFilterService)
+        TorrentioRepository(
+            torrentioApiService,
+            premiumizeRepository,
+            realDebridRepository,
+            allDebridRepository,
+            linkFilterService
+        )
 
     // ==================== Utilities ====================
 

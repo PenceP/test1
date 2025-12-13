@@ -15,6 +15,8 @@ import com.strmr.tv.data.local.dao.SyncMetadataDao
 import com.strmr.tv.data.local.dao.PremiumizeAccountDao
 import com.strmr.tv.data.local.dao.PlayerSettingsDao
 import com.strmr.tv.data.local.dao.PlaybackProgressDao
+import com.strmr.tv.data.local.dao.RealDebridAccountDao
+import com.strmr.tv.data.local.dao.AllDebridAccountDao
 import com.strmr.tv.data.local.entity.CachedContent
 import com.strmr.tv.data.local.entity.TraktAccount
 import com.strmr.tv.data.local.entity.TraktUserItem
@@ -26,6 +28,8 @@ import com.strmr.tv.data.local.entity.MediaEnrichmentEntity
 import com.strmr.tv.data.local.entity.PremiumizeAccount
 import com.strmr.tv.data.local.entity.PlayerSettings
 import com.strmr.tv.data.local.entity.PlaybackProgress
+import com.strmr.tv.data.local.entity.RealDebridAccount
+import com.strmr.tv.data.local.entity.AllDebridAccount
 
 @Database(
     entities = [
@@ -43,9 +47,11 @@ import com.strmr.tv.data.local.entity.PlaybackProgress
         MediaEnrichmentEntity::class,
         PremiumizeAccount::class,
         PlayerSettings::class,
-        PlaybackProgress::class
+        PlaybackProgress::class,
+        RealDebridAccount::class,
+        AllDebridAccount::class
     ],
-    version = 20,
+    version = 21,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -61,4 +67,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun premiumizeAccountDao(): PremiumizeAccountDao
     abstract fun playerSettingsDao(): PlayerSettingsDao
     abstract fun playbackProgressDao(): PlaybackProgressDao
+    abstract fun realDebridAccountDao(): RealDebridAccountDao
+    abstract fun allDebridAccountDao(): AllDebridAccountDao
 }

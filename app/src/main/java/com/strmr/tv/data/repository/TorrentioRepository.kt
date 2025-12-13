@@ -11,16 +11,19 @@ import javax.inject.Singleton
 
 /**
  * Repository for scraping streams from Torrentio and enriching them with debrid cache status
+ * Supports multiple debrid providers: Premiumize, Real-Debrid, and AllDebrid
  */
 @Singleton
 class TorrentioRepository @Inject constructor(
     private val torrentioApiService: TorrentioApiService,
     private val premiumizeRepository: PremiumizeRepository,
+    private val realDebridRepository: RealDebridRepository,
+    private val allDebridRepository: AllDebridRepository,
     private val linkFilterService: LinkFilterService
 ) {
     companion object {
         private const val TAG = "TorrentioRepository"
-        private const val BATCH_SIZE = 100 // Premiumize cache check limit per request
+        private const val BATCH_SIZE = 100 // Cache check limit per request
     }
 
     /**
@@ -123,34 +126,90 @@ class TorrentioRepository @Inject constructor(
     }
 
     /**
-     * Enrich streams with debrid cache status
+     * Enrich streams with debrid cache status from all connected providers
+     * Priority order: Premiumize > Real-Debrid > AllDebrid (first cached wins)
      */
     private suspend fun enrichWithCacheStatus(streams: List<StreamInfo>): List<StreamInfo> {
-        // Check if Premiumize account exists
-        if (!premiumizeRepository.hasAccount()) {
-            Log.d(TAG, "No Premiumize account, skipping cache check")
+        // Determine which providers are available
+        val hasPremiumize = premiumizeRepository.hasAccount()
+        val hasRealDebrid = realDebridRepository.hasAccount()
+        val hasAllDebrid = allDebridRepository.hasAccount()
+
+        if (!hasPremiumize && !hasRealDebrid && !hasAllDebrid) {
+            Log.d(TAG, "No debrid accounts configured, skipping cache check")
             return streams
         }
+
+        Log.d(TAG, "Checking cache: PM=$hasPremiumize RD=$hasRealDebrid AD=$hasAllDebrid")
 
         // Get all unique info hashes
         val hashes = streams.map { it.infoHash }.distinct()
 
-        // Check cache status in batches
-        val cacheStatusMap = mutableMapOf<String, Boolean>()
-        hashes.chunked(BATCH_SIZE).forEach { batch ->
-            val result = premiumizeRepository.checkCacheStatus(batch)
-            result.onSuccess { batchStatus ->
-                cacheStatusMap.putAll(batchStatus)
+        // Maps to track which provider has each hash cached
+        val premiumizeCacheMap = mutableMapOf<String, Boolean>()
+        val realDebridCacheMap = mutableMapOf<String, Boolean>()
+        val allDebridCacheMap = mutableMapOf<String, Boolean>()
+
+        // Check Premiumize cache status
+        if (hasPremiumize) {
+            hashes.chunked(BATCH_SIZE).forEach { batch ->
+                val result = premiumizeRepository.checkCacheStatus(batch)
+                result.onSuccess { batchStatus ->
+                    premiumizeCacheMap.putAll(batchStatus)
+                }
             }
+            Log.d(TAG, "Premiumize: ${premiumizeCacheMap.count { it.value }} cached")
         }
 
-        // Enrich streams with cache status
+        // Check Real-Debrid cache status
+        if (hasRealDebrid) {
+            hashes.chunked(BATCH_SIZE).forEach { batch ->
+                val result = realDebridRepository.checkCacheStatus(batch)
+                result.onSuccess { batchStatus ->
+                    realDebridCacheMap.putAll(batchStatus)
+                }
+            }
+            Log.d(TAG, "Real-Debrid: ${realDebridCacheMap.count { it.value }} cached")
+        }
+
+        // Check AllDebrid cache status
+        if (hasAllDebrid) {
+            hashes.chunked(BATCH_SIZE).forEach { batch ->
+                val result = allDebridRepository.checkCacheStatus(batch)
+                result.onSuccess { batchStatus ->
+                    allDebridCacheMap.putAll(batchStatus)
+                }
+            }
+            Log.d(TAG, "AllDebrid: ${allDebridCacheMap.count { it.value }} cached")
+        }
+
+        // Enrich streams with cache status - priority: Premiumize > Real-Debrid > AllDebrid
         return streams.map { stream ->
-            val isCached = cacheStatusMap[stream.infoHash] == true
-            stream.copy(
-                isCached = isCached,
-                debridProvider = DebridProvider.PREMIUMIZE
-            )
+            val hash = stream.infoHash
+            when {
+                premiumizeCacheMap[hash] == true -> stream.copy(
+                    isCached = true,
+                    debridProvider = DebridProvider.PREMIUMIZE
+                )
+                realDebridCacheMap[hash] == true -> stream.copy(
+                    isCached = true,
+                    debridProvider = DebridProvider.REAL_DEBRID
+                )
+                allDebridCacheMap[hash] == true -> stream.copy(
+                    isCached = true,
+                    debridProvider = DebridProvider.ALL_DEBRID
+                )
+                else -> {
+                    // Not cached, assign the first available provider
+                    val provider = when {
+                        hasPremiumize -> DebridProvider.PREMIUMIZE
+                        hasRealDebrid -> DebridProvider.REAL_DEBRID
+                        hasAllDebrid -> DebridProvider.ALL_DEBRID
+                        else -> null
+                    }
+                    stream.copy(isCached = false, debridProvider = provider)
+                }
+            }
         }
     }
 
@@ -172,9 +231,11 @@ class TorrentioRepository @Inject constructor(
                 val magnetUri = "magnet:?xt=urn:btih:${stream.infoHash}"
                 premiumizeRepository.resolveToDirectLink(magnetUri, stream.fileIdx)
             }
-            DebridProvider.REAL_DEBRID, DebridProvider.ALL_DEBRID -> {
-                // TODO: Implement other debrid providers
-                Result.failure(Exception("${stream.debridProvider?.displayName} not yet implemented"))
+            DebridProvider.REAL_DEBRID -> {
+                realDebridRepository.resolveToDirectLink(stream.infoHash)
+            }
+            DebridProvider.ALL_DEBRID -> {
+                allDebridRepository.resolveToDirectLink(stream.infoHash)
             }
             null -> {
                 Result.failure(Exception("No debrid provider available"))

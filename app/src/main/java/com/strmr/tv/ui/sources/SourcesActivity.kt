@@ -15,9 +15,11 @@ import androidx.fragment.app.FragmentActivity
 import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.strmr.tv.BuildConfig
 import com.strmr.tv.R
 import com.strmr.tv.data.model.ContentItem
 import com.strmr.tv.data.model.StreamInfo
+import com.strmr.tv.data.remote.api.TMDBApiService
 import com.strmr.tv.data.repository.ScrapeResult
 import com.strmr.tv.data.repository.TorrentioRepository
 import com.strmr.tv.ui.sources.adapter.SourcesAdapter
@@ -65,6 +67,9 @@ class SourcesActivity : FragmentActivity() {
 
     @Inject
     lateinit var torrentioRepository: TorrentioRepository
+
+    @Inject
+    lateinit var tmdbApiService: TMDBApiService
 
     private lateinit var backgroundImage: ImageView
     private lateinit var posterImage: ImageView
@@ -172,15 +177,19 @@ class SourcesActivity : FragmentActivity() {
             return
         }
 
-        val imdbId = item.imdbId
-        if (imdbId.isNullOrBlank()) {
-            showError("No IMDB ID available for scraping")
-            return
-        }
-
         showLoading()
 
         lifecycleScope.launch {
+            // Try to get IMDB ID, fetching from TMDB if needed
+            val imdbId = withContext(Dispatchers.IO) {
+                resolveImdbId(item)
+            }
+
+            if (imdbId.isNullOrBlank()) {
+                showError("No IMDB ID available for scraping")
+                return@launch
+            }
+
             val result = withContext(Dispatchers.IO) {
                 val runtime = item.runtime?.toIntOrNull()
                 if (season > 0 && episode > 0) {
@@ -191,6 +200,40 @@ class SourcesActivity : FragmentActivity() {
             }
 
             displayResults(result)
+        }
+    }
+
+    /**
+     * Resolve IMDB ID from content item, falling back to TMDB API lookup if needed
+     */
+    private suspend fun resolveImdbId(item: ContentItem): String? {
+        // First try the item's own IMDB ID
+        if (!item.imdbId.isNullOrBlank()) {
+            return item.imdbId
+        }
+
+        // Fall back to TMDB API lookup using tmdbId
+        return try {
+            when (item.type) {
+                ContentItem.ContentType.MOVIE -> {
+                    val details = tmdbApiService.getMovieDetails(
+                        movieId = item.tmdbId,
+                        apiKey = BuildConfig.TMDB_API_KEY
+                    )
+                    // Try imdbId field first, then external_ids
+                    details.imdbId ?: details.externalIds?.imdbId
+                }
+                ContentItem.ContentType.TV_SHOW -> {
+                    val details = tmdbApiService.getShowDetails(
+                        showId = item.tmdbId,
+                        apiKey = BuildConfig.TMDB_API_KEY
+                    )
+                    details.externalIds?.imdbId
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SourcesActivity", "Failed to fetch IMDB ID from TMDB", e)
+            null
         }
     }
 

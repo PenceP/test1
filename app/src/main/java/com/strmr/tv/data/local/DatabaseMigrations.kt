@@ -175,3 +175,45 @@ val MIGRATION_19_20 = object : Migration(19, 20) {
         database.execSQL("ALTER TABLE premiumize_accounts ADD COLUMN accessToken TEXT")
     }
 }
+
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create realdebrid_accounts table
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS realdebrid_accounts (
+                providerId TEXT PRIMARY KEY NOT NULL,
+                accessToken TEXT NOT NULL,
+                refreshToken TEXT,
+                clientId TEXT NOT NULL,
+                clientSecret TEXT NOT NULL,
+                tokenExpiresAt INTEGER,
+                userId INTEGER,
+                username TEXT,
+                email TEXT,
+                accountType TEXT,
+                premiumDaysRemaining INTEGER,
+                expiresAt INTEGER,
+                points INTEGER,
+                lastVerifiedAt INTEGER NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+        """)
+
+        // Create alldebrid_accounts table
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS alldebrid_accounts (
+                providerId TEXT PRIMARY KEY NOT NULL,
+                apiKey TEXT NOT NULL,
+                username TEXT,
+                email TEXT,
+                isPremium INTEGER NOT NULL,
+                isSubscribed INTEGER,
+                isTrial INTEGER,
+                premiumUntil INTEGER,
+                fidelityPoints INTEGER,
+                lastVerifiedAt INTEGER NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+        """)
+    }
+}
