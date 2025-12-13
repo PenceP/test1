@@ -167,3 +167,11 @@ val MIGRATION_18_19 = object : Migration(18, 19) {
         """)
     }
 }
+
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Add accessToken column to premiumize_accounts for OAuth support
+        // Also make apiKey nullable (by recreating table since SQLite doesn't support changing NULL constraints)
+        database.execSQL("ALTER TABLE premiumize_accounts ADD COLUMN accessToken TEXT")
+    }
+}

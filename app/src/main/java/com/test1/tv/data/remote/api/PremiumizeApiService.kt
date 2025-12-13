@@ -2,11 +2,14 @@ package com.test1.tv.data.remote.api
 
 import com.test1.tv.data.remote.model.premiumize.PremiumizeAccountResponse
 import com.test1.tv.data.remote.model.premiumize.PremiumizeCacheCheckResponse
+import com.test1.tv.data.remote.model.premiumize.PremiumizeDeviceCodeResponse
 import com.test1.tv.data.remote.model.premiumize.PremiumizeDirectLinkResponse
+import com.test1.tv.data.remote.model.premiumize.PremiumizeTokenResponse
 import com.test1.tv.data.remote.model.premiumize.PremiumizeTransferResponse
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -14,10 +17,19 @@ interface PremiumizeApiService {
 
     /**
      * Get account information to verify API key and retrieve account status
+     * Legacy method - uses API key authentication
      */
     @GET("account/info")
     suspend fun getAccountInfo(
         @Query("apikey") apiKey: String
+    ): PremiumizeAccountResponse
+
+    /**
+     * Get account information using OAuth Bearer token
+     */
+    @GET("account/info")
+    suspend fun getAccountInfoWithToken(
+        @Header("Authorization") authHeader: String
     ): PremiumizeAccountResponse
 
     /**
@@ -32,12 +44,32 @@ interface PremiumizeApiService {
     ): PremiumizeCacheCheckResponse
 
     /**
+     * Check if items are cached using OAuth Bearer token
+     */
+    @POST("cache/check")
+    @FormUrlEncoded
+    suspend fun checkCacheWithToken(
+        @Header("Authorization") authHeader: String,
+        @Field("items[]") hashes: List<String>
+    ): PremiumizeCacheCheckResponse
+
+    /**
      * Create a transfer from a magnet link or torrent hash
      */
     @POST("transfer/create")
     @FormUrlEncoded
     suspend fun createTransfer(
         @Query("apikey") apiKey: String,
+        @Field("src") magnetOrHash: String
+    ): PremiumizeTransferResponse
+
+    /**
+     * Create a transfer using OAuth Bearer token
+     */
+    @POST("transfer/create")
+    @FormUrlEncoded
+    suspend fun createTransferWithToken(
+        @Header("Authorization") authHeader: String,
         @Field("src") magnetOrHash: String
     ): PremiumizeTransferResponse
 
@@ -49,6 +81,16 @@ interface PremiumizeApiService {
     @FormUrlEncoded
     suspend fun getDirectLink(
         @Query("apikey") apiKey: String,
+        @Field("src") magnetOrHash: String
+    ): PremiumizeDirectLinkResponse
+
+    /**
+     * Get direct download link using OAuth Bearer token
+     */
+    @POST("transfer/directdl")
+    @FormUrlEncoded
+    suspend fun getDirectLinkWithToken(
+        @Header("Authorization") authHeader: String,
         @Field("src") magnetOrHash: String
     ): PremiumizeDirectLinkResponse
 }

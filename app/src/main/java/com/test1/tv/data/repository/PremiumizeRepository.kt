@@ -1,16 +1,21 @@
 package com.test1.tv.data.repository
 
 import android.util.Log
+import com.test1.tv.BuildConfig
 import com.test1.tv.data.local.dao.PremiumizeAccountDao
 import com.test1.tv.data.local.entity.PremiumizeAccount
 import com.test1.tv.data.remote.api.PremiumizeApiService
+import com.test1.tv.data.remote.api.PremiumizeAuthService
+import com.test1.tv.data.remote.model.premiumize.PremiumizeDeviceCodeResponse
 import com.test1.tv.data.remote.model.premiumize.PremiumizeDirectLinkResponse
+import com.test1.tv.data.remote.model.premiumize.PremiumizeTokenResponse
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PremiumizeRepository @Inject constructor(
     private val premiumizeApiService: PremiumizeApiService,
+    private val premiumizeAuthService: PremiumizeAuthService,
     private val accountDao: PremiumizeAccountDao
 ) {
     companion object {
@@ -18,13 +23,135 @@ class PremiumizeRepository @Inject constructor(
         private const val PROVIDER_ID = "premiumize"
     }
 
+    private val clientId: String
+        get() = BuildConfig.PREMIUMIZE_CLIENT_ID
+
     /**
      * Get the stored Premiumize account
      */
     suspend fun getAccount(): PremiumizeAccount? = accountDao.getAccount(PROVIDER_ID)
 
+    // ==================== OAuth Device Code Flow ====================
+
     /**
-     * Verify an API key and save the account if valid
+     * Request a device code for OAuth authentication
+     * User will need to visit verification_uri and enter user_code
+     */
+    suspend fun requestDeviceCode(): Result<PremiumizeDeviceCodeResponse> {
+        return try {
+            val response = premiumizeAuthService.requestDeviceCode(clientId = clientId)
+            Log.d(TAG, "Device code requested: ${response.userCode}")
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to request device code", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Poll for token after user has authorized the device code
+     * @return PremiumizeTokenResponse if authorized, null if still pending, throws on error
+     */
+    suspend fun pollForToken(deviceCode: String): Result<PremiumizeTokenResponse?> {
+        return try {
+            val response = premiumizeAuthService.pollForToken(clientId = clientId, deviceCode = deviceCode)
+
+            when {
+                response.accessToken != null -> {
+                    Log.d(TAG, "Token received successfully")
+                    Result.success(response)
+                }
+                response.error == "authorization_pending" -> {
+                    // User hasn't authorized yet - keep polling
+                    Log.d(TAG, "Authorization pending, continuing to poll...")
+                    Result.success(null)
+                }
+                response.error == "access_denied" -> {
+                    Result.failure(Exception("Access denied by user"))
+                }
+                response.error != null -> {
+                    Result.failure(Exception(response.errorDescription ?: response.error))
+                }
+                else -> {
+                    // No token and no error - keep polling
+                    Result.success(null)
+                }
+            }
+        } catch (e: retrofit2.HttpException) {
+            // Premiumize returns HTTP 400 for authorization_pending and other OAuth errors
+            // We need to parse the error body to determine if we should keep polling
+            val errorBody = e.response()?.errorBody()?.string()
+            Log.d(TAG, "HTTP ${e.code()} error, body: $errorBody")
+
+            when {
+                errorBody?.contains("authorization_pending") == true -> {
+                    // User hasn't authorized yet - keep polling
+                    Log.d(TAG, "Authorization pending (from 400 response), continuing to poll...")
+                    Result.success(null)
+                }
+                errorBody?.contains("access_denied") == true -> {
+                    Result.failure(Exception("Access denied by user"))
+                }
+                errorBody?.contains("expired") == true -> {
+                    Result.failure(Exception("Device code expired"))
+                }
+                else -> {
+                    Log.e(TAG, "Failed to poll for token: HTTP ${e.code()}", e)
+                    Result.failure(e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to poll for token", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Save OAuth token and fetch account info
+     */
+    suspend fun saveOAuthToken(accessToken: String): Result<PremiumizeAccount> {
+        return try {
+            val authHeader = "Bearer $accessToken"
+            val response = premiumizeApiService.getAccountInfoWithToken(authHeader)
+
+            if (response.status == "success") {
+                val now = System.currentTimeMillis()
+                val account = PremiumizeAccount(
+                    providerId = PROVIDER_ID,
+                    apiKey = null,  // OAuth doesn't use API key
+                    accessToken = accessToken,
+                    customerId = response.customerId,
+                    username = null,
+                    email = null,
+                    accountStatus = if (response.premiumUntil != null && response.premiumUntil > now / 1000) "premium" else "free",
+                    expiresAt = response.premiumUntil?.times(1000),
+                    pointsUsed = response.pointsUsed,
+                    pointsAvailable = response.pointsAvailable,
+                    spaceLimitBytes = null,
+                    spaceUsedBytes = response.spaceUsed?.toLong(),
+                    fairUsageLimitBytes = null,
+                    fairUsageUsedBytes = response.fairUseUsed?.toLong(),
+                    lastVerifiedAt = now,
+                    createdAt = now
+                )
+                accountDao.upsert(account)
+                Log.d(TAG, "Premiumize OAuth account saved: ${response.customerId}")
+                Result.success(account)
+            } else {
+                val errorMsg = response.message ?: "Failed to get account info"
+                Log.w(TAG, "Premiumize OAuth verification failed: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save OAuth token", e)
+            Result.failure(e)
+        }
+    }
+
+    // ==================== Legacy API Key Support ====================
+
+    /**
+     * Verify an API key and save the account if valid (legacy method)
      * @return Result with the account on success, or an error message on failure
      */
     suspend fun verifyAndSaveApiKey(apiKey: String): Result<PremiumizeAccount> {
@@ -36,14 +163,15 @@ class PremiumizeRepository @Inject constructor(
                 val account = PremiumizeAccount(
                     providerId = PROVIDER_ID,
                     apiKey = apiKey,
+                    accessToken = null,
                     customerId = response.customerId,
-                    username = null, // Premiumize doesn't return username in account/info
+                    username = null,
                     email = null,
                     accountStatus = if (response.premiumUntil != null && response.premiumUntil > now / 1000) "premium" else "free",
-                    expiresAt = response.premiumUntil?.times(1000), // Convert to millis
+                    expiresAt = response.premiumUntil?.times(1000),
                     pointsUsed = response.pointsUsed,
                     pointsAvailable = response.pointsAvailable,
-                    spaceLimitBytes = null, // Not provided directly
+                    spaceLimitBytes = null,
                     spaceUsedBytes = response.spaceUsed?.toLong(),
                     fairUsageLimitBytes = null,
                     fairUsageUsedBytes = response.fairUseUsed?.toLong(),
@@ -71,8 +199,16 @@ class PremiumizeRepository @Inject constructor(
         val account = accountDao.getAccount(PROVIDER_ID)
             ?: return Result.failure(Exception("No Premiumize account configured"))
 
-        return verifyAndSaveApiKey(account.apiKey)
+        return if (account.isOAuthAccount()) {
+            saveOAuthToken(account.accessToken!!)
+        } else if (account.apiKey != null) {
+            verifyAndSaveApiKey(account.apiKey)
+        } else {
+            Result.failure(Exception("No valid credentials"))
+        }
     }
+
+    // ==================== API Methods (OAuth + Legacy Support) ====================
 
     /**
      * Check cache status for multiple torrent hashes
@@ -84,7 +220,11 @@ class PremiumizeRepository @Inject constructor(
             ?: return Result.failure(Exception("No Premiumize account configured"))
 
         return try {
-            val response = premiumizeApiService.checkCache(account.apiKey, hashes)
+            val response = if (account.isOAuthAccount()) {
+                premiumizeApiService.checkCacheWithToken(account.getAuthHeader()!!, hashes)
+            } else {
+                premiumizeApiService.checkCache(account.apiKey!!, hashes)
+            }
 
             if (response.status == "success" && response.response != null) {
                 val cacheMap = hashes.zip(response.response).toMap()
@@ -110,7 +250,11 @@ class PremiumizeRepository @Inject constructor(
             ?: return Result.failure(Exception("No Premiumize account configured"))
 
         return try {
-            val response = premiumizeApiService.getDirectLink(account.apiKey, magnetOrHash)
+            val response = if (account.isOAuthAccount()) {
+                premiumizeApiService.getDirectLinkWithToken(account.getAuthHeader()!!, magnetOrHash)
+            } else {
+                premiumizeApiService.getDirectLink(account.apiKey!!, magnetOrHash)
+            }
 
             if (response.status == "success") {
                 val link = selectBestLink(response, fileIdx)
@@ -140,24 +284,46 @@ class PremiumizeRepository @Inject constructor(
             return null
         }
 
-        // If fileIdx specified, use that specific file
-        if (fileIdx != null && fileIdx < contents.size) {
-            val content = contents[fileIdx]
-            return content.streamLink ?: content.link
-        }
+        // Video file extensions (playable by ExoPlayer)
+        val videoExtensions = listOf(".mkv", ".mp4", ".avi", ".mov", ".wmv", ".m4v", ".webm", ".ts", ".m2ts")
 
-        // Otherwise, find the largest video file
-        val videoExtensions = listOf(".mkv", ".mp4", ".avi", ".mov", ".wmv", ".m4v")
+        // Non-video extensions to explicitly exclude
+        val excludeExtensions = listOf(".srt", ".sub", ".idx", ".ass", ".ssa", ".nfo", ".txt", ".jpg", ".jpeg", ".png", ".gif", ".exe", ".rar", ".zip", ".7z")
+
+        // Filter to only video files
         val videoFiles = contents.filter { content ->
             val path = content.path?.lowercase() ?: ""
-            videoExtensions.any { path.endsWith(it) }
+            val isVideo = videoExtensions.any { path.endsWith(it) }
+            val isExcluded = excludeExtensions.any { path.endsWith(it) }
+            isVideo && !isExcluded
         }
 
-        // Sort by size and return the largest (usually the main video)
-        val bestFile = videoFiles.maxByOrNull { it.size ?: 0 }
-            ?: contents.maxByOrNull { it.size ?: 0 }
+        Log.d(TAG, "selectBestLink: ${contents.size} total files, ${videoFiles.size} video files")
 
-        return bestFile?.streamLink ?: bestFile?.link
+        // If fileIdx specified, check if it's a valid video file
+        if (fileIdx != null && fileIdx < contents.size) {
+            val content = contents[fileIdx]
+            val path = content.path?.lowercase() ?: ""
+            val isVideo = videoExtensions.any { path.endsWith(it) }
+            if (isVideo) {
+                Log.d(TAG, "Using specified fileIdx $fileIdx: ${content.path}")
+                return content.streamLink ?: content.link
+            }
+            // If specified index is not a video, fall through to find best video
+            Log.d(TAG, "Specified fileIdx $fileIdx is not a video file, finding best video instead")
+        }
+
+        // Find the largest video file (usually the main video)
+        val bestFile = videoFiles.maxByOrNull { it.size ?: 0 }
+
+        if (bestFile != null) {
+            Log.d(TAG, "Selected best video: ${bestFile.path} (${bestFile.size} bytes)")
+            return bestFile.streamLink ?: bestFile.link
+        }
+
+        // No video files found - don't fall back to non-video files
+        Log.w(TAG, "No video files found in ${contents.size} files")
+        return null
     }
 
     /**
@@ -175,10 +341,11 @@ class PremiumizeRepository @Inject constructor(
 
     /**
      * Get the stored API key (for display purposes - masked)
+     * Returns null for OAuth accounts (they don't have API keys)
      */
     suspend fun getApiKeyMasked(): String? {
         val account = accountDao.getAccount(PROVIDER_ID) ?: return null
-        val key = account.apiKey
+        val key = account.apiKey ?: return null
         return if (key.length > 8) {
             "${key.take(4)}****${key.takeLast(4)}"
         } else {

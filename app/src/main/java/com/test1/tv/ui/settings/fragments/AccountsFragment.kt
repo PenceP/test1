@@ -48,8 +48,6 @@ class AccountsFragment : Fragment() {
     // State
     private var traktConnected = false
     private var premiumizeConnected = false
-    private var premiumizeApiKeyInput = ""
-    private var premiumizeVerifying = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -129,26 +127,18 @@ class AccountsFragment : Fragment() {
                 }
             ),
 
-            // Premiumize Account Card (API Key based)
-            SettingsItem.AccountCardApiKey(
+            // Premiumize Account Card (OAuth device code flow)
+            SettingsItem.AccountCard(
                 id = "premiumize",
                 serviceName = "Premiumize",
                 serviceDescription = "High-speed cloud downloader",
                 iconText = "P",
                 iconBackgroundColor = Color.parseColor("#2563EB"), // Blue
                 isConnected = premiumizeConnected,
-                apiKey = premiumizeApiKeyInput,
-                isVerifying = premiumizeVerifying,
-                accountStatus = premiumizeAccount?.accountStatus?.replaceFirstChar { it.uppercase() },
-                daysRemaining = premiumizeDaysRemaining,
-                onApiKeyChange = { key ->
-                    premiumizeApiKeyInput = key
-                },
-                onVerify = { apiKey ->
-                    verifyPremiumizeApiKey(apiKey)
-                },
-                onDisconnect = {
-                    disconnectPremiumize()
+                userName = premiumizeAccount?.accountStatus?.replaceFirstChar { it.uppercase() },
+                additionalInfo = premiumizeDaysRemaining?.let { "$it days remaining" },
+                onAction = { action ->
+                    handlePremiumizeAction(action)
                 }
             )
         )
@@ -294,36 +284,129 @@ class AccountsFragment : Fragment() {
         }
     }
 
-    private fun verifyPremiumizeApiKey(apiKey: String) {
-        if (apiKey.isBlank()) {
-            Toast.makeText(context, "Please enter an API key", Toast.LENGTH_SHORT).show()
-            return
+    // ==================== Premiumize OAuth Device Code Flow ====================
+
+    private fun handlePremiumizeAction(action: AccountAction) {
+        when (action) {
+            AccountAction.AUTHENTICATE -> {
+                requestPremiumizeDeviceCode()
+            }
+            AccountAction.LOGOUT -> {
+                disconnectPremiumize()
+            }
+            else -> {}
         }
+    }
 
-        premiumizeVerifying = true
-        refreshItems()
-
+    private fun requestPremiumizeDeviceCode() {
         viewLifecycleOwner.lifecycleScope.launch {
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Authorize Premiumize")
+                .setMessage("Requesting authorization code...")
+                .setCancelable(false)
+                .show()
+
             val result = withContext(Dispatchers.IO) {
-                premiumizeRepository.verifyAndSaveApiKey(apiKey)
+                premiumizeRepository.requestDeviceCode()
             }
 
-            premiumizeVerifying = false
+            dialog.dismiss()
 
-            result.onSuccess { account ->
-                premiumizeAccount = account
-                premiumizeConnected = true
-                premiumizeApiKeyInput = "" // Clear input after successful verification
-                Toast.makeText(context, "Premiumize connected!", Toast.LENGTH_SHORT).show()
+            result.onSuccess { code ->
+                showPremiumizeActivationDialog(code.userCode, code.verificationUri, code.expiresIn)
+                pollForPremiumizeToken(code.deviceCode, code.interval, code.expiresIn)
             }.onFailure { error ->
                 Toast.makeText(
-                    context,
-                    "Verification failed: ${error.message}",
+                    requireContext(),
+                    "Failed to get authorization code: ${error.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }
+        }
+    }
 
-            refreshItems()
+    private fun showPremiumizeActivationDialog(userCode: String, verificationUrl: String, expiresIn: Int) {
+        val minutes = (expiresIn / 60).coerceAtLeast(1)
+        val message = """
+            Go to: $verificationUrl
+
+            Enter code: ${userCode.uppercase(Locale.US)}
+
+            This code expires in $minutes minutes.
+        """.trimIndent()
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Authorize Premiumize")
+            .setMessage(message)
+            .setPositiveButton("Open Browser") { _, _ ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(verificationUrl))
+                startActivity(intent)
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun pollForPremiumizeToken(deviceCode: String, intervalSeconds: Int, expiresIn: Int) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            val expiresAt = startTime + expiresIn * 1000L
+            val pollDelay = (intervalSeconds.coerceAtLeast(5)) * 1000L
+
+            while (isActive && System.currentTimeMillis() < expiresAt) {
+                val tokenResult = premiumizeRepository.pollForToken(deviceCode)
+
+                tokenResult.onSuccess { response ->
+                    if (response != null && response.accessToken != null) {
+                        // Token received - save it and update UI
+                        onPremiumizeTokenReceived(response.accessToken)
+                        return@launch
+                    }
+                    // null response means still pending - continue polling
+                }.onFailure { error ->
+                    // Access denied or other error
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Authorization failed: ${error.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    return@launch
+                }
+
+                delay(pollDelay)
+            }
+
+            // Expired
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    requireContext(),
+                    "Premiumize code expired. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private suspend fun onPremiumizeTokenReceived(accessToken: String) {
+        val result = premiumizeRepository.saveOAuthToken(accessToken)
+
+        result.onSuccess { account ->
+            premiumizeAccount = account
+            premiumizeConnected = true
+
+            withContext(Dispatchers.Main) {
+                refreshItems()
+                Toast.makeText(requireContext(), "Premiumize connected!", Toast.LENGTH_SHORT).show()
+            }
+        }.onFailure { error ->
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to save account: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
@@ -335,7 +418,6 @@ class AccountsFragment : Fragment() {
 
             premiumizeAccount = null
             premiumizeConnected = false
-            premiumizeApiKeyInput = ""
 
             refreshItems()
             Toast.makeText(context, "Disconnected from Premiumize", Toast.LENGTH_SHORT).show()

@@ -34,6 +34,9 @@ android {
         buildConfigField("String", "TMDB_ACCESS_TOKEN", "\"${secrets.getProperty("TMDB_ACCESS_TOKEN", "")}\"")
         // OpenSubtitles API key for external subtitles
         buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${secrets.getProperty("OPENSUBTITLES_API_KEY", "")}\"")
+        // Premiumize OAuth credentials
+        buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${secrets.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
+        buildConfigField("String", "PREMIUMIZE_CLIENT_SECRET", "\"${secrets.getProperty("PREMIUMIZE_CLIENT_SECRET", "")}\"")
         // OMDB_API_KEY is set per build type below - no hardcoded fallback for security
     }
 

@@ -14,8 +14,10 @@ import com.test1.tv.data.local.MIGRATION_15_16
 import com.test1.tv.data.local.MIGRATION_16_17
 import com.test1.tv.data.local.MIGRATION_17_18
 import com.test1.tv.data.local.MIGRATION_18_19
+import com.test1.tv.data.local.MIGRATION_19_20
 import com.test1.tv.data.remote.api.OMDbApiService
 import com.test1.tv.data.remote.api.PremiumizeApiService
+import com.test1.tv.data.remote.api.PremiumizeAuthService
 import com.test1.tv.data.remote.api.TMDBApiService
 import com.test1.tv.data.remote.api.TorrentioApiService
 import com.test1.tv.data.remote.api.TraktApiService
@@ -67,6 +69,10 @@ annotation class PremiumizeRetrofit
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
+annotation class PremiumizeAuthRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
 annotation class TorrentioRetrofit
 
 @Qualifier
@@ -87,7 +93,7 @@ object AppModule {
             AppDatabase::class.java,
             "test1_tv_database"
         )
-            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -151,8 +157,9 @@ object AppModule {
     @Singleton
     fun providePremiumizeRepository(
         premiumizeApiService: PremiumizeApiService,
+        premiumizeAuthService: PremiumizeAuthService,
         premiumizeAccountDao: com.test1.tv.data.local.dao.PremiumizeAccountDao
-    ) = PremiumizeRepository(premiumizeApiService, premiumizeAccountDao)
+    ) = PremiumizeRepository(premiumizeApiService, premiumizeAuthService, premiumizeAccountDao)
 
     @Provides
     @Singleton
@@ -288,6 +295,17 @@ object AppModule {
 
     @Provides
     @Singleton
+    @PremiumizeAuthRetrofit
+    fun providePremiumizeAuthRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://www.premiumize.me/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     @TorrentioRetrofit
     fun provideTorrentioRetrofit(client: OkHttpClient): Retrofit {
         return Retrofit.Builder()
@@ -330,6 +348,12 @@ object AppModule {
     @Singleton
     fun providePremiumizeApiService(@PremiumizeRetrofit retrofit: Retrofit): PremiumizeApiService {
         return retrofit.create(PremiumizeApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun providePremiumizeAuthService(@PremiumizeAuthRetrofit retrofit: Retrofit): PremiumizeAuthService {
+        return retrofit.create(PremiumizeAuthService::class.java)
     }
 
     @Provides

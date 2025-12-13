@@ -45,7 +45,7 @@ import com.test1.tv.data.local.entity.PlaybackProgress
         PlayerSettings::class,
         PlaybackProgress::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
